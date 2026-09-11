@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requireSession } from "@/lib/auth";
 import {
   type ActionResult,
   type JobFormValues,
@@ -29,6 +30,7 @@ async function assertInventoryItemsExist(ids: string[]) {
 }
 
 export async function createJob(values: JobFormValues): Promise<ActionResult> {
+  await requireSession();
   const parsed = validateAndNormalize(values);
   if (!parsed.ok) return parsed;
   const data = parsed.data;
@@ -106,6 +108,7 @@ export async function updateJob(
   jobId: string,
   values: JobFormValues
 ): Promise<ActionResult> {
+  await requireSession();
   const parsed = validateAndNormalize(values);
   if (!parsed.ok) return parsed;
   const data = parsed.data;
@@ -186,6 +189,7 @@ export async function updateJob(
 }
 
 export async function deleteJob(jobId: string): Promise<ActionResult> {
+  await requireSession();
   try {
     const existing = await prisma.job.findUnique({ where: { id: jobId } });
     if (!existing) return { ok: false, error: "Job not found." };
