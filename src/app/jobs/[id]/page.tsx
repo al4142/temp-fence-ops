@@ -30,20 +30,28 @@ export default async function JobDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/jobs" className="text-sm text-blue-700 hover:underline">
-          Back to jobs
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <Link href="/jobs" className="text-sm text-blue-700 hover:underline">
+            Back to jobs
+          </Link>
+          <h1 className="mt-2 text-2xl font-semibold text-slate-900">
+            {job.orderNumber}{" "}
+            <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-base">
+              {job.jobType}
+            </span>
+          </h1>
+          <p className="mt-1 text-sm text-slate-600">
+            {formatDate(job.date)} | {job.branch.name} ({job.branch.code}) |{" "}
+            {describeInventoryEffect(job.jobType)}
+          </p>
+        </div>
+        <Link
+          href={`/jobs/${job.id}/edit`}
+          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
+        >
+          Edit job
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-slate-900">
-          {job.orderNumber}{" "}
-          <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-base">
-            {job.jobType}
-          </span>
-        </h1>
-        <p className="mt-1 text-sm text-slate-600">
-          {formatDate(job.date)} | {job.branch.name} ({job.branch.code}) |{" "}
-          {describeInventoryEffect(job.jobType)}
-        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
