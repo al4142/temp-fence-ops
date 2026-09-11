@@ -44,7 +44,7 @@ Construction rollups, Master installer table).
 ## Phase 4 - Construction / analytics dashboards
 
 - `/analytics` filters: year, branch, job type group (INST vs PU vs Other)
-- Monthly LF (`qtyLf`) table by branch × job type group (Construction Data-style)
+- Monthly LF (`qtyLf`) table by branch × job type group (Construction Data–style)
 - Summary cards: jobs, install LF vs pickup LF, revenue, rough labor cost
 - SVG stacked bar chart for monthly LF (no heavy chart dependency)
 - Server-side Prisma filters; only needed job/labor fields loaded
@@ -53,12 +53,13 @@ Construction rollups, Master installer table).
 
 ## Phase 5 - Auth + private company deploy
 
-- Auth for 1-2 office users (e.g. NextAuth / simple credentials)
-- Private repo or private deploy; PostgreSQL via `DATABASE_URL`
-- Optional tablet/phone polish for field viewing
-- Strip or gate demo seed; import real workbook history carefully (no PII leakage)
+- Credentials auth: Prisma `User` + bcrypt password hash + signed httpOnly session cookie (`AUTH_SECRET` / jose)
+- Seeded demo users (`admin@demo.local`, `office@demo.local`) — demo-only, documented in README
+- Middleware protects all app pages except `/login`; job mutating server actions call `requireSession()`
+- Login / logout UI; signed-in name in nav
+- Private deploy guide: [PRIVATE_DEPLOY.md](PRIVATE_DEPLOY.md) (fork/private repo, Postgres, env vars, Vercel primary path, seed vs migrate, field tips)
 
-**Status: planned**
+**Status: done**
 
 ## Notes
 
