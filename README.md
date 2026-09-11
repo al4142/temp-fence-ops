@@ -1,2 +1,64 @@
-# temp-fence-ops
-Temporary fencing daily ops, inventory, and job P&amp;L tracker (public demo with sample data)
+# Temp Fence Ops
+
+Public demo of an operations tracker for temporary fence install and pickup work (events & construction).
+Replaces a slow Excel workbook covering daily jobs, inventory by branch, and P&L by order number.
+
+**This repository uses fake sample data only.** Employee records include name, hourly rate, position, and branch — no SSN, DOB, address, phone, or personal email.
+
+## Stack
+
+- Next.js (App Router) + TypeScript + Tailwind CSS
+- Prisma ORM
+- SQLite for the public demo (`file:./dev.db`)
+
+Company / private deploys can switch to PostgreSQL by changing the Prisma `provider` and setting `DATABASE_URL` (see `.env.example`).
+
+## Quick start
+
+```bash
+npm install
+cp .env.example .env   # if needed; demo defaults to SQLite
+npx prisma migrate dev
+npm run db:seed
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+### Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Dev server |
+| `npm run build` | Production build (`prisma generate` runs via `postinstall`) |
+| `npm run start` | Start production server |
+| `npm run db:migrate` | `prisma migrate dev` |
+| `npm run db:seed` | Seed fake Miami/Davie sample data |
+| `npm run db:reset` | Reset DB + re-seed |
+
+## What you can see in the demo
+
+- **Dashboard** — counts, recent jobs, inventory attention
+- **Jobs** — list + detail with material line items and labor
+- **Inventory** — on-hand by branch (starting qty ± job movements ± adjustments)
+- **P&L** — lookup by order number (e.g. `ORD-1001`)
+
+Inventory movement: `INST` / `DELIVERY` decrease on-hand; `PU` / `PICKUP` increase it. Details in [docs/DATA_MODEL.md](docs/DATA_MODEL.md).
+
+## Public demo vs private company use
+
+| | Public demo (this repo) | Private company deploy |
+|--|-------------------------|-------------------------|
+| Data | Fake sample only | Real ops data (private) |
+| Database | SQLite file | Prefer PostgreSQL |
+| Auth | None | Phase 5 — 1–2 office users |
+| PII | None beyond name/rate/role | Keep sensitive HR fields out or gated |
+
+## Docs
+
+- [docs/DATA_MODEL.md](docs/DATA_MODEL.md) — tables, inventory rules, P&L
+- [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) — phased roadmap
+
+## License
+
+Private use by the repo owner unless otherwise stated. Sample data is fictional.
