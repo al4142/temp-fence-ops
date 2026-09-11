@@ -1,8 +1,10 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.user.deleteMany();
   await prisma.jobLabor.deleteMany();
   await prisma.jobMaterial.deleteMany();
   await prisma.inventoryAdjustment.deleteMany();
@@ -289,8 +291,28 @@ async function main() {
     },
   });
 
+  const adminHash = await bcrypt.hash("DemoAdmin123!", 10);
+  const officeHash = await bcrypt.hash("DemoOffice123!", 10);
+  await prisma.user.create({
+    data: {
+      email: "admin@demo.local",
+      name: "Demo Admin",
+      passwordHash: adminHash,
+      role: "admin",
+    },
+  });
+  await prisma.user.create({
+    data: {
+      email: "office@demo.local",
+      name: "Demo Office",
+      passwordHash: officeHash,
+      role: "office",
+    },
+  });
+
   console.log("Seeded branches, employees, inventory, jobs.");
   console.log("Sample orders: ORD-1001 (install+pickup), ORD-2044 (install), ORD-1105 (delivery).");
+  console.log("Demo users (demo-only): admin@demo.local / DemoAdmin123! ; office@demo.local / DemoOffice123!");
 }
 
 main()
