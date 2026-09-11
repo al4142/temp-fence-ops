@@ -32,7 +32,7 @@ export default async function JobDetailPage({ params }: Props) {
     <div className="space-y-6">
       <div>
         <Link href="/jobs" className="text-sm text-blue-700 hover:underline">
-          <- Jobs
+          Back to jobs
         </Link>
         <h1 className="mt-2 text-2xl font-semibold text-slate-900">
           {job.orderNumber}{" "}
@@ -153,7 +153,7 @@ export default async function JobDetailPage({ params }: Props) {
             href={`/pnl?order=${encodeURIComponent(job.orderNumber)}`}
             className="text-blue-700 hover:underline"
           >
-            View P&amp;L for order {job.orderNumber} ->
+            View P&amp;L for order {job.orderNumber}
           </Link>
         </p>
       </section>
