@@ -1,0 +1,128 @@
+// Temp Fence Ops — Prisma schema
+// Demo uses SQLite. For company deploy, change provider to "postgresql"
+// and set DATABASE_URL accordingly (see .env.example and README).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees       Employee[]
+  inventoryItems  InventoryItem[]
+  jobs            Job[]
+  adjustments     InventoryAdjustment[]
+}
+
+model Employee {
+  id         String   @id @default(cuid())
+  name       String
+  nameKey    String   @unique
+  hourlyRate Float
+  position   String
+  branchId   String
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  branch Branch     @relation(fields: [branchId], references: [id])
+  labor  JobLabor[]
+}
+
+model InventoryItem {
+  id          String   @id @default(cuid())
+  sku         String
+  name        String
+  description String?
+  unit        String   @default("ea")
+  reusable    Boolean  @default(true)
+  branchId    String
+  startingQty Float    @default(0)
+  unitCost    Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  branch      Branch                @relation(fields: [branchId], references: [id])
+  materials   JobMaterial[]
+  adjustments InventoryAdjustment[]
+
+  @@unique([branchId, sku])
+}
+
+model Job {
+  id           String   @id @default(cuid())
+  date         DateTime
+  branchId     String
+  class        String? // e.g. EVENT, CONSTRUCTION
+  orderNumber  String
+  customer     String
+  address      String?
+  city         String?
+  jobType      String // INST, PU, PICKUP, DELIVERY, etc.
+  fenceType    String?
+  qtyLf        Float?
+  screen       Boolean  @default(false)
+  gates        Int      @default(0)
+  notes        String?
+  accountExec  String?
+  revenue      Float    @default(0)
+  lodging      Float    @default(0)
+  freight      Float    @default(0)
+  misc         Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  branch    Branch        @relation(fields: [branchId], references: [id])
+  materials JobMaterial[]
+  labor     JobLabor[]
+
+  @@index([orderNumber])
+  @@index([date])
+  @@index([branchId])
+}
+
+model JobMaterial {
+  id              String  @id @default(cuid())
+  jobId           String
+  inventoryItemId String?
+  itemName        String? // free-text when not linked to catalog
+  quantity        Float
+  notes           String?
+
+  job           Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+}
+
+model JobLabor {
+  id             String @id @default(cuid())
+  jobId          String
+  employeeId     String
+  regularHours   Float  @default(0)
+  overtimeHours  Float  @default(0)
+
+  job      Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+model InventoryAdjustment {
+  id              String   @id @default(cuid())
+  inventoryItemId String
+  branchId        String
+  quantityDelta   Float // positive = add to on-hand, negative = remove
+  reason          String?
+  adjustedAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  branch        Branch        @relation(fields: [branchId], references: [id])
+}
