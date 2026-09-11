@@ -118,7 +118,7 @@ export default async function HomePage() {
         <p className="font-medium text-slate-900">Phase status</p>
         <ul className="mt-2 list-inside list-disc space-y-1">
           <li>Phase 0: scaffold, schema, seed - done</li>
-          <li>Phase 1: jobs list/detail with material &amp; labor lines (read) - stub done; CRUD later</li>
+          <li>Phase 1: jobs create/edit/delete with material &amp; labor lines - done</li>
           <li>Phase 2: inventory on-hand by branch - computed view done</li>
           <li>Phase 3: P&amp;L by order # - lookup page done</li>
           <li>Phases 4-5: analytics dashboards &amp; auth - planned</li>
