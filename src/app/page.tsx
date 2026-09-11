@@ -121,7 +121,8 @@ export default async function HomePage() {
           <li>Phase 1: jobs create/edit/delete with material &amp; labor lines - done</li>
           <li>Phase 2: inventory on-hand by branch - computed view done</li>
           <li>Phase 3: P&amp;L by order # - lookup page done</li>
-          <li>Phases 4-5: analytics dashboards &amp; auth - planned</li>
+          <li>Phase 4: analytics dashboards (LF rollups) - done</li>
+          <li>Phase 5: auth &amp; private deploy - planned</li>
         </ul>
         <p className="mt-2">
           See <code className="rounded bg-white px-1">docs/BUILD_PLAN.md</code> and{" "}
