@@ -16,12 +16,19 @@ export default async function JobsPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Jobs</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Daily work tickets. Material line items drive inventory; labor lines drive P&amp;L.
-          Create/edit forms land in Phase 1.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Jobs</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Daily work tickets. Material line items drive inventory; labor lines drive P&amp;L.
+          </p>
+        </div>
+        <Link
+          href="/jobs/new"
+          className="rounded-md bg-blue-700 px-3 py-2 text-sm font-medium text-white hover:bg-blue-800"
+        >
+          New job
+        </Link>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -36,6 +43,7 @@ export default async function JobsPage() {
               <th className="px-3 py-2 font-medium">Inv.</th>
               <th className="px-3 py-2 font-medium text-right">Revenue</th>
               <th className="px-3 py-2 font-medium text-right">Lines</th>
+              <th className="px-3 py-2 font-medium"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -67,6 +75,14 @@ export default async function JobsPage() {
                 </td>
                 <td className="px-3 py-2 text-right text-slate-600">
                   {j._count.materials}m / {j._count.labor}l
+                </td>
+                <td className="px-3 py-2 text-right">
+                  <Link
+                    href={`/jobs/${j.id}/edit`}
+                    className="text-sm text-blue-700 hover:underline"
+                  >
+                    Edit
+                  </Link>
                 </td>
               </tr>
             ))}
