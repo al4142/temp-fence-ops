@@ -86,3 +86,9 @@ See `src/lib/pnl.ts` and the `/pnl` page.
 
 Demo `datasource` uses `provider = "sqlite"`. For company deploy, switch to `postgresql`
 and set `DATABASE_URL` (see `.env.example`). Schema types are portable; re-run migrate.
+
+## Auth users
+
+| Model | Purpose |
+|-------|---------|
+| User | Office login (`email`, bcrypt `passwordHash`, `name`, `role`). Demo seed only for public repo. |
