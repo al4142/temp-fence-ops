@@ -42,7 +42,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ## What you can see in the demo
 
 - **Dashboard** - counts, recent jobs, inventory attention
-- **Jobs** - list + detail with material line items and labor
+- **Jobs** - list, create/edit/delete, detail with material line items and labor
 - **Inventory** - on-hand by branch (starting qty +/- job movements +/- adjustments)
 - **P&L** - lookup by order number (e.g. `ORD-1001`)
 
