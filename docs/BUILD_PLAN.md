@@ -11,6 +11,8 @@ Construction rollups, Master installer table).
 - Seed with fake Miami / Davie-style data (install vs pickup inventory impact)
 - Docs: DATA_MODEL, BUILD_PLAN, README
 
+**Status: done**
+
 ## Phase 1 - Daily jobs CRUD + line items
 
 - Jobs list + job detail (materials & labor)
@@ -21,11 +23,15 @@ Construction rollups, Master installer table).
 - Validation: order #, date, branch, jobType; sensible number parsing
 - Inventory effect displayed from jobType
 
+**Status: done**
+
 ## Phase 2 - Inventory by branch  (computed view)
 
 - On-hand = startingQty + signed job movements + adjustments
 - Filter by branch
 - Later: adjustment UI, low-stock alerts, transfers between branches
+
+**Status: done** (computed view + branch filter; adjustment UI still later)
 
 ## Phase 3 - Job P&L by order #  (lookup)
 
@@ -33,12 +39,17 @@ Construction rollups, Master installer table).
 - Labor + material + lodging/freight/misc
 - Later: export CSV, compare estimate vs actual
 
+**Status: done** (lookup + cost rollup; export later)
+
 ## Phase 4 - Construction / analytics dashboards
 
-- Construction class rollups (LF installed, open sites, utilization)
-- Revenue by branch / class / account exec
-- Crew hours trends
-- Event vs construction mix
+- `/analytics` filters: year, branch, job type group (INST vs PU vs Other)
+- Monthly LF (`qtyLf`) table by branch × job type group (Construction Data-style)
+- Summary cards: jobs, install LF vs pickup LF, revenue, rough labor cost
+- SVG stacked bar chart for monthly LF (no heavy chart dependency)
+- Server-side Prisma filters; only needed job/labor fields loaded
+
+**Status: done**
 
 ## Phase 5 - Auth + private company deploy
 
@@ -46,6 +57,8 @@ Construction rollups, Master installer table).
 - Private repo or private deploy; PostgreSQL via `DATABASE_URL`
 - Optional tablet/phone polish for field viewing
 - Strip or gate demo seed; import real workbook history carefully (no PII leakage)
+
+**Status: planned**
 
 ## Notes
 

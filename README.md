@@ -45,6 +45,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - **Jobs** - list, create/edit/delete, detail with material line items and labor
 - **Inventory** - on-hand by branch (starting qty +/- job movements +/- adjustments)
 - **P&L** - lookup by order number (e.g. `ORD-1001`)
+- **Analytics** - monthly LF by branch × job type, summary cards, bar chart (`/analytics`)
 
 Inventory movement: `INST` / `DELIVERY` decrease on-hand; `PU` / `PICKUP` increase it. Details in [docs/DATA_MODEL.md](docs/DATA_MODEL.md).
 
@@ -56,6 +57,10 @@ Inventory movement: `INST` / `DELIVERY` decrease on-hand; `PU` / `PICKUP` increa
 | Database | SQLite file | Prefer PostgreSQL |
 | Auth | None | Phase 5 - 1-2 office users |
 | PII | None beyond name/rate/role | Keep sensitive HR fields out or gated |
+
+## Phase status
+
+Phases 0-4 are implemented in this demo (scaffold through analytics). Phase 5 (auth + private deploy) is planned — see [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md).
 
 ## Docs
 
