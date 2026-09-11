@@ -126,3 +126,13 @@ model InventoryAdjustment {
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
   branch        Branch        @relation(fields: [branchId], references: [id])
 }
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("office") // admin | office
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
