@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminInventoryPage() {
   const [branches, items, materials, adjustments, recentAdjustments] = await Promise.all([
-    prisma.branch.findMany({ orderBy: { code: "asc" } }),
+    prisma.branch.findMany({ orderBy: [{ active: "desc" }, { code: "asc" }] }),
     prisma.inventoryItem.findMany({
       include: { branch: true },
       orderBy: [{ branch: { code: "asc" } }, { sku: "asc" }],
