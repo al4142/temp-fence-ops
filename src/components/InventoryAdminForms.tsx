@@ -7,7 +7,7 @@ import {
   createAdjustment,
 } from "@/app/admin/inventory/actions";
 
-type Branch = { id: string; code: string; name: string };
+type Branch = { id: string; code: string; name: string; active?: boolean };
 type Item = {
   id: string;
   sku: string;
@@ -93,7 +93,9 @@ export function InventoryItemForm({
           <input required value={form.name} onChange={(ev) => setF("name", ev.target.value)} className={"mt-1 " + inputCls} /></label>
         <label className="block text-sm"><span className="text-xs font-medium text-slate-600">Branch *</span>
           <select required value={form.branchId} onChange={(ev) => setF("branchId", ev.target.value)} className={"mt-1 " + inputCls}>
-            {branches.map((b) => <option key={b.id} value={b.id}>{b.code} - {b.name}</option>)}
+            {branches.filter((b) => b.active !== false || b.id === form.branchId).map((b) => (
+              <option key={b.id} value={b.id}>{b.code} - {b.name}</option>
+            ))}
           </select></label>
         <label className="block text-sm"><span className="text-xs font-medium text-slate-600">Description</span>
           <input value={form.description} onChange={(ev) => setF("description", ev.target.value)} className={"mt-1 " + inputCls} /></label>
