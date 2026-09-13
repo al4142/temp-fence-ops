@@ -31,7 +31,7 @@ Construction rollups, Master installer table).
 - Filter by branch
 - Later: adjustment UI, low-stock alerts, transfers between branches
 
-**Status: done** (computed view + branch filter; adjustment UI still later)
+**Status: done** (computed view + branch filter; adjustment UI in polish)
 
 ## Phase 3 - Job P&L by order #  (lookup)
 
@@ -58,6 +58,16 @@ Construction rollups, Master installer table).
 - Middleware protects all app pages except `/login`; job mutating server actions call `requireSession()`
 - Login / logout UI; signed-in name in nav
 - Private deploy guide: [PRIVATE_DEPLOY.md](PRIVATE_DEPLOY.md) (fork/private repo, Postgres, env vars, Vercel primary path, seed vs migrate, field tips)
+
+**Status: done**
+
+## Polish - Filters, admin CRUD, CSV import
+
+- **Jobs filters** (`/jobs`): date from/to, branch, job type, text search (order #, customer, city, address); query-param driven (shareable); pagination (50/page); clear filters
+- **Admin → Employees** (`/admin/employees`): list/create/edit/deactivate — name, nameKey, hourlyRate, position, branch (no PII)
+- **Admin → Inventory** (`/admin/inventory`): catalog CRUD per branch; manual InventoryAdjustment form; on-hand via existing inventory math; link from `/inventory`
+- **Admin → Import** (`/admin/import`): CSV upload (Excel → Save As CSV); flexible column aliases; dry-run preview; upsert/skip by orderNumber+date; optional SKU material columns; sample [import-template.csv](import-template.csv) + [IMPORT.md](IMPORT.md)
+- Nav: Admin section links for signed-in users
 
 **Status: done**
 

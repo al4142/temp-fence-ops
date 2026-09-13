@@ -50,10 +50,14 @@ These accounts exist only after `npm run db:seed`. **Do not use them in a real c
 ## What you can see in the demo
 
 - **Dashboard** - counts, recent jobs, inventory attention
-- **Jobs** - list, create/edit/delete, detail with material line items and labor
+- **Jobs** - list with shareable filters (date range, branch, job type, text search), pagination, create/edit/delete, detail with material & labor lines
 - **Inventory** - on-hand by branch (starting qty +/- job movements +/- adjustments)
 - **P&L** - lookup by order number (e.g. `ORD-1001`)
 - **Analytics** - monthly LF by branch × job type, summary cards, bar chart (`/analytics`)
+- **Admin** (nav, signed-in users)
+  - **Employees** (`/admin/employees`) - list/create/edit/deactivate (name, nameKey, rate, position, branch; no PII)
+  - **Inventory admin** (`/admin/inventory`) - catalog CRUD per branch + manual adjustments
+  - **CSV import** (`/admin/import`) - dry-run then commit; see [docs/IMPORT.md](docs/IMPORT.md)
 
 Inventory movement: `INST` / `DELIVERY` decrease on-hand; `PU` / `PICKUP` increase it. Details in [docs/DATA_MODEL.md](docs/DATA_MODEL.md).
 
@@ -68,7 +72,7 @@ Inventory movement: `INST` / `DELIVERY` decrease on-hand; `PU` / `PICKUP` increa
 
 ## Phase status
 
-Phases 0–5 are implemented in this demo (scaffold through auth + private deploy docs). See [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md).
+Phases 0–5 plus polish (filters, admin CRUD, CSV import) are implemented. See [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md).
 
 ## Auth (Phase 5)
 
@@ -79,6 +83,8 @@ Simple credentials for 1–2 office users: bcrypt-hashed passwords in Prisma `Us
 - [docs/DATA_MODEL.md](docs/DATA_MODEL.md) - tables, inventory rules, P&L
 - [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) - phased roadmap
 - [docs/PRIVATE_DEPLOY.md](docs/PRIVATE_DEPLOY.md) - private repo, Postgres, env, hosts, production users
+- [docs/IMPORT.md](docs/IMPORT.md) - Excel → CSV import
+- [docs/import-template.csv](docs/import-template.csv) - sample import file
 
 ## License
 
