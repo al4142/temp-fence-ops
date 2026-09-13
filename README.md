@@ -55,6 +55,7 @@ These accounts exist only after `npm run db:seed`. **Do not use them in a real c
 - **P&L** - lookup by order number (e.g. `ORD-1001`)
 - **Analytics** - monthly LF by branch × job type, summary cards, bar chart (`/analytics`)
 - **Admin** (nav, signed-in users)
+  - **Yards / branches** (`/admin/branches`) - add/edit/remove yards (code + name; code unique & uppercased; remove deletes if unused, else deactivates)
   - **Employees** (`/admin/employees`) - list/create/edit/deactivate (name, nameKey, rate, position, branch; no PII)
   - **Inventory admin** (`/admin/inventory`) - catalog CRUD per branch + manual adjustments
   - **CSV import** (`/admin/import`) - dry-run then commit; see [docs/IMPORT.md](docs/IMPORT.md)

@@ -13,7 +13,7 @@ export default async function InventoryPage({
   const branchFilter = sp.branch?.toUpperCase();
 
   const [branches, items, materials, adjustments] = await Promise.all([
-    prisma.branch.findMany({ orderBy: { code: "asc" } }),
+    prisma.branch.findMany({ orderBy: [{ active: "desc" }, { code: "asc" }] }),
     prisma.inventoryItem.findMany({
       include: { branch: true },
       orderBy: [{ branch: { code: "asc" } }, { sku: "asc" }],

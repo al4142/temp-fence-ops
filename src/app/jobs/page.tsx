@@ -32,7 +32,7 @@ export default async function JobsPage({
   const q = (sp.q ?? "").trim();
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
-  const branches = await prisma.branch.findMany({ orderBy: { code: "asc" } });
+  const branches = await prisma.branch.findMany({ orderBy: [{ active: "desc" }, { code: "asc" }] });
 
   const where: Prisma.JobWhereInput = {};
 
