@@ -8,7 +8,7 @@ import {
   reactivateEmployee,
 } from "@/app/admin/employees/actions";
 
-type Branch = { id: string; code: string; name: string };
+type Branch = { id: string; code: string; name: string; active?: boolean };
 type Employee = {
   id: string;
   name: string;
@@ -119,7 +119,7 @@ export function EmployeeAdminClient({ branches, employees }: Props) {
           <label className="block text-sm">
             <span className="text-xs font-medium text-slate-600">Branch *</span>
             <select required value={form.branchId} onChange={(ev) => set("branchId", ev.target.value)} className={"mt-1 " + inputCls}>
-              {branches.map((b) => (
+              {branches.filter((b) => b.active !== false || b.id === form.branchId).map((b) => (
                 <option key={b.id} value={b.id}>{b.code} - {b.name}</option>
               ))}
             </select>
