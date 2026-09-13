@@ -12,15 +12,20 @@ type Props = { params: Promise<{ id: string }> };
 export default async function EditJobPage({ params }: Props) {
   const { id } = await params;
 
-  const [job, branches, employees, inventory] = await Promise.all([
-    prisma.job.findUnique({
-      where: { id },
-      include: {
-        materials: true,
-        labor: true,
-      },
+  const job = await prisma.job.findUnique({
+    where: { id },
+    include: {
+      materials: true,
+      labor: true,
+    },
+  });
+  if (!job) notFound();
+
+  const [branches, employees, inventory] = await Promise.all([
+    prisma.branch.findMany({
+      where: { OR: [{ active: true }, { id: job.branchId }] },
+      orderBy: { code: "asc" },
     }),
-    prisma.branch.findMany({ orderBy: { code: "asc" } }),
     prisma.employee.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true, position: true, branchId: true, active: true },
@@ -30,8 +35,6 @@ export default async function EditJobPage({ params }: Props) {
       select: { id: true, sku: true, name: true, unit: true, branchId: true },
     }),
   ]);
-
-  if (!job) notFound();
 
   const initial: JobFormValues = {
     date: toDateInputValue(job.date),

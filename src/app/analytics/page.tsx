@@ -26,7 +26,7 @@ export default async function AnalyticsPage({
   const sp = await searchParams;
 
   const [branches, bounds, knownTypeRows] = await Promise.all([
-    prisma.branch.findMany({ orderBy: { code: "asc" } }),
+    prisma.branch.findMany({ orderBy: [{ active: "desc" }, { code: "asc" }] }),
     prisma.job.aggregate({ _min: { date: true }, _max: { date: true } }),
     prisma.job.findMany({ distinct: ["jobType"], select: { jobType: true } }),
   ]);
