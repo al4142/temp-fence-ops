@@ -31,12 +31,20 @@ export default async function InventoryPage({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Inventory by branch</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          On-hand = starting qty + job material movements (signed by job type) + manual
-          adjustments. INST/DELIVERY reduce stock; PU/PICKUP increase it.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Inventory by branch</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            On-hand = starting qty + job material movements (signed by job type) + manual
+            adjustments. INST/DELIVERY reduce stock; PU/PICKUP increase it.
+          </p>
+        </div>
+        <a
+          href="/admin/inventory"
+          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        >
+          Manage catalog / adjustments
+        </a>
       </div>
 
       <div className="flex flex-wrap gap-2 text-sm">
