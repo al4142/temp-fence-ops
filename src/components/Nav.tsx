@@ -10,6 +10,12 @@ const links = [
   { href: "/analytics", label: "Analytics" },
 ];
 
+const adminLinks = [
+  { href: "/admin/employees", label: "Employees" },
+  { href: "/admin/inventory", label: "Inv. admin" },
+  { href: "/admin/import", label: "Import" },
+];
+
 export async function Nav() {
   const session = await getSession();
 
@@ -26,6 +32,21 @@ export async function Nav() {
           <div className="flex flex-wrap items-center gap-3">
             <nav className="flex flex-wrap gap-1 text-sm">
               {links.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className="rounded-md px-3 py-1.5 text-slate-700 hover:bg-slate-100"
+                >
+                  {l.label}
+                </Link>
+              ))}
+              <span className="mx-1 hidden self-center text-slate-300 sm:inline" aria-hidden>
+                |
+              </span>
+              <span className="self-center px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Admin
+              </span>
+              {adminLinks.map((l) => (
                 <Link
                   key={l.href}
                   href={l.href}
