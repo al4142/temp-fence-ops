@@ -11,6 +11,7 @@ const links = [
 ];
 
 const adminLinks = [
+  { href: "/admin/branches", label: "Yards" },
   { href: "/admin/employees", label: "Employees" },
   { href: "/admin/inventory", label: "Inv. admin" },
   { href: "/admin/import", label: "Import" },
