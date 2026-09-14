@@ -1,4 +1,5 @@
 import { JOB_TYPES } from "./job-constants";
+import { VARIANCE_REASONS } from "./ops-constants";
 
 export type MaterialInput = {
   inventoryItemId: string | null;
@@ -11,6 +12,32 @@ export type LaborInput = {
   employeeId: string;
   regularHours: number;
   overtimeHours: number;
+};
+
+export type LodgingLineInput = {
+  amount: number;
+  facility: string | null;
+  notes: string | null;
+};
+
+export type FreightLineInput = {
+  company: string | null;
+  cost: number;
+  notes: string | null;
+};
+
+export type MiscLineInput = {
+  amount: number;
+  category: string | null;
+  notes: string | null;
+};
+
+export type VarianceInput = {
+  inventoryItemId: string | null;
+  itemName: string | null;
+  quantity: number;
+  reason: string;
+  notes: string | null;
 };
 
 export type JobFormValues = {
@@ -29,11 +56,12 @@ export type JobFormValues = {
   notes: string;
   accountExec: string;
   revenue: string;
-  lodging: string;
-  freight: string;
-  misc: string;
+  lodgingLines: LodgingLineInput[];
+  freightLines: FreightLineInput[];
+  miscLines: MiscLineInput[];
   materials: MaterialInput[];
   labor: LaborInput[];
+  variances: VarianceInput[];
 };
 
 export type JobFormPayload = {
@@ -55,8 +83,12 @@ export type JobFormPayload = {
   lodging: number;
   freight: number;
   misc: number;
+  lodgingLines: LodgingLineInput[];
+  freightLines: FreightLineInput[];
+  miscLines: MiscLineInput[];
   materials: MaterialInput[];
   labor: LaborInput[];
+  variances: VarianceInput[];
 };
 
 export type ActionResult =
@@ -106,11 +138,12 @@ export function emptyJobFormValues(defaults?: {
     notes: "",
     accountExec: "",
     revenue: "0",
-    lodging: "0",
-    freight: "0",
-    misc: "0",
+    lodgingLines: [],
+    freightLines: [],
+    miscLines: [],
     materials: [],
     labor: [],
+    variances: [],
   };
 }
 
@@ -166,6 +199,70 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
     labor.push({ employeeId, regularHours, overtimeHours });
   }
 
+  const lodgingLines: LodgingLineInput[] = [];
+  for (const row of input.lodgingLines ?? []) {
+    const amount = parseRequiredNumber(row.amount as unknown as string, 0);
+    if (amount === 0 && !(row.facility?.trim() || row.notes?.trim())) continue;
+    if (amount < 0) return { ok: false, error: "Lodging amount cannot be negative." };
+    lodgingLines.push({
+      amount,
+      facility: row.facility?.trim() || null,
+      notes: row.notes?.trim() || null,
+    });
+  }
+
+  const freightLines: FreightLineInput[] = [];
+  for (const row of input.freightLines ?? []) {
+    const cost = parseRequiredNumber(row.cost as unknown as string, 0);
+    if (cost === 0 && !(row.company?.trim() || row.notes?.trim())) continue;
+    if (cost < 0) return { ok: false, error: "Freight cost cannot be negative." };
+    freightLines.push({
+      company: row.company?.trim() || null,
+      cost,
+      notes: row.notes?.trim() || null,
+    });
+  }
+
+  const miscLines: MiscLineInput[] = [];
+  for (const row of input.miscLines ?? []) {
+    const amount = parseRequiredNumber(row.amount as unknown as string, 0);
+    if (amount === 0 && !(row.category?.trim() || row.notes?.trim())) continue;
+    if (amount < 0) return { ok: false, error: "Misc amount cannot be negative." };
+    miscLines.push({
+      amount,
+      category: row.category?.trim() || null,
+      notes: row.notes?.trim() || null,
+    });
+  }
+
+  const knownVariance = new Set<string>(VARIANCE_REASONS as unknown as string[]);
+  const variances: VarianceInput[] = [];
+  for (const row of input.variances ?? []) {
+    const quantity = parseOptionalNumber(row.quantity as unknown as string);
+    if (quantity === null || quantity === 0) continue;
+    const reason = (row.reason ?? "").trim();
+    if (!reason) return { ok: false, error: "Each variance line needs a reason." };
+    if (!knownVariance.has(reason)) {
+      return { ok: false, error: `Unknown variance reason: ${reason}` };
+    }
+    const inventoryItemId = row.inventoryItemId?.trim() || null;
+    const itemName = row.itemName?.trim() || null;
+    if (!inventoryItemId && !itemName) {
+      return { ok: false, error: "Each variance line needs an inventory item or a name." };
+    }
+    variances.push({
+      inventoryItemId,
+      itemName: inventoryItemId ? null : itemName,
+      quantity,
+      reason,
+      notes: row.notes?.trim() || null,
+    });
+  }
+
+  const lodging = lodgingLines.reduce((s, l) => s + l.amount, 0);
+  const freight = freightLines.reduce((s, l) => s + l.cost, 0);
+  const misc = miscLines.reduce((s, l) => s + l.amount, 0);
+
   return {
     ok: true,
     data: {
@@ -184,11 +281,15 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
       notes: input.notes.trim() || null,
       accountExec: input.accountExec.trim() || null,
       revenue: parseRequiredNumber(input.revenue, 0),
-      lodging: parseRequiredNumber(input.lodging, 0),
-      freight: parseRequiredNumber(input.freight, 0),
-      misc: parseRequiredNumber(input.misc, 0),
+      lodging,
+      freight,
+      misc,
+      lodgingLines,
+      freightLines,
+      miscLines,
       materials,
       labor,
+      variances,
     },
   };
 }
