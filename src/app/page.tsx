@@ -6,8 +6,18 @@ import { computeOnHand } from "@/lib/inventory";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [jobCount, branchCount, employeeCount, recentJobs, items, materials, adjustments] =
-    await Promise.all([
+  const [
+    jobCount,
+    branchCount,
+    employeeCount,
+    recentJobs,
+    items,
+    materials,
+    adjustments,
+    transferLines,
+    writeOffs,
+    variances,
+  ] = await Promise.all([
       prisma.job.count(),
       prisma.branch.count(),
       prisma.employee.count(),
@@ -21,9 +31,23 @@ export default async function HomePage() {
         include: { job: { select: { jobType: true, branchId: true } } },
       }),
       prisma.inventoryAdjustment.findMany(),
+      prisma.transferLine.findMany({
+        select: { fromInventoryItemId: true, toInventoryItemId: true, quantity: true },
+      }),
+      prisma.writeOff.findMany({ select: { inventoryItemId: true, quantity: true } }),
+      prisma.jobMaterialVariance.findMany({
+        select: { inventoryItemId: true, quantity: true },
+      }),
     ]);
 
-  const onHand = computeOnHand({ items, materials, adjustments });
+  const onHand = computeOnHand({
+    items,
+    materials,
+    adjustments,
+    transferLines,
+    writeOffs,
+    variances,
+  });
   const lowStock = onHand.filter((r) => r.onHand < r.startingQty * 0.85).slice(0, 5);
   const revenue = await prisma.job.aggregate({ _sum: { revenue: true } });
 
