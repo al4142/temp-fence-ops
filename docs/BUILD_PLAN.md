@@ -44,7 +44,7 @@ Construction rollups, Master installer table).
 ## Phase 4 - Construction / analytics dashboards
 
 - `/analytics` filters: year, branch, job type group (INST vs PU vs Other)
-- Monthly LF (`qtyLf`) table by branch × job type group (Construction Data–style)
+- Monthly LF (`qtyLf`) table by branch x job type group (Construction Data-style)
 - Summary cards: jobs, install LF vs pickup LF, revenue, rough labor cost
 - SVG stacked bar chart for monthly LF (no heavy chart dependency)
 - Server-side Prisma filters; only needed job/labor fields loaded
@@ -54,7 +54,7 @@ Construction rollups, Master installer table).
 ## Phase 5 - Auth + private company deploy
 
 - Credentials auth: Prisma `User` + bcrypt password hash + signed httpOnly session cookie (`AUTH_SECRET` / jose)
-- Seeded demo users (`admin@demo.local`, `office@demo.local`) — demo-only, documented in README
+- Seeded demo users (`admin@demo.local`, `office@demo.local`) - demo-only, documented in README
 - Middleware protects all app pages except `/login`; job mutating server actions call `requireSession()`
 - Login / logout UI; signed-in name in nav
 - Private deploy guide: [PRIVATE_DEPLOY.md](PRIVATE_DEPLOY.md) (fork/private repo, Postgres, env vars, Vercel primary path, seed vs migrate, field tips)
@@ -64,9 +64,9 @@ Construction rollups, Master installer table).
 ## Polish - Filters, admin CRUD, CSV import
 
 - **Jobs filters** (`/jobs`): date from/to, branch, job type, text search (order #, customer, city, address); query-param driven (shareable); pagination (50/page); clear filters
-- **Admin → Employees** (`/admin/employees`): list/create/edit/deactivate — name, nameKey, hourlyRate, position, branch (no PII)
-- **Admin → Inventory** (`/admin/inventory`): catalog CRUD per branch; manual InventoryAdjustment form; on-hand via existing inventory math; link from `/inventory`
-- **Admin → Import** (`/admin/import`): CSV upload (Excel → Save As CSV); flexible column aliases; dry-run preview; upsert/skip by orderNumber+date; optional SKU material columns; sample [import-template.csv](import-template.csv) + [IMPORT.md](IMPORT.md)
+- **Admin -> Employees** (`/admin/employees`): list/create/edit/deactivate - name, nameKey, hourlyRate, position, branch (no PII)
+- **Admin -> Inventory** (`/admin/inventory`): catalog CRUD per branch; manual InventoryAdjustment form; on-hand via existing inventory math; link from `/inventory`
+- **Admin -> Import** (`/admin/import`): CSV upload (Excel -> Save As CSV); flexible column aliases; dry-run preview; upsert/skip by orderNumber+date; optional SKU material columns; sample [import-template.csv](import-template.csv) + [IMPORT.md](IMPORT.md)
 - Nav: Admin section links for signed-in users
 
 **Status: done**
@@ -75,3 +75,17 @@ Construction rollups, Master installer table).
 
 - Desktop-first UI; tables should remain usable on tablet.
 - Public repo must keep **fake sample data only**.
+
+## Wave 1 - Ops ledger + cost lines + export
+
+- Admin **Vendors** CRUD; wired into yard expenses
+- Job **lodging / freight / misc** line lists on create/edit/detail/P&L (denormalized sums kept)
+- **Yard expense** ledger (`/expenses`)
+- **Transfers** (`/transfers`) - qty move between yards; exclude from job analytics
+- **Write-offs** (`/write-offs`) - damaged/scrap/shrink; exclude from job analytics
+- **Job material variance** lines + inventory + P&L variance
+- **Export Project** button -> `.xlsx` (exceljs) on job detail
+- Pickup BOM / materials from LF or original job - deferred to Wave 2 (README note only)
+- Purchases / landed / avg cost - Wave 2-3
+
+**Status: done**

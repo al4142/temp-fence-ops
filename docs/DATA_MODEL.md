@@ -9,12 +9,21 @@ Branch 1--* Employee
 Branch 1--* InventoryItem
 Branch 1--* Job
 Branch 1--* InventoryAdjustment
+Branch 1--* YardExpense
+Branch 1--* WriteOff
+Branch 1--* Transfer (from / to)
+
+Vendor 1--* YardExpense
 
 Job 1--* JobMaterial
 Job 1--* JobLabor
+Job 1--* JobLodgingLine
+Job 1--* JobFreightLine
+Job 1--* JobMiscLine
+Job 1--* JobMaterialVariance
 
-InventoryItem 1--* JobMaterial   (optional; free-text itemName allowed)
-InventoryItem 1--* InventoryAdjustment
+Transfer 1--* TransferLine
+InventoryItem 1--* JobMaterial / WriteOff / TransferLine / JobMaterialVariance / InventoryAdjustment
 Employee 1--* JobLabor
 ```
 
@@ -27,35 +36,56 @@ No SSN, DOB, address, phone, or personal email.
 
 ### InventoryItem
 Catalog row **per branch** (`@@unique([branchId, sku])`).
-- `startingQty` — opening balance for the demo / period
-- `unitCost` — used for P&L material cost (not sell price)
-- `reusable` — fence panels/bases typically true; consumables may be false
+- `startingQty` - opening balance for the demo / period
+- `unitCost` - used for P&L material cost (not sell price); Wave 3 will refine avg / landed cost
+- `reusable` - fence panels/bases typically true; consumables may be false
 
 ### Job
 One daily ticket. Multiple jobs can share an `orderNumber` (install then pickup).
-Key fields: `date`, `branchId`, `class` (EVENT / CONSTRUCTION), `orderNumber`, `customer`,
-site fields, `jobType`, fence specs, `revenue`, `lodging`, `freight`, `misc`.
+Key fields: `date`, `branchId`, `class`, `orderNumber`, `customer`, site fields, `jobType`,
+fence specs, `revenue`. `lodging` / `freight` / `misc` are **denormalized sums** of their line tables.
+
+### Job cost lines
+- `JobLodgingLine` - amount, hotel/facility, notes
+- `JobFreightLine` - company, cost, notes
+- `JobMiscLine` - amount, category/description, notes (job-tied fuel/PPE/etc.)
 
 ### JobMaterial (line items)
-Not wide columns. Each row is a quantity of one item:
-- Prefer `inventoryItemId` for catalog items (drives inventory + P&L cost)
-- Or `itemName` free-text for one-offs / consumables (no inventory effect; $0 material cost)
+Prefer `inventoryItemId` for catalog items (drives inventory + P&L cost), or `itemName` free-text.
+
+### JobMaterialVariance
+Job-tied inventory delta (`quantity` signed): damaged on site / lost / extra used / returned unused.
+Moves on-hand; P&L treats `-qty * unitCost` as variance cost.
 
 ### JobLabor
-`regularHours` + `overtimeHours` against an `Employee`. Cost =
-`reg * rate + ot * rate * 1.5` (demo convention).
+`regularHours` + `overtimeHours` against an `Employee`. Cost = `reg * rate + ot * rate * 1.5`.
+
+### Vendor
+Admin CRUD: name, optional notes, active. Used on yard expenses; future purchases.
+
+### YardExpense
+Yard ledger (not forced onto jobs): date, yard, category (PPE/Consumables/Tools/Food/Equipment/Other),
+optional vendor, amount, purchased by, notes.
+
+### Transfer / TransferLine
+From yard -> to yard. Lines reference from/to inventory items (destination SKU created if missing).
+Excluded from job analytics. Carry cost conceptual until Wave 3.
+
+### WriteOff
+Yard, item, qty, reason (damaged/scrap/shrink), date, notes. Qty down. Excluded from job analytics.
 
 ### InventoryAdjustment
-Manual corrections (damage, count, transfer). `quantityDelta` positive adds to on-hand.
+Manual corrections. `quantityDelta` positive adds to on-hand.
 
 ## Inventory movement rules
 
-On-hand for an inventory item:
-
 ```
 onHand = startingQty
-       + SUM (JobMaterial.quantity * sign(job.jobType))   // linked items only
-       + SUM InventoryAdjustment.quantityDelta
+       + sum (JobMaterial.quantity x sign(job.jobType))   // linked items only
+       + sum InventoryAdjustment.quantityDelta
+       + sum TransferLine (-from / +to)
+       + sum WriteOff (-quantity)
+       + sum JobMaterialVariance.quantity                 // signed delta
 ```
 
 | jobType (normalized) | Sign | Meaning |
@@ -69,18 +99,17 @@ Implementation: `src/lib/inventory.ts`.
 
 ## P&L derivation (by order number)
 
-Aggregate all `Job` rows with the same `orderNumber`:
-
 | Component | Formula |
 |-----------|---------|
-| Revenue | SUM job.revenue |
-| Labor cost | SUM (reg*rate + ot*rate*1.5) |
-| Material cost | SUM (qty * inventoryItem.unitCost); free-text -> 0 |
-| Lodging / Freight / Misc | SUM respective job fields |
-| Total cost | labor + materials + lodging + freight + misc |
+| Revenue | sum job.revenue |
+| Labor cost | sum (regxrate + otxratex1.5) |
+| Material cost | sum (qty x inventoryItem.unitCost); free-text -> 0 |
+| Lodging / Freight / Misc | sum cost line amounts (fallback: denormalized job fields) |
+| Material variance | sum (-variance.qty x unitCost) |
+| Total cost | labor + materials + lodging + freight + misc + variance |
 | Gross profit | revenue - total cost |
 
-See `src/lib/pnl.ts` and the `/pnl` page.
+Transfers, write-offs, and yard expenses are **not** in job P&L / analytics.
 
 ## SQLite vs PostgreSQL
 
