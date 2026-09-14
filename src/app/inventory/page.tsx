@@ -12,19 +12,40 @@ export default async function InventoryPage({
   const sp = await searchParams;
   const branchFilter = sp.branch?.toUpperCase();
 
-  const [branches, items, materials, adjustments] = await Promise.all([
-    prisma.branch.findMany({ orderBy: [{ active: "desc" }, { code: "asc" }] }),
-    prisma.inventoryItem.findMany({
-      include: { branch: true },
-      orderBy: [{ branch: { code: "asc" } }, { sku: "asc" }],
-    }),
-    prisma.jobMaterial.findMany({
-      include: { job: { select: { jobType: true, branchId: true } } },
-    }),
-    prisma.inventoryAdjustment.findMany(),
-  ]);
+  const [branches, items, materials, adjustments, transferLines, writeOffs, variances] =
+    await Promise.all([
+      prisma.branch.findMany({ orderBy: [{ active: "desc" }, { code: "asc" }] }),
+      prisma.inventoryItem.findMany({
+        include: { branch: true },
+        orderBy: [{ branch: { code: "asc" } }, { sku: "asc" }],
+      }),
+      prisma.jobMaterial.findMany({
+        include: { job: { select: { jobType: true, branchId: true } } },
+      }),
+      prisma.inventoryAdjustment.findMany(),
+      prisma.transferLine.findMany({
+        select: {
+          fromInventoryItemId: true,
+          toInventoryItemId: true,
+          quantity: true,
+        },
+      }),
+      prisma.writeOff.findMany({
+        select: { inventoryItemId: true, quantity: true },
+      }),
+      prisma.jobMaterialVariance.findMany({
+        select: { inventoryItemId: true, quantity: true },
+      }),
+    ]);
 
-  let rows = computeOnHand({ items, materials, adjustments });
+  let rows = computeOnHand({
+    items,
+    materials,
+    adjustments,
+    transferLines,
+    writeOffs,
+    variances,
+  });
   if (branchFilter) {
     rows = rows.filter((r) => r.branchCode === branchFilter);
   }
@@ -35,8 +56,9 @@ export default async function InventoryPage({
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Inventory by branch</h1>
           <p className="mt-1 text-sm text-slate-600">
-            On-hand = starting qty + job material movements (signed by job type) + manual
-            adjustments. INST/DELIVERY reduce stock; PU/PICKUP increase it.
+            On-hand = starting + job movements + adjustments + transfers + write-offs + job
+            material variance. INST/DELIVERY reduce stock; PU/PICKUP increase it. Transfers and
+            write-offs are excluded from job analytics.
           </p>
         </div>
         <a
@@ -67,8 +89,11 @@ export default async function InventoryPage({
               <th className="px-3 py-2 font-medium">SKU</th>
               <th className="px-3 py-2 font-medium">Name</th>
               <th className="px-3 py-2 font-medium text-right">Starting</th>
-              <th className="px-3 py-2 font-medium text-right">Moves</th>
+              <th className="px-3 py-2 font-medium text-right">Jobs</th>
               <th className="px-3 py-2 font-medium text-right">Adj</th>
+              <th className="px-3 py-2 font-medium text-right">Xfer</th>
+              <th className="px-3 py-2 font-medium text-right">W/O</th>
+              <th className="px-3 py-2 font-medium text-right">Var</th>
               <th className="px-3 py-2 font-medium text-right">On hand</th>
               <th className="px-3 py-2 font-medium text-right">Unit cost</th>
             </tr>
@@ -89,6 +114,17 @@ export default async function InventoryPage({
                 <td className="px-3 py-2 text-right tabular-nums">
                   {r.adjustmentQty > 0 ? "+" : ""}
                   {formatNumber(r.adjustmentQty, 0)}
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums">
+                  {r.transferQty > 0 ? "+" : ""}
+                  {formatNumber(r.transferQty, 0)}
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums">
+                  {formatNumber(r.writeOffQty, 0)}
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums">
+                  {r.varianceQty > 0 ? "+" : ""}
+                  {formatNumber(r.varianceQty, 0)}
                 </td>
                 <td className="px-3 py-2 text-right font-medium tabular-nums">
                   {formatNumber(r.onHand, 0)} {r.unit}
