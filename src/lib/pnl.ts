@@ -7,9 +7,13 @@ export type JobForPnL = {
   jobType: string;
   customer: string;
   revenue: number;
-  lodging: number;
-  freight: number;
-  misc: number;
+  lodgingLines?: Array<{ amount: number }>;
+  freightLines?: Array<{ cost: number }>;
+  miscLines?: Array<{ amount: number }>;
+  /** Fallback when lines not loaded */
+  lodging?: number;
+  freight?: number;
+  misc?: number;
   labor: Array<{
     regularHours: number;
     overtimeHours: number;
@@ -17,6 +21,12 @@ export type JobForPnL = {
   }>;
   materials: Array<{
     quantity: number;
+    itemName: string | null;
+    inventoryItem: { name: string; unitCost: number } | null;
+  }>;
+  variances?: Array<{
+    quantity: number;
+    reason: string;
     itemName: string | null;
     inventoryItem: { name: string; unitCost: number } | null;
   }>;
@@ -32,6 +42,8 @@ export type OrderPnL = {
   lodging: number;
   freight: number;
   misc: number;
+  /** Material variance at unit cost (can be negative if returns) */
+  varianceCost: number;
   totalCost: number;
   grossProfit: number;
   jobs: JobForPnL[];
@@ -50,6 +62,27 @@ export function materialCostForLine(quantity: number, unitCost: number): number 
   return quantity * unitCost;
 }
 
+function sumLodging(job: JobForPnL): number {
+  if (job.lodgingLines && job.lodgingLines.length > 0) {
+    return job.lodgingLines.reduce((s, l) => s + l.amount, 0);
+  }
+  return job.lodging ?? 0;
+}
+
+function sumFreight(job: JobForPnL): number {
+  if (job.freightLines && job.freightLines.length > 0) {
+    return job.freightLines.reduce((s, l) => s + l.cost, 0);
+  }
+  return job.freight ?? 0;
+}
+
+function sumMisc(job: JobForPnL): number {
+  if (job.miscLines && job.miscLines.length > 0) {
+    return job.miscLines.reduce((s, l) => s + l.amount, 0);
+  }
+  return job.misc ?? 0;
+}
+
 export function buildOrderPnL(jobs: JobForPnL[]): OrderPnL | null {
   if (jobs.length === 0) return null;
   const orderNumber = jobs[0].orderNumber;
@@ -61,12 +94,13 @@ export function buildOrderPnL(jobs: JobForPnL[]): OrderPnL | null {
   let misc = 0;
   let laborCost = 0;
   let materialCost = 0;
+  let varianceCost = 0;
 
   for (const job of jobs) {
     revenue += job.revenue;
-    lodging += job.lodging;
-    freight += job.freight;
-    misc += job.misc;
+    lodging += sumLodging(job);
+    freight += sumFreight(job);
+    misc += sumMisc(job);
     for (const line of job.labor) {
       laborCost += laborCostForLine(
         line.regularHours,
@@ -78,9 +112,16 @@ export function buildOrderPnL(jobs: JobForPnL[]): OrderPnL | null {
       const unitCost = mat.inventoryItem?.unitCost ?? 0;
       materialCost += materialCostForLine(mat.quantity, unitCost);
     }
+    for (const v of job.variances ?? []) {
+      const unitCost = v.inventoryItem?.unitCost ?? 0;
+      // Extra used / damage (negative qty leaving yard) increases cost as abs(qty)*cost
+      // Returned unused (positive) reduces cost
+      varianceCost += materialCostForLine(-v.quantity, unitCost);
+    }
   }
 
-  const totalCost = laborCost + materialCost + lodging + freight + misc;
+  const totalCost =
+    laborCost + materialCost + lodging + freight + misc + varianceCost;
   return {
     orderNumber,
     customer,
@@ -91,6 +132,7 @@ export function buildOrderPnL(jobs: JobForPnL[]): OrderPnL | null {
     lodging,
     freight,
     misc,
+    varianceCost,
     totalCost,
     grossProfit: revenue - totalCost,
     jobs,
@@ -105,6 +147,7 @@ export function pnlSummaryLines(pnl: OrderPnL): string[] {
     `Lodging: ${formatCurrency(pnl.lodging)}`,
     `Freight: ${formatCurrency(pnl.freight)}`,
     `Misc: ${formatCurrency(pnl.misc)}`,
+    `Material variance: ${formatCurrency(pnl.varianceCost)}`,
     `Total cost: ${formatCurrency(pnl.totalCost)}`,
     `Gross profit: ${formatCurrency(pnl.grossProfit)}`,
   ];
