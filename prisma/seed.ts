@@ -7,6 +7,15 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.jobLabor.deleteMany();
   await prisma.jobMaterial.deleteMany();
+  await prisma.jobLodgingLine.deleteMany();
+  await prisma.jobFreightLine.deleteMany();
+  await prisma.jobMiscLine.deleteMany();
+  await prisma.jobMaterialVariance.deleteMany();
+  await prisma.transferLine.deleteMany();
+  await prisma.transfer.deleteMany();
+  await prisma.writeOff.deleteMany();
+  await prisma.yardExpense.deleteMany();
+  await prisma.vendor.deleteMany();
   await prisma.inventoryAdjustment.deleteMany();
   await prisma.job.deleteMany();
   await prisma.inventoryItem.deleteMany();
@@ -157,8 +166,14 @@ async function main() {
       accountExec: "A. Lopez",
       revenue: 4200,
       lodging: 0,
-      freight: 150,
-      misc: 75,
+      freight: 150.0,
+      freightLines: {
+        create: [{ company: "Demo Freight Co", cost: 150.0, notes: "Seed" }],
+      },
+      misc: 75.0,
+      miscLines: {
+        create: [{ amount: 75.0, category: "Supplies", notes: "Seed" }],
+      },
       materials: {
         create: [
           { inventoryItemId: miaPanel.id, quantity: 40, notes: "Perimeter" },
@@ -194,7 +209,10 @@ async function main() {
       accountExec: "A. Lopez",
       revenue: 800,
       lodging: 0,
-      freight: 100,
+      freight: 100.0,
+      freightLines: {
+        create: [{ company: "Demo Freight Co", cost: 100.0, notes: "Seed" }],
+      },
       misc: 0,
       materials: {
         create: [
@@ -231,8 +249,14 @@ async function main() {
       accountExec: "J. Torres",
       revenue: 6500,
       lodging: 0,
-      freight: 200,
-      misc: 50,
+      freight: 200.0,
+      freightLines: {
+        create: [{ company: "Demo Freight Co", cost: 200.0, notes: "Seed" }],
+      },
+      misc: 50.0,
+      miscLines: {
+        create: [{ amount: 50.0, category: "Supplies", notes: "Seed" }],
+      },
       materials: {
         create: [
           { inventoryItemId: davPanel.id, quantity: 60 },
@@ -267,7 +291,12 @@ async function main() {
       notes: "Drop panels; customer installs",
       accountExec: "A. Lopez",
       revenue: 900,
-      freight: 80,
+      lodging: 0,
+      freight: 80.0,
+      freightLines: {
+        create: [{ company: "Demo Freight Co", cost: 80.0, notes: "Seed" }],
+      },
+      misc: 0,
       materials: {
         create: [
           { inventoryItemId: miaPanel.id, quantity: 10 },
@@ -288,6 +317,21 @@ async function main() {
       branchId: miami.id,
       quantityDelta: -2,
       reason: "Damaged panels written off (demo)",
+    },
+  });
+
+  const vendor = await prisma.vendor.create({
+    data: { name: "Demo Safety Supply", notes: "PPE & consumables", active: true },
+  });
+  await prisma.yardExpense.create({
+    data: {
+      date: new Date("2026-03-01"),
+      branchId: miami.id,
+      category: "PPE",
+      vendorId: vendor.id,
+      amount: 120,
+      purchasedBy: "Demo Admin",
+      notes: "Gloves and glasses (seed)",
     },
   });
 
