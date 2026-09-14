@@ -88,7 +88,7 @@ export function TransferClient({ branches, items, transfers, today }: Props) {
       <form onSubmit={onSubmit} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-lg font-medium text-slate-900">New transfer</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Moves qty from yard -> to yard (from down, to up). Excluded from job analytics. Carry
+          Moves qty from yard to destination yard (from down, to up). Excluded from job analytics. Carry
           cost is conceptual in Wave 1; Wave 3 will refine avg cost.
         </p>
         {error ? (
@@ -208,7 +208,7 @@ export function TransferClient({ branches, items, transfers, today }: Props) {
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="font-medium text-slate-900">
-                  {t.date} | {t.fromBranch.code} -> {t.toBranch.code}
+                  {t.date} | {t.fromBranch.code} to {t.toBranch.code}
                 </p>
                 {t.notes ? <p className="text-sm text-slate-600">{t.notes}</p> : null}
               </div>
