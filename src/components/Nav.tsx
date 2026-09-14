@@ -6,12 +6,16 @@ const links = [
   { href: "/", label: "Dashboard" },
   { href: "/jobs", label: "Jobs" },
   { href: "/inventory", label: "Inventory" },
+  { href: "/transfers", label: "Transfers" },
+  { href: "/write-offs", label: "Write-offs" },
+  { href: "/expenses", label: "Yard expenses" },
   { href: "/pnl", label: "P&L" },
   { href: "/analytics", label: "Analytics" },
 ];
 
 const adminLinks = [
   { href: "/admin/branches", label: "Yards" },
+  { href: "/admin/vendors", label: "Vendors" },
   { href: "/admin/employees", label: "Employees" },
   { href: "/admin/inventory", label: "Inv. admin" },
   { href: "/admin/import", label: "Import" },
