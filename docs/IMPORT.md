@@ -27,7 +27,7 @@ At least one header alias for each:
 
 `class`, `customer`, `address`, `city`, `fenceType`, `qtyLf`, `screen`, `notes`, `accountExec`, `revenue`, `labor` / `assigned`, `hours`, `ot`.
 
-Material columns whose header looks like a SKU (`PANEL-6`, `BASE-STD`) are treated as quantities for that SKU on the job's branch.
+Material columns whose header looks like a SKU (`PANEL-6`, `BASE-STD`) are treated as quantities for that SKU on the job’s branch.
 
 ## Dry-run and commit
 
@@ -44,5 +44,5 @@ See [import-template.csv](import-template.csv).
 
 - Server-side parse only (no spreadsheet engine).
 - Labor: at most one employee per row (matched by name or `nameKey`).
-- Materials: only SKU-header columns that exist in that branch's catalog are linked.
+- Materials: only SKU-header columns that exist in that branch’s catalog are linked.
 - Idempotency key: `orderNumber` + `date` (UTC date-only).
