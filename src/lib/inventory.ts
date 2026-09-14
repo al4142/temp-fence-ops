@@ -4,6 +4,11 @@
  * OUTBOUND (negative on-hand): INST, INSTALL, DELIVERY, DEL, DROP
  * INBOUND  (positive on-hand): PU, PICKUP, PICK-UP, RETURN, RET
  * Unknown / other types: zero effect (no inventory movement)
+ *
+ * Also applied (not job analytics):
+ * - Transfers: from yard -qty, to yard +qty
+ * - Write-offs: -qty
+ * - Job material variances: quantity is the inventory delta (+/-)
  */
 
 const OUTBOUND = new Set([
@@ -49,13 +54,22 @@ export type OnHandRow = {
   startingQty: number;
   movementQty: number;
   adjustmentQty: number;
+  transferQty: number;
+  writeOffQty: number;
+  varianceQty: number;
   onHand: number;
   unitCost: number;
 };
 
 /**
- * onHand = startingQty + sum(job material qty * sign(jobType)) + sum(adjustments)
- * Only materials linked to an InventoryItem affect on-hand.
+ * onHand = startingQty
+ *   + sum(job material qty * sign(jobType))
+ *   + sum(adjustments)
+ *   + sum(transfer deltas)
+ *   + sum(write-off deltas)   // always negative qty stored as -quantity
+ *   + sum(job material variances)
+ * Only materials/variances linked to an InventoryItem affect on-hand.
+ * Transfers and write-offs are excluded from job analytics.
  */
 export function computeOnHand(params: {
   items: Array<{
@@ -77,6 +91,19 @@ export function computeOnHand(params: {
     inventoryItemId: string;
     quantityDelta: number;
   }>;
+  transferLines?: Array<{
+    fromInventoryItemId: string;
+    toInventoryItemId: string;
+    quantity: number;
+  }>;
+  writeOffs?: Array<{
+    inventoryItemId: string;
+    quantity: number;
+  }>;
+  variances?: Array<{
+    inventoryItemId: string | null;
+    quantity: number;
+  }>;
 }): OnHandRow[] {
   const movement = new Map<string, number>();
   for (const m of params.materials) {
@@ -92,10 +119,48 @@ export function computeOnHand(params: {
     adj.set(a.inventoryItemId, (adj.get(a.inventoryItemId) ?? 0) + a.quantityDelta);
   }
 
+  const transfer = new Map<string, number>();
+  for (const t of params.transferLines ?? []) {
+    transfer.set(
+      t.fromInventoryItemId,
+      (transfer.get(t.fromInventoryItemId) ?? 0) - t.quantity
+    );
+    transfer.set(
+      t.toInventoryItemId,
+      (transfer.get(t.toInventoryItemId) ?? 0) + t.quantity
+    );
+  }
+
+  const writeOff = new Map<string, number>();
+  for (const w of params.writeOffs ?? []) {
+    writeOff.set(
+      w.inventoryItemId,
+      (writeOff.get(w.inventoryItemId) ?? 0) - Math.abs(w.quantity)
+    );
+  }
+
+  const variance = new Map<string, number>();
+  for (const v of params.variances ?? []) {
+    if (!v.inventoryItemId) continue;
+    variance.set(
+      v.inventoryItemId,
+      (variance.get(v.inventoryItemId) ?? 0) + v.quantity
+    );
+  }
+
   return params.items.map((item) => {
     const movementQty = movement.get(item.id) ?? 0;
     const adjustmentQty = adj.get(item.id) ?? 0;
-    const onHand = item.startingQty + movementQty + adjustmentQty;
+    const transferQty = transfer.get(item.id) ?? 0;
+    const writeOffQty = writeOff.get(item.id) ?? 0;
+    const varianceQty = variance.get(item.id) ?? 0;
+    const onHand =
+      item.startingQty +
+      movementQty +
+      adjustmentQty +
+      transferQty +
+      writeOffQty +
+      varianceQty;
     return {
       itemId: item.id,
       sku: item.sku,
@@ -107,6 +172,9 @@ export function computeOnHand(params: {
       startingQty: item.startingQty,
       movementQty,
       adjustmentQty,
+      transferQty,
+      writeOffQty,
+      varianceQty,
       onHand,
       unitCost: item.unitCost,
     };
