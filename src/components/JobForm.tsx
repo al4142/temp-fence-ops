@@ -3,9 +3,17 @@
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import Link from "next/link";
 import type { ActionResult, JobFormValues } from "@/lib/job-form";
+import { VARIANCE_REASONS } from "@/lib/ops-constants";
 import { JobFormDetails } from "@/components/JobFormDetails";
 import { JobFormMaterials } from "@/components/JobFormMaterials";
 import { JobFormLabor } from "@/components/JobFormLabor";
+import {
+  JobFormCostLines,
+  type FreightRow,
+  type LodgingRow,
+  type MiscRow,
+} from "@/components/JobFormCostLines";
+import { JobFormVariances, type VarianceRow } from "@/components/JobFormVariances";
 
 export type BranchOption = { id: string; code: string; name: string };
 export type EmployeeOption = {
@@ -81,9 +89,31 @@ export function JobForm({
   const [notes, setNotes] = useState(initial.notes);
   const [accountExec, setAccountExec] = useState(initial.accountExec);
   const [revenue, setRevenue] = useState(initial.revenue);
-  const [lodging, setLodging] = useState(initial.lodging);
-  const [freight, setFreight] = useState(initial.freight);
-  const [misc, setMisc] = useState(initial.misc);
+
+  const [lodging, setLodging] = useState<LodgingRow[]>(() =>
+    (initial.lodgingLines ?? []).map((l) => ({
+      key: newKey(),
+      amount: String(l.amount ?? ""),
+      facility: l.facility ?? "",
+      notes: l.notes ?? "",
+    }))
+  );
+  const [freight, setFreight] = useState<FreightRow[]>(() =>
+    (initial.freightLines ?? []).map((l) => ({
+      key: newKey(),
+      company: l.company ?? "",
+      cost: String(l.cost ?? ""),
+      notes: l.notes ?? "",
+    }))
+  );
+  const [misc, setMisc] = useState<MiscRow[]>(() =>
+    (initial.miscLines ?? []).map((l) => ({
+      key: newKey(),
+      amount: String(l.amount ?? ""),
+      category: l.category ?? "",
+      notes: l.notes ?? "",
+    }))
+  );
 
   const [materials, setMaterials] = useState<MaterialRow[]>(() =>
     (initial.materials.length > 0
@@ -107,6 +137,17 @@ export function JobForm({
       employeeId: l.employeeId,
       regularHours: String(l.regularHours ?? ""),
       overtimeHours: String(l.overtimeHours ?? ""),
+    }))
+  );
+
+  const [variances, setVariances] = useState<VarianceRow[]>(() =>
+    (initial.variances ?? []).map((v) => ({
+      key: newKey(),
+      inventoryItemId: v.inventoryItemId ?? "",
+      itemName: v.itemName ?? "",
+      quantity: String(v.quantity ?? ""),
+      reason: v.reason || VARIANCE_REASONS[0],
+      notes: v.notes ?? "",
     }))
   );
 
@@ -141,9 +182,21 @@ export function JobForm({
       notes,
       accountExec,
       revenue,
-      lodging,
-      freight,
-      misc,
+      lodgingLines: lodging.map((l) => ({
+        amount: Number(l.amount) || 0,
+        facility: l.facility || null,
+        notes: l.notes || null,
+      })),
+      freightLines: freight.map((l) => ({
+        company: l.company || null,
+        cost: Number(l.cost) || 0,
+        notes: l.notes || null,
+      })),
+      miscLines: misc.map((l) => ({
+        amount: Number(l.amount) || 0,
+        category: l.category || null,
+        notes: l.notes || null,
+      })),
       materials: materials.map((m) => ({
         inventoryItemId: m.inventoryItemId || null,
         itemName: m.itemName || null,
@@ -154,6 +207,13 @@ export function JobForm({
         employeeId: l.employeeId,
         regularHours: Number(l.regularHours) || 0,
         overtimeHours: Number(l.overtimeHours) || 0,
+      })),
+      variances: variances.map((v) => ({
+        inventoryItemId: v.inventoryItemId || null,
+        itemName: v.itemName || null,
+        quantity: Number(v.quantity) || 0,
+        reason: v.reason,
+        notes: v.notes || null,
       })),
     };
   }
@@ -172,7 +232,7 @@ export function JobForm({
     if (!onDelete) return;
     if (
       !window.confirm(
-        "Delete this job and its material/labor lines? This cannot be undone."
+        "Delete this job and its material/labor/cost lines? This cannot be undone."
       )
     ) {
       return;
@@ -230,17 +290,32 @@ export function JobForm({
         setAccountExec={setAccountExec}
         revenue={revenue}
         setRevenue={setRevenue}
+      />
+
+      <JobFormCostLines
         lodging={lodging}
         setLodging={setLodging}
         freight={freight}
         setFreight={setFreight}
         misc={misc}
         setMisc={setMisc}
+        inputClass={inputClass}
+        labelClass={labelClass}
+        newKey={newKey}
       />
 
       <JobFormMaterials
         materials={materials}
         setMaterials={setMaterials}
+        filteredInventory={filteredInventory}
+        inputClass={inputClass}
+        labelClass={labelClass}
+        newKey={newKey}
+      />
+
+      <JobFormVariances
+        variances={variances}
+        setVariances={setVariances}
         filteredInventory={filteredInventory}
         inputClass={inputClass}
         labelClass={labelClass}
