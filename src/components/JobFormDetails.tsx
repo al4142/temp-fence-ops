@@ -22,9 +22,6 @@ type Props = {
   notes: string; setNotes: (v: string) => void;
   accountExec: string; setAccountExec: (v: string) => void;
   revenue: string; setRevenue: (v: string) => void;
-  lodging: string; setLodging: (v: string) => void;
-  freight: string; setFreight: (v: string) => void;
-  misc: string; setMisc: (v: string) => void;
 };
 
 export function JobFormDetails(p: Props) {
@@ -34,7 +31,7 @@ export function JobFormDetails(p: Props) {
     orderNumber, setOrderNumber, customer, setCustomer, address, setAddress,
     city, setCity, jobType, setJobType, fenceType, setFenceType, qtyLf, setQtyLf,
     screen, setScreen, gates, setGates, notes, setNotes, accountExec, setAccountExec,
-    revenue, setRevenue, lodging, setLodging, freight, setFreight, misc, setMisc,
+    revenue, setRevenue,
   } = p;
 
   return (
@@ -109,29 +106,14 @@ export function JobFormDetails(p: Props) {
             <label className={labelClass} htmlFor="accountExec">Account exec</label>
             <input id="accountExec" className={inputClass} value={accountExec} onChange={(e) => setAccountExec(e.target.value)} />
           </div>
+          <div>
+            <label className={labelClass} htmlFor="revenue">Revenue</label>
+            <input id="revenue" type="number" step="0.01" min="0" className={inputClass} value={revenue} onChange={(e) => setRevenue(e.target.value)} />
+          </div>
         </div>
         <div className="mt-4">
           <label className={labelClass} htmlFor="notes">Notes</label>
           <textarea id="notes" rows={2} className={inputClass} value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </div>
-      </section>
-
-      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-semibold text-slate-900">Revenue &amp; costs</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {(
-            [
-              ["revenue", "Revenue", revenue, setRevenue],
-              ["lodging", "Lodging", lodging, setLodging],
-              ["freight", "Freight", freight, setFreight],
-              ["misc", "Misc", misc, setMisc],
-            ] as const
-          ).map(([id, label, value, setter]) => (
-            <div key={id}>
-              <label className={labelClass} htmlFor={id}>{label}</label>
-              <input id={id} type="number" step="0.01" min="0" className={inputClass} value={value} onChange={(e) => setter(e.target.value)} />
-            </div>
-          ))}
         </div>
       </section>
     </>
