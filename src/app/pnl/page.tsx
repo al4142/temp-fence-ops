@@ -27,6 +27,10 @@ export default async function PnLPage({
       include: {
         labor: { include: { employee: true } },
         materials: { include: { inventoryItem: true } },
+        lodgingLines: true,
+        freightLines: true,
+        miscLines: true,
+        variances: { include: { inventoryItem: true } },
       },
     });
     pnl = buildOrderPnL(jobs);
@@ -38,7 +42,8 @@ export default async function PnLPage({
         <h1 className="text-2xl font-semibold text-slate-900">P&amp;L by order #</h1>
         <p className="mt-1 text-sm text-slate-600">
           Rolls up all jobs sharing an order number. Labor uses employee hourly rate (OT @
-          1.5x). Material cost uses catalog unit cost x quantity (free-text lines = $0).
+          1.5x). Material cost uses catalog unit cost x quantity (free-text lines = $0). Lodging /
+          freight / misc sum from cost line items. Material variance uses unit cost.
         </p>
       </div>
 
@@ -105,6 +110,7 @@ export default async function PnLPage({
               <Stat label="Lodging" value={formatCurrency(pnl.lodging)} />
               <Stat label="Freight" value={formatCurrency(pnl.freight)} />
               <Stat label="Misc" value={formatCurrency(pnl.misc)} />
+              <Stat label="Material variance" value={formatCurrency(pnl.varianceCost)} />
               <Stat label="Total cost" value={formatCurrency(pnl.totalCost)} />
               <Stat
                 label="Gross profit"
