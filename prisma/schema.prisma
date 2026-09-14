@@ -19,10 +19,14 @@ model Branch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  employees       Employee[]
-  inventoryItems  InventoryItem[]
-  jobs            Job[]
-  adjustments     InventoryAdjustment[]
+  employees      Employee[]
+  inventoryItems InventoryItem[]
+  jobs           Job[]
+  adjustments    InventoryAdjustment[]
+  yardExpenses   YardExpense[]
+  writeOffs      WriteOff[]
+  transfersFrom  Transfer[] @relation("TransferFrom")
+  transfersTo    Transfer[] @relation("TransferTo")
 }
 
 model Employee {
@@ -53,39 +57,50 @@ model InventoryItem {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  branch      Branch                @relation(fields: [branchId], references: [id])
-  materials   JobMaterial[]
-  adjustments InventoryAdjustment[]
+  branch            Branch                @relation(fields: [branchId], references: [id])
+  materials         JobMaterial[]
+  adjustments       InventoryAdjustment[]
+  writeOffs         WriteOff[]
+  variances         JobMaterialVariance[]
+  transferLinesFrom TransferLine[]        @relation("TransferLineFrom")
+  transferLinesTo   TransferLine[]        @relation("TransferLineTo")
 
   @@unique([branchId, sku])
 }
 
 model Job {
-  id           String   @id @default(cuid())
-  date         DateTime
-  branchId     String
-  class        String? // e.g. EVENT, CONSTRUCTION
-  orderNumber  String
-  customer     String
-  address      String?
-  city         String?
-  jobType      String // INST, PU, PICKUP, DELIVERY, etc.
-  fenceType    String?
-  qtyLf        Float?
-  screen       Boolean  @default(false)
-  gates        Int      @default(0)
-  notes        String?
-  accountExec  String?
-  revenue      Float    @default(0)
-  lodging      Float    @default(0)
-  freight      Float    @default(0)
-  misc         Float    @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  date        DateTime
+  branchId    String
+  class       String? // e.g. EVENT, CONSTRUCTION
+  orderNumber String
+  customer    String
+  address     String?
+  city        String?
+  jobType     String // INST, PU, PICKUP, DELIVERY, etc.
+  fenceType   String?
+  qtyLf       Float?
+  screen      Boolean  @default(false)
+  gates       Int      @default(0)
+  notes       String?
+  accountExec String?
+  revenue     Float    @default(0)
+  /// Denormalized sum of lodgingLines (kept for simple rollups / legacy seed)
+  lodging     Float    @default(0)
+  /// Denormalized sum of freightLines
+  freight     Float    @default(0)
+  /// Denormalized sum of miscLines
+  misc        Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  branch    Branch        @relation(fields: [branchId], references: [id])
-  materials JobMaterial[]
-  labor     JobLabor[]
+  branch       Branch                @relation(fields: [branchId], references: [id])
+  materials    JobMaterial[]
+  labor        JobLabor[]
+  lodgingLines JobLodgingLine[]
+  freightLines JobFreightLine[]
+  miscLines    JobMiscLine[]
+  variances    JobMaterialVariance[]
 
   @@index([orderNumber])
   @@index([date])
@@ -105,14 +120,59 @@ model JobMaterial {
 }
 
 model JobLabor {
-  id             String @id @default(cuid())
-  jobId          String
-  employeeId     String
-  regularHours   Float  @default(0)
-  overtimeHours  Float  @default(0)
+  id            String @id @default(cuid())
+  jobId         String
+  employeeId    String
+  regularHours  Float  @default(0)
+  overtimeHours Float  @default(0)
 
   job      Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
   employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+model JobLodgingLine {
+  id       String  @id @default(cuid())
+  jobId    String
+  amount   Float
+  facility String?
+  notes    String?
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model JobFreightLine {
+  id      String  @id @default(cuid())
+  jobId   String
+  company String?
+  cost    Float
+  notes   String?
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model JobMiscLine {
+  id       String  @id @default(cuid())
+  jobId    String
+  amount   Float
+  category String?
+  notes    String?
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+/// Job-tied material qty adjustments (damaged on site / lost / extra / returned).
+/// quantity is the inventory delta: negative removes from yard, positive returns.
+model JobMaterialVariance {
+  id              String  @id @default(cuid())
+  jobId           String
+  inventoryItemId String?
+  itemName        String?
+  quantity        Float
+  reason          String
+  notes           String?
+
+  job           Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id])
 }
 
 model InventoryAdjustment {
@@ -126,6 +186,87 @@ model InventoryAdjustment {
 
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
   branch        Branch        @relation(fields: [branchId], references: [id])
+}
+
+model Vendor {
+  id        String   @id @default(cuid())
+  name      String
+  notes     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  yardExpenses YardExpense[]
+}
+
+model YardExpense {
+  id          String   @id @default(cuid())
+  date        DateTime
+  branchId    String
+  category    String // PPE | Consumables | Tools | Food | Equipment | Other
+  vendorId    String?
+  vendorText  String? // optional free-text when no Vendor row
+  amount      Float
+  purchasedBy String
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  branch Branch  @relation(fields: [branchId], references: [id])
+  vendor Vendor? @relation(fields: [vendorId], references: [id])
+
+  @@index([date])
+  @@index([branchId])
+}
+
+/// Yard-to-yard stock move. Excluded from job analytics.
+/// Carry cost conceptually; Wave 3 will refine avg cost on InventoryItem.
+model Transfer {
+  id           String   @id @default(cuid())
+  date         DateTime
+  fromBranchId String
+  toBranchId   String
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  fromBranch Branch         @relation("TransferFrom", fields: [fromBranchId], references: [id])
+  toBranch   Branch         @relation("TransferTo", fields: [toBranchId], references: [id])
+  lines      TransferLine[]
+
+  @@index([date])
+}
+
+model TransferLine {
+  id                  String @id @default(cuid())
+  transferId          String
+  fromInventoryItemId String
+  toInventoryItemId   String
+  quantity            Float
+  notes               String?
+
+  transfer          Transfer      @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  fromInventoryItem InventoryItem @relation("TransferLineFrom", fields: [fromInventoryItemId], references: [id])
+  toInventoryItem   InventoryItem @relation("TransferLineTo", fields: [toInventoryItemId], references: [id])
+}
+
+/// Damaged / scrap / shrink write-offs. Qty down. Excluded from job analytics.
+model WriteOff {
+  id              String   @id @default(cuid())
+  date            DateTime
+  branchId        String
+  inventoryItemId String
+  quantity        Float
+  reason          String // damaged | scrap | shrink
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@index([date])
+  @@index([branchId])
 }
 
 model User {
