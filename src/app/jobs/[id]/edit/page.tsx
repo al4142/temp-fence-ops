@@ -17,6 +17,10 @@ export default async function EditJobPage({ params }: Props) {
     include: {
       materials: true,
       labor: true,
+      lodgingLines: true,
+      freightLines: true,
+      miscLines: true,
+      variances: true,
     },
   });
   if (!job) notFound();
@@ -52,9 +56,21 @@ export default async function EditJobPage({ params }: Props) {
     notes: job.notes ?? "",
     accountExec: job.accountExec ?? "",
     revenue: String(job.revenue),
-    lodging: String(job.lodging),
-    freight: String(job.freight),
-    misc: String(job.misc),
+    lodgingLines: job.lodgingLines.map((l) => ({
+      amount: l.amount,
+      facility: l.facility,
+      notes: l.notes,
+    })),
+    freightLines: job.freightLines.map((l) => ({
+      company: l.company,
+      cost: l.cost,
+      notes: l.notes,
+    })),
+    miscLines: job.miscLines.map((l) => ({
+      amount: l.amount,
+      category: l.category,
+      notes: l.notes,
+    })),
     materials: job.materials.map((m) => ({
       inventoryItemId: m.inventoryItemId,
       itemName: m.itemName,
@@ -65,6 +81,13 @@ export default async function EditJobPage({ params }: Props) {
       employeeId: l.employeeId,
       regularHours: l.regularHours,
       overtimeHours: l.overtimeHours,
+    })),
+    variances: job.variances.map((v) => ({
+      inventoryItemId: v.inventoryItemId,
+      itemName: v.itemName,
+      quantity: v.quantity,
+      reason: v.reason,
+      notes: v.notes,
     })),
   };
 
@@ -88,7 +111,8 @@ export default async function EditJobPage({ params }: Props) {
           Edit job {job.orderNumber}
         </h1>
         <p className="mt-1 text-sm text-slate-600">
-          Saving replaces material and labor lines for this job in one transaction.
+          Saving replaces material, labor, cost, and variance lines for this job in one
+          transaction.
         </p>
       </div>
 
