@@ -29,6 +29,26 @@ async function assertInventoryItemsExist(ids: string[]) {
   if (count !== unique.length) throw new Error("One or more inventory items were not found.");
 }
 
+function isNextRedirect(e: unknown): boolean {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    "digest" in e &&
+    typeof (e as { digest?: unknown }).digest === "string" &&
+    String((e as { digest: string }).digest).startsWith("NEXT_REDIRECT")
+  );
+}
+
+function collectItemIds(data: {
+  materials: { inventoryItemId: string | null }[];
+  variances: { inventoryItemId: string | null }[];
+}) {
+  return [
+    ...data.materials.map((m) => m.inventoryItemId).filter((id): id is string => Boolean(id)),
+    ...data.variances.map((v) => v.inventoryItemId).filter((id): id is string => Boolean(id)),
+  ];
+}
+
 export async function createJob(values: JobFormValues): Promise<ActionResult> {
   await requireSession();
   const parsed = validateAndNormalize(values);
@@ -38,9 +58,7 @@ export async function createJob(values: JobFormValues): Promise<ActionResult> {
   try {
     await assertBranchExists(data.branchId);
     await assertEmployeesExist(data.labor.map((l) => l.employeeId));
-    await assertInventoryItemsExist(
-      data.materials.map((m) => m.inventoryItemId).filter((id): id is string => Boolean(id))
-    );
+    await assertInventoryItemsExist(collectItemIds(data));
 
     const job = await prisma.$transaction(async (tx) => {
       const created = await tx.job.create({
@@ -89,6 +107,52 @@ export async function createJob(values: JobFormValues): Promise<ActionResult> {
         });
       }
 
+      if (data.lodgingLines.length > 0) {
+        await tx.jobLodgingLine.createMany({
+          data: data.lodgingLines.map((l) => ({
+            jobId: created.id,
+            amount: l.amount,
+            facility: l.facility,
+            notes: l.notes,
+          })),
+        });
+      }
+
+      if (data.freightLines.length > 0) {
+        await tx.jobFreightLine.createMany({
+          data: data.freightLines.map((l) => ({
+            jobId: created.id,
+            company: l.company,
+            cost: l.cost,
+            notes: l.notes,
+          })),
+        });
+      }
+
+      if (data.miscLines.length > 0) {
+        await tx.jobMiscLine.createMany({
+          data: data.miscLines.map((l) => ({
+            jobId: created.id,
+            amount: l.amount,
+            category: l.category,
+            notes: l.notes,
+          })),
+        });
+      }
+
+      if (data.variances.length > 0) {
+        await tx.jobMaterialVariance.createMany({
+          data: data.variances.map((v) => ({
+            jobId: created.id,
+            inventoryItemId: v.inventoryItemId,
+            itemName: v.itemName,
+            quantity: v.quantity,
+            reason: v.reason,
+            notes: v.notes,
+          })),
+        });
+      }
+
       return created;
     });
 
@@ -119,9 +183,7 @@ export async function updateJob(
 
     await assertBranchExists(data.branchId);
     await assertEmployeesExist(data.labor.map((l) => l.employeeId));
-    await assertInventoryItemsExist(
-      data.materials.map((m) => m.inventoryItemId).filter((id): id is string => Boolean(id))
-    );
+    await assertInventoryItemsExist(collectItemIds(data));
 
     await prisma.$transaction(async (tx) => {
       await tx.job.update({
@@ -150,6 +212,10 @@ export async function updateJob(
 
       await tx.jobMaterial.deleteMany({ where: { jobId } });
       await tx.jobLabor.deleteMany({ where: { jobId } });
+      await tx.jobLodgingLine.deleteMany({ where: { jobId } });
+      await tx.jobFreightLine.deleteMany({ where: { jobId } });
+      await tx.jobMiscLine.deleteMany({ where: { jobId } });
+      await tx.jobMaterialVariance.deleteMany({ where: { jobId } });
 
       if (data.materials.length > 0) {
         await tx.jobMaterial.createMany({
@@ -170,6 +236,52 @@ export async function updateJob(
             employeeId: l.employeeId,
             regularHours: l.regularHours,
             overtimeHours: l.overtimeHours,
+          })),
+        });
+      }
+
+      if (data.lodgingLines.length > 0) {
+        await tx.jobLodgingLine.createMany({
+          data: data.lodgingLines.map((l) => ({
+            jobId,
+            amount: l.amount,
+            facility: l.facility,
+            notes: l.notes,
+          })),
+        });
+      }
+
+      if (data.freightLines.length > 0) {
+        await tx.jobFreightLine.createMany({
+          data: data.freightLines.map((l) => ({
+            jobId,
+            company: l.company,
+            cost: l.cost,
+            notes: l.notes,
+          })),
+        });
+      }
+
+      if (data.miscLines.length > 0) {
+        await tx.jobMiscLine.createMany({
+          data: data.miscLines.map((l) => ({
+            jobId,
+            amount: l.amount,
+            category: l.category,
+            notes: l.notes,
+          })),
+        });
+      }
+
+      if (data.variances.length > 0) {
+        await tx.jobMaterialVariance.createMany({
+          data: data.variances.map((v) => ({
+            jobId,
+            inventoryItemId: v.inventoryItemId,
+            itemName: v.itemName,
+            quantity: v.quantity,
+            reason: v.reason,
+            notes: v.notes,
           })),
         });
       }
@@ -206,14 +318,4 @@ export async function deleteJob(jobId: string): Promise<ActionResult> {
     const message = e instanceof Error ? e.message : "Failed to delete job.";
     return { ok: false, error: message };
   }
-}
-
-function isNextRedirect(e: unknown): boolean {
-  return (
-    typeof e === "object" &&
-    e !== null &&
-    "digest" in e &&
-    typeof (e as { digest?: unknown }).digest === "string" &&
-    String((e as { digest: string }).digest).startsWith("NEXT_REDIRECT")
-  );
 }
