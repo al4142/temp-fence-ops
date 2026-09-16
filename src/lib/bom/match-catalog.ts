@@ -1,4 +1,4 @@
-import { BOM_NAME_ALIASES } from "./catalog";
+import { BOM_NAME_ALIASES, KNOWN_SKU_GAPS } from "./catalog";
 import type { BomLine, CatalogItem, MatchedBomMaterial } from "./types";
 
 export function normalizeCatalogKey(s: string): string {
@@ -59,4 +59,26 @@ export function bomLinesToMaterials(
       skuOrName: line.skuOrName,
     };
   });
+}
+
+/**
+ * Warnings for BOM lines that did not link to inventory.
+ * Skips names already mentioned in `existingWarnings` (e.g. calculator KNOWN_SKU_GAPS).
+ */
+export function catalogMatchWarnings(
+  materials: MatchedBomMaterial[],
+  existingWarnings: string[] = []
+): string[] {
+  const already = existingWarnings.join("\n");
+  const extra: string[] = [];
+  for (const m of materials) {
+    if (m.catalogMatched) continue;
+    if (already.includes(m.skuOrName)) continue;
+    extra.push(
+      KNOWN_SKU_GAPS.has(m.skuOrName)
+        ? `${m.skuOrName} is a known catalog gap (Excel dropdown vs inventory). Line is still emitted as free-text; inventory will not move.`
+        : `${m.skuOrName}: no catalog match — entered as free-text; inventory will not move.`
+    );
+  }
+  return extra;
 }

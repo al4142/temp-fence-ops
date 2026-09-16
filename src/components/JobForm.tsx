@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { ActionResult, JobFormValues } from "@/lib/job-form";
 import { parseOptionalNumber } from "@/lib/job-form";
 import { VARIANCE_REASONS } from "@/lib/ops-constants";
-import { bomLinesToMaterials, calculateBom, type BomResult, type MatchedBomMaterial } from "@/lib/bom";
+import { bomLinesToMaterials, calculateBom, catalogMatchWarnings, type BomResult, type MatchedBomMaterial } from "@/lib/bom";
 import { JobFormDetails } from "@/components/JobFormDetails";
 import { JobFormBomOptions } from "@/components/JobFormBomOptions";
 import { JobFormMaterials } from "@/components/JobFormMaterials";
@@ -257,7 +257,8 @@ export function JobForm({
       jobType,
     });
     const matched = bomLinesToMaterials(result.lines, filteredInventory);
-    setBomPreview({ result, materials: matched });
+    const warnings = [...result.warnings, ...catalogMatchWarnings(matched, result.warnings)];
+    setBomPreview({ result: { ...result, warnings }, materials: matched });
   }
 
   function handleApplyBom() {

@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { calculateBom } from "./calculate";
-import { BOM_NAMES } from "./catalog";
-import { bomLinesToMaterials, matchCatalogItem } from "./match-catalog";
+import {
+  BOM_NAMES,
+  BOM_SEED_ITEMS,
+  GATE_TYPES,
+  KNOWN_SKU_GAPS,
+  gateTypesExpectedInSeed,
+} from "./catalog";
+import { bomLinesToMaterials, catalogMatchWarnings, matchCatalogItem } from "./match-catalog";
 import type { BomResult } from "./types";
 
 function qty(result: BomResult, name: string): number {
@@ -334,6 +340,62 @@ describe("gates", () => {
     expect(qty(r, BOM_NAMES.swingRoller)).toBe(1);
     expect(r.warnings.some((w) => /12x8/.test(w))).toBe(true);
   });
+
+  it("4x8 gate body matches demo catalog (Excel SKU column, not a gap)", () => {
+    const r = calculateBom({
+      fenceType: "6x10",
+      qtyLf: 20,
+      gate: { type: "4x8", qty: 1 },
+    });
+    expect(qty(r, "4x8")).toBe(1);
+    expect(qty(r, BOM_NAMES.swingRoller)).toBe(1);
+    expect(r.warnings.some((w) => /4x8/.test(w))).toBe(false);
+
+    const catalog = BOM_SEED_ITEMS.map((item, idx) => ({
+      id: String(idx),
+      sku: item.sku,
+      name: item.name,
+    }));
+    const mats = bomLinesToMaterials(r.lines, catalog);
+    const body = mats.find((m) => m.skuOrName === "4x8");
+    expect(body?.catalogMatched).toBe(true);
+    expect(body?.inventoryItemId).toBeTruthy();
+    expect(body?.itemName).toBeNull();
+    expect(catalogMatchWarnings(mats, r.warnings).some((w) => /4x8/.test(w))).toBe(false);
+  });
+
+  it("4x8 against a catalog without that SKU still emits an unmatched warning", () => {
+    const r = calculateBom({
+      fenceType: "6x10",
+      qtyLf: 20,
+      gate: { type: "4x8", qty: 1 },
+    });
+    const mats = bomLinesToMaterials(r.lines, [
+      { id: "hw", sku: "SWING-ROLLER-6", name: 'SWING GATE ROLLER WHEEL 6"' },
+    ]);
+    const body = mats.find((m) => m.skuOrName === "4x8");
+    expect(body?.catalogMatched).toBe(false);
+    const extra = catalogMatchWarnings(mats, r.warnings);
+    expect(extra.some((w) => /4x8/.test(w) && /no catalog match/i.test(w))).toBe(true);
+    expect(extra.some((w) => /inventory will not move/i.test(w))).toBe(true);
+  });
+
+  it("4x6 remains a documented gap: warning + unmatched in demo seed", () => {
+    const r = calculateBom({
+      fenceType: "6x10",
+      qtyLf: 20,
+      gate: { type: "4x6", qty: 1 },
+    });
+    expect(qty(r, "4x6")).toBe(1);
+    expect(r.warnings.some((w) => /4x6/.test(w) && /catalog gap/i.test(w))).toBe(true);
+    const catalog = BOM_SEED_ITEMS.map((item, idx) => ({
+      id: String(idx),
+      sku: item.sku,
+      name: item.name,
+    }));
+    const body = bomLinesToMaterials(r.lines, catalog).find((m) => m.skuOrName === "4x6");
+    expect(body?.catalogMatched).toBe(false);
+  });
 });
 
 describe("guardrails", () => {
@@ -395,5 +457,19 @@ describe("catalog matching", () => {
     expect(stands?.catalogMatched).toBe(false);
     expect(stands?.itemName).toBe(BOM_NAMES.tStands);
     expect(stands?.notes).toMatch(/no catalog match/i);
+  });
+
+  it("demo seed includes every GATE_TYPES body except documented gaps", () => {
+    const names = new Set(BOM_SEED_ITEMS.map((i) => i.name));
+    const skus = new Set(BOM_SEED_ITEMS.map((i) => i.sku));
+    expect(names.has("4x8") || skus.has("4x8")).toBe(true);
+    for (const g of gateTypesExpectedInSeed()) {
+      expect(names.has(g) || skus.has(g.replace(/\s+/g, "-"))).toBe(true);
+    }
+    for (const gap of ["4x6", "12x8", "CUSTOM"] as const) {
+      expect(KNOWN_SKU_GAPS.has(gap)).toBe(true);
+      expect(names.has(gap)).toBe(false);
+    }
+    expect(GATE_TYPES.includes("4x8")).toBe(true);
   });
 });

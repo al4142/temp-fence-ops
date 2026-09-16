@@ -6,6 +6,9 @@ export {
   WEIGHT_MODES,
   BOM_NAMES,
   BOM_SEED_ITEMS,
+  BOM_GATE_SEED_ITEMS,
+  KNOWN_SKU_GAPS,
+  gateTypesExpectedInSeed,
   normalizeFenceType,
   normalizeGateType,
   normalizeScreenSku,
@@ -15,5 +18,5 @@ export {
   isPlusOneType,
 } from "./catalog";
 export { calculateBom } from "./calculate";
-export { matchCatalogItem, bomLinesToMaterials, normalizeCatalogKey } from "./match-catalog";
+export { matchCatalogItem, bomLinesToMaterials, catalogMatchWarnings, normalizeCatalogKey } from "./match-catalog";
 export type { BomInput, BomLine, BomResult, BomGateInput, MatchedBomMaterial } from "./types";

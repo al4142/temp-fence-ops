@@ -87,8 +87,56 @@ export const SLIDE_GATE_TYPES = [
 export const SHORT_SLIDE_GATE_TYPES = ["15x6 SLIDE", "14x8 SLIDE"] as const;
 export const LONG_SLIDE_GATE_TYPES = ["20x6 SLIDE", "20x8 SLIDE"] as const;
 
-/** Names that have no inventory SKU in the ops workbook (still emit the line). */
+/** Names that have no inventory SKU in the ops workbook (still emit the line + warning). */
 export const KNOWN_SKU_GAPS = new Set<string>(["12x8", "4x6", "CUSTOM"]);
+
+export type BomSeedItem = {
+  sku: string;
+  name: string;
+  unit: string;
+  reusable: boolean;
+  startingQty: number;
+  unitCost: number;
+  description?: string;
+};
+
+/** Demo qty/cost for gate bodies that exist in the Excel SKU columns (not KNOWN_SKU_GAPS). */
+const GATE_SEED_STATS: Partial<Record<GateType, { startingQty: number; unitCost: number }>> = {
+  "5x6": { startingQty: 12, unitCost: 110 },
+  "6x6": { startingQty: 12, unitCost: 120 },
+  "7x6": { startingQty: 8, unitCost: 130 },
+  "9x6": { startingQty: 8, unitCost: 140 },
+  "12x6": { startingQty: 10, unitCost: 160 },
+  "14x6": { startingQty: 6, unitCost: 180 },
+  "15x6": { startingQty: 4, unitCost: 190 },
+  "15x6 SLIDE": { startingQty: 4, unitCost: 240 },
+  "20x6": { startingQty: 3, unitCost: 220 },
+  "20x6 SLIDE": { startingQty: 3, unitCost: 280 },
+  "4x8": { startingQty: 10, unitCost: 125 },
+  "6x8": { startingQty: 8, unitCost: 140 },
+  "10x8": { startingQty: 6, unitCost: 170 },
+  "14x8": { startingQty: 4, unitCost: 200 },
+  "14x8 SLIDE": { startingQty: 3, unitCost: 260 },
+  "20x8": { startingQty: 2, unitCost: 240 },
+  "20x8 SLIDE": { startingQty: 2, unitCost: 300 },
+};
+
+/** GATE_TYPES minus documented ops gaps — every one of these must exist in the demo catalog. */
+export function gateTypesExpectedInSeed(): GateType[] {
+  return GATE_TYPES.filter((g) => !KNOWN_SKU_GAPS.has(g));
+}
+
+export const BOM_GATE_SEED_ITEMS: BomSeedItem[] = gateTypesExpectedInSeed().map((g) => {
+  const stats = GATE_SEED_STATS[g] ?? { startingQty: 8, unitCost: 150 };
+  return {
+    sku: g.replace(/\s+/g, "-"),
+    name: g,
+    unit: "ea",
+    reusable: true,
+    startingQty: stats.startingQty,
+    unitCost: stats.unitCost,
+  };
+});
 
 export const BOM_NAMES = {
   panel: {
@@ -147,16 +195,6 @@ export const BOM_NAME_ALIASES: Record<string, string[]> = {
     "BOULEVARD CLAMP 1-5/8 X 1-3/8",
     "BOULEVARD CLAMPS 1-5/8x1-3/8",
   ],
-};
-
-export type BomSeedItem = {
-  sku: string;
-  name: string;
-  unit: string;
-  reusable: boolean;
-  startingQty: number;
-  unitCost: number;
-  description?: string;
 };
 
 /** Demo catalog rows so Generate BOM can link inventory. Fake qtys/costs only. */
@@ -219,22 +257,7 @@ export const BOM_SEED_ITEMS: BomSeedItem[] = [
   { sku: "ROYAL6", name: "ROYAL6", unit: "roll", reusable: true, startingQty: 15, unitCost: 42 },
   { sku: "NAVY6", name: "NAVY6", unit: "roll", reusable: true, startingQty: 10, unitCost: 42 },
   { sku: "ZIP-TIES", name: "ZIP TIES", unit: "ea", reusable: false, startingQty: 5000, unitCost: 0.03 },
-  { sku: "5x6", name: "5x6", unit: "ea", reusable: true, startingQty: 12, unitCost: 110 },
-  { sku: "6x6", name: "6x6", unit: "ea", reusable: true, startingQty: 12, unitCost: 120 },
-  { sku: "7x6", name: "7x6", unit: "ea", reusable: true, startingQty: 8, unitCost: 130 },
-  { sku: "9x6", name: "9x6", unit: "ea", reusable: true, startingQty: 8, unitCost: 140 },
-  { sku: "12x6", name: "12x6", unit: "ea", reusable: true, startingQty: 10, unitCost: 160 },
-  { sku: "14x6", name: "14x6", unit: "ea", reusable: true, startingQty: 6, unitCost: 180 },
-  { sku: "15x6", name: "15x6", unit: "ea", reusable: true, startingQty: 4, unitCost: 190 },
-  { sku: "15x6-SLIDE", name: "15x6 SLIDE", unit: "ea", reusable: true, startingQty: 4, unitCost: 240 },
-  { sku: "20x6", name: "20x6", unit: "ea", reusable: true, startingQty: 3, unitCost: 220 },
-  { sku: "20x6-SLIDE", name: "20x6 SLIDE", unit: "ea", reusable: true, startingQty: 3, unitCost: 280 },
-  { sku: "6x8", name: "6x8", unit: "ea", reusable: true, startingQty: 8, unitCost: 140 },
-  { sku: "10x8", name: "10x8", unit: "ea", reusable: true, startingQty: 6, unitCost: 170 },
-  { sku: "14x8", name: "14x8", unit: "ea", reusable: true, startingQty: 4, unitCost: 200 },
-  { sku: "14x8-SLIDE", name: "14x8 SLIDE", unit: "ea", reusable: true, startingQty: 3, unitCost: 260 },
-  { sku: "20x8", name: "20x8", unit: "ea", reusable: true, startingQty: 2, unitCost: 240 },
-  { sku: "20x8-SLIDE", name: "20x8 SLIDE", unit: "ea", reusable: true, startingQty: 2, unitCost: 300 },
+  ...BOM_GATE_SEED_ITEMS,
   { sku: "SWING-ROLLER-6", name: 'SWING GATE ROLLER WHEEL 6"', unit: "ea", reusable: true, startingQty: 20, unitCost: 18 },
   { sku: "MH2-1-2", name: "MH2-1/2", unit: "ea", reusable: true, startingQty: 40, unitCost: 6 },
   { sku: "CB3-8x3", name: "CB3/8x3", unit: "ea", reusable: true, startingQty: 80, unitCost: 0.5 },
