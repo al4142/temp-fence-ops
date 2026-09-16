@@ -2,6 +2,8 @@
 
 Guidance for running Temp Fence Ops as an internal tool for a small office (1–2 users), without putting real employee PII in a public demo repo.
 
+Live **public demo** ops (Hardpoint Hobby + Neon): [RUNBOOK.md](./RUNBOOK.md). This file is the **private / real-data** path.
+
 ## 1. Fork / private repo
 
 - Keep the **public** demo on fake sample data only (no SSN, DOB, address, phone, personal email).
