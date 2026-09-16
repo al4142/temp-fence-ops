@@ -3,8 +3,11 @@
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import Link from "next/link";
 import type { ActionResult, JobFormValues } from "@/lib/job-form";
+import { parseOptionalNumber } from "@/lib/job-form";
 import { VARIANCE_REASONS } from "@/lib/ops-constants";
+import { bomLinesToMaterials, calculateBom, type BomResult, type MatchedBomMaterial } from "@/lib/bom";
 import { JobFormDetails } from "@/components/JobFormDetails";
+import { JobFormBomOptions } from "@/components/JobFormBomOptions";
 import { JobFormMaterials } from "@/components/JobFormMaterials";
 import { JobFormLabor } from "@/components/JobFormLabor";
 import {
@@ -84,8 +87,15 @@ export function JobForm({
   const [jobType, setJobType] = useState(initial.jobType);
   const [fenceType, setFenceType] = useState(initial.fenceType);
   const [qtyLf, setQtyLf] = useState(initial.qtyLf);
-  const [screen, setScreen] = useState(initial.screen);
-  const [gates, setGates] = useState(initial.gates);
+  const [screenSku, setScreenSku] = useState(initial.screenSku ?? "");
+  const [gateType, setGateType] = useState(initial.gateType ?? "");
+  const [gateQty, setGateQty] = useState(initial.gateQty ?? "0");
+  const [gateType2, setGateType2] = useState(initial.gateType2 ?? "");
+  const [gateQty2, setGateQty2] = useState(initial.gateQty2 ?? "0");
+  const [topRail, setTopRail] = useState(initial.topRail ?? false);
+  const [bottomRail, setBottomRail] = useState(initial.bottomRail ?? false);
+  const [weightMode, setWeightMode] = useState(initial.weightMode ?? "");
+  const [terminalsManual, setTerminalsManual] = useState(initial.terminalsManual ?? "0");
   const [notes, setNotes] = useState(initial.notes);
   const [accountExec, setAccountExec] = useState(initial.accountExec);
   const [revenue, setRevenue] = useState(initial.revenue);
@@ -151,6 +161,11 @@ export function JobForm({
     }))
   );
 
+  const [bomPreview, setBomPreview] = useState<{
+    result: BomResult;
+    materials: MatchedBomMaterial[];
+  } | null>(null);
+
   const filteredInventory = useMemo(() => {
     if (!branchId) return inventory;
     const forBranch = inventory.filter((i) => i.branchId === branchId);
@@ -177,8 +192,17 @@ export function JobForm({
       jobType,
       fenceType,
       qtyLf,
-      screen,
-      gates,
+      screen: Boolean(screenSku),
+      screenSku,
+      gates: String((Number(gateQty) || 0) + (Number(gateQty2) || 0)),
+      gateType,
+      gateQty,
+      gateType2,
+      gateQty2,
+      topRail,
+      bottomRail,
+      weightMode,
+      terminalsManual,
       notes,
       accountExec,
       revenue,
@@ -216,6 +240,53 @@ export function JobForm({
         notes: v.notes || null,
       })),
     };
+  }
+
+  function handleGenerateBom() {
+    const lf = parseOptionalNumber(qtyLf) ?? 0;
+    const result = calculateBom({
+      fenceType,
+      qtyLf: lf,
+      topRail,
+      bottomRail,
+      weightMode: weightMode || null,
+      screenSku: screenSku || null,
+      gate: { type: gateType || null, qty: Number(gateQty) || 0 },
+      gate2: { type: gateType2 || null, qty: Number(gateQty2) || 0 },
+      terminalsManual: Number(terminalsManual) || 0,
+      jobType,
+    });
+    const matched = bomLinesToMaterials(result.lines, filteredInventory);
+    setBomPreview({ result, materials: matched });
+  }
+
+  function handleApplyBom() {
+    if (!bomPreview) return;
+    if (bomPreview.materials.length === 0) {
+      window.alert("Nothing to apply. Check fence type, LF, and options — see warnings in the preview.");
+      return;
+    }
+    const existing = materials.some(
+      (m) =>
+        (Number(m.quantity) || 0) !== 0 &&
+        (m.inventoryItemId || m.itemName.trim())
+    );
+    if (existing) {
+      const ok = window.confirm(
+        "Replace existing material lines with the generated BOM? Manually edited rows will be removed."
+      );
+      if (!ok) return;
+    }
+    setMaterials(
+      bomPreview.materials.map((m) => ({
+        key: newKey(),
+        inventoryItemId: m.inventoryItemId ?? "",
+        itemName: m.itemName ?? "",
+        quantity: String(m.quantity),
+        notes: m.notes ?? "",
+      }))
+    );
+    setBomPreview(null);
   }
 
   function handleSubmit(e: FormEvent) {
@@ -276,20 +347,39 @@ export function JobForm({
         setCity={setCity}
         jobType={jobType}
         setJobType={setJobType}
-        fenceType={fenceType}
-        setFenceType={setFenceType}
-        qtyLf={qtyLf}
-        setQtyLf={setQtyLf}
-        screen={screen}
-        setScreen={setScreen}
-        gates={gates}
-        setGates={setGates}
         notes={notes}
         setNotes={setNotes}
         accountExec={accountExec}
         setAccountExec={setAccountExec}
         revenue={revenue}
         setRevenue={setRevenue}
+      />
+
+      <JobFormBomOptions
+        inputClass={inputClass}
+        labelClass={labelClass}
+        fenceType={fenceType}
+        setFenceType={setFenceType}
+        qtyLf={qtyLf}
+        setQtyLf={setQtyLf}
+        topRail={topRail}
+        setTopRail={setTopRail}
+        bottomRail={bottomRail}
+        setBottomRail={setBottomRail}
+        weightMode={weightMode}
+        setWeightMode={setWeightMode}
+        screenSku={screenSku}
+        setScreenSku={setScreenSku}
+        gateType={gateType}
+        setGateType={setGateType}
+        gateQty={gateQty}
+        setGateQty={setGateQty}
+        gateType2={gateType2}
+        setGateType2={setGateType2}
+        gateQty2={gateQty2}
+        setGateQty2={setGateQty2}
+        terminalsManual={terminalsManual}
+        setTerminalsManual={setTerminalsManual}
       />
 
       <JobFormCostLines
@@ -311,6 +401,10 @@ export function JobForm({
         inputClass={inputClass}
         labelClass={labelClass}
         newKey={newKey}
+        bomPreview={bomPreview}
+        onGenerateBom={handleGenerateBom}
+        onApplyBom={handleApplyBom}
+        onDismissBom={() => setBomPreview(null)}
       />
 
       <JobFormVariances

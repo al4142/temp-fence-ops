@@ -187,6 +187,7 @@ export async function commitCsvImport(formData: FormData): Promise<ImportCommitR
       fenceType: row.fenceType,
       qtyLf: row.qtyLf,
       screen: row.screen,
+      screenSku: row.screenSku,
       notes: row.notes,
       accountExec: row.accountExec,
       revenue: row.revenue,

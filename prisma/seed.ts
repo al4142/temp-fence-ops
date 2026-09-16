@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { BOM_SEED_ITEMS } from "../src/lib/bom/catalog";
 
 const prisma = new PrismaClient();
 
@@ -146,6 +147,21 @@ async function main() {
       startingQty: 500,
       unitCost: 3.5,
     },
+  });
+
+  await prisma.inventoryItem.createMany({
+    data: [miami.id, davie.id].flatMap((branchId) =>
+      BOM_SEED_ITEMS.map((item) => ({
+        sku: item.sku,
+        name: item.name,
+        description: item.description ?? `Demo BOM catalog — ${item.name}`,
+        unit: item.unit,
+        reusable: item.reusable,
+        branchId,
+        startingQty: item.startingQty,
+        unitCost: item.unitCost,
+      }))
+    ),
   });
 
   await prisma.job.create({

@@ -13,7 +13,16 @@ export type ExportJob = {
   fenceType: string | null;
   qtyLf: number | null;
   screen: boolean;
+  screenSku?: string | null;
   gates: number;
+  gateType?: string | null;
+  gateQty?: number;
+  gateType2?: string | null;
+  gateQty2?: number;
+  topRail?: boolean;
+  bottomRail?: boolean;
+  weightMode?: string | null;
+  terminalsManual?: number;
   notes: string | null;
   accountExec: string | null;
   revenue: number;
@@ -50,6 +59,14 @@ export function exportFilename(job: ExportJob): string {
   return `Project_${safeName(job.orderNumber)}_${d}_${job.branch.code}.xlsx`;
 }
 
+function formatExportGates(job: ExportJob): string {
+  const parts: string[] = [];
+  if (job.gateType && job.gateQty) parts.push(`${job.gateType} × ${job.gateQty}`);
+  if (job.gateType2 && job.gateQty2) parts.push(`${job.gateType2} × ${job.gateQty2}`);
+  if (parts.length) return parts.join(", ");
+  return String(job.gates);
+}
+
 export async function buildProjectWorkbook(job: ExportJob): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
   wb.creator = "Temp Fence Ops";
@@ -70,8 +87,12 @@ export async function buildProjectWorkbook(job: ExportJob): Promise<Buffer> {
     ["Job type", job.jobType],
     ["LF", job.qtyLf ?? ""],
     ["Fence type", job.fenceType ?? ""],
-    ["Gates", job.gates],
-    ["Screen", job.screen ? "Yes" : "No"],
+    ["Top rail", job.topRail ? "Yes" : "No"],
+    ["Bottom rail", job.bottomRail ? "Yes" : "No"],
+    ["Weights", job.weightMode ?? ""],
+    ["Gates", formatExportGates(job)],
+    ["Screen", job.screenSku || (job.screen ? "Yes" : "No")],
+    ["Manual terminals", job.terminalsManual ?? 0],
     ["Account exec", job.accountExec ?? ""],
     ["Revenue", job.revenue],
     ["Notes", job.notes ?? ""],

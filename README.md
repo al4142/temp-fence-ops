@@ -54,11 +54,12 @@ These accounts exist only after `npm run db:seed`. **Do not use them in a real c
 | `npm run db:migrate` | `prisma migrate dev` |
 | `npm run db:seed` | Seed fake Miami/Davie sample data |
 | `npm run db:reset` | Reset DB + re-seed |
+| `npm test` | BOM calculator unit tests (vitest) |
 
 ## What you can see in the demo
 
 - **Dashboard** - counts, recent jobs, inventory attention
-- **Jobs** - list with filters, create/edit/delete, detail with materials, labor, cost lines, material variance; **Export Project** downloads an `.xlsx` for poster handoff
+- **Jobs** - list with filters, create/edit/delete, detail with materials, labor, cost lines, material variance; **Generate BOM** from fence type + LF + options (preview/apply); **Export Project** downloads an `.xlsx` for poster handoff
 - **Inventory** - on-hand by branch (starting +/- job moves +/- adjustments +/- transfers +/- write-offs +/- job variance)
 - **Transfers** (`/transfers`) - from yard → to yard, lines item+qty; inventory from down / to up; excluded from job analytics
 - **Write-offs** (`/write-offs`) - damaged/scrap/shrink; qty down; excluded from job analytics
@@ -78,8 +79,9 @@ Inventory movement: `INST` / `DELIVERY` decrease on-hand; `PU` / `PICKUP` increa
 
 - Job **lodging / freight / misc** are line lists (amount/facility, company/cost, category/amount). `Job.lodging|freight|misc` stay as denormalized sums for rollups.
 - **Transfers** move quantity only. Carry cost is conceptual; Wave 3 will refine average cost on `InventoryItem`.
-- **Pickup materials** (INST/DELIVERY BOM later; pickup materials from LF or original job / partial) — Wave 2. Documented here only for now.
-- Not in Wave 1: BOM generate, screen dropdown overhaul, purchases / landed cost / avg cost engine.
+- **Pickup / install BOM** — same recipes for INST and PU; inventory sign is still INST down / PU up. Generate BOM on job create/edit from LF + fence type + options.
+- Screen is a **SKU pick** (BLACK6, …), not Yes/No.
+- Purchases / landed cost / avg cost engine still later.
 
 ## Public demo vs private company use
 
@@ -92,7 +94,7 @@ Inventory movement: `INST` / `DELIVERY` decrease on-hand; `PU` / `PICKUP` increa
 
 ## Phase / wave status
 
-Phases 0–5 plus polish are implemented. **Wave 1** (vendors, cost lines, yard expenses, transfers, write-offs, job material variance, Export Project) is implemented. See [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md).
+Phases 0–5 plus polish and Wave 1 are implemented. **Wave 2 BOM calculator** is implemented (job create/edit Generate BOM). See [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md).
 
 ## Auth
 
@@ -101,6 +103,8 @@ Simple credentials for 1–2 office users: bcrypt-hashed passwords in Prisma `Us
 ## Docs
 
 - [docs/DATA_MODEL.md](docs/DATA_MODEL.md) - tables, inventory rules, P&L
+- [docs/BOM_APPROVED.md](docs/BOM_APPROVED.md) - **live** temporary-fence BOM recipes (locked)
+- [docs/BOM_FROM_EXCEL_DRAFT.md](docs/BOM_FROM_EXCEL_DRAFT.md) - historical Excel reverse-engineer (use only where APPROVED points at it)
 - [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) - phased roadmap
 - [docs/PRIVATE_DEPLOY.md](docs/PRIVATE_DEPLOY.md) - private repo, Postgres, env, hosts, production users
 - [docs/IMPORT.md](docs/IMPORT.md) - Excel → CSV import

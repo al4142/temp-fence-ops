@@ -89,3 +89,13 @@ Construction rollups, Master installer table).
 - Purchases / landed / avg cost - Wave 2-3
 
 **Status: done**
+
+## Wave 2 - Temporary-fence BOM calculator
+
+- Pure TS calculator (`src/lib/bom/`) from [BOM_APPROVED.md](./BOM_APPROVED.md)
+- Unit tests for panels, barricade, CL6/CL8 rails, CL6+1/CL8+1 barb, screens, swing/slide gates, terminal hybrid
+- Job create/edit: fence options + **Generate BOM** preview/apply (does not silently replace lines)
+- Catalog match by inventory name/SKU (aliases for SADDLE CLAMP, etc.)
+- Same qtys for INST and PU; inventory sign unchanged
+
+**Status: done**
