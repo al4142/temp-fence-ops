@@ -106,6 +106,7 @@ Simple credentials for 1–2 office users: bcrypt-hashed passwords in Prisma `Us
 
 ## Docs
 
+- [docs/USER_GUIDE.md](docs/USER_GUIDE.md) - Operator’s Guide (live app: jobs, Generate BOM, inventory, P&L)
 - [docs/DATA_MODEL.md](docs/DATA_MODEL.md) - tables, inventory rules, P&L
 - [docs/BOM_APPROVED.md](docs/BOM_APPROVED.md) - **live** temporary-fence BOM recipes (locked)
 - [docs/BOM_FROM_EXCEL_DRAFT.md](docs/BOM_FROM_EXCEL_DRAFT.md) - historical Excel reverse-engineer (use only where APPROVED points at it)
