@@ -45,6 +45,16 @@ One daily ticket. Multiple jobs can share an `orderNumber` (install then pickup)
 Key fields: `date`, `branchId`, `class`, `orderNumber`, `customer`, site fields, `jobType`,
 fence specs, `revenue`. `lodging` / `freight` / `misc` are **denormalized sums** of their line tables.
 
+BOM generator inputs (optional; used by **Generate BOM** on create/edit):
+- `fenceType` — canonical only: `CL6`, `CL8`, `CL6+1`, `CL8+1`, `6x10`, `6x12`, `8x10`, `8x12`, `BARRICADE`
+- `qtyLf`, `topRail`, `bottomRail`, `weightMode` (`BFOOT` / `SBAG`), `screenSku`
+- `gateType` + `gateQty`, `gateType2` + `gateQty2` (`gates` is the denormalized total)
+- `terminalsManual` — corners / start-stop / extras; auto terminals = gate qty × 2
+- `screen` stays in sync as `Boolean(screenSku)` for legacy views
+
+Live recipes: [BOM_APPROVED.md](./BOM_APPROVED.md). Calculator: `src/lib/bom/`.
+INST vs PU does **not** change BOM quantities (inventory sign is separate).
+
 ### Job cost lines
 - `JobLodgingLine` - amount, hotel/facility, notes
 - `JobFreightLine` - company, cost, notes

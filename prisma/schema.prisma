@@ -78,10 +78,22 @@ model Job {
   address     String?
   city        String?
   jobType     String // INST, PU, PICKUP, DELIVERY, etc.
-  fenceType   String?
+  fenceType   String? // canonical: CL6, CL8, CL6+1, CL8+1, 6x10, 6x12, 8x10, 8x12, BARRICADE
   qtyLf       Float?
   screen      Boolean  @default(false)
-  gates       Int      @default(0)
+  /// Screen SKU (BLACK6, …). `screen` is derived as Boolean(screenSku) for legacy views.
+  screenSku   String?
+  gates       Int      @default(0) // denormalized gateQty + gateQty2
+  gateType    String?
+  gateQty     Int      @default(0)
+  gateType2   String?
+  gateQty2    Int      @default(0)
+  topRail     Boolean  @default(false)
+  bottomRail  Boolean  @default(false)
+  /// BFOOT | SBAG — panel T-stand weights. Blank = none.
+  weightMode  String?
+  /// Corners + start/stop + extras (not including 2 per gate).
+  terminalsManual Int  @default(0)
   notes       String?
   accountExec String?
   revenue     Float    @default(0)

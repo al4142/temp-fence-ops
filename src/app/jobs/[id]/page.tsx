@@ -5,6 +5,20 @@ import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import { describeInventoryEffect, inventorySignForJobType } from "@/lib/inventory";
 import { laborCostForLine, materialCostForLine } from "@/lib/pnl";
 
+function formatJobGates(job: {
+  gates: number;
+  gateType: string | null;
+  gateQty: number;
+  gateType2: string | null;
+  gateQty2: number;
+}): string {
+  const parts: string[] = [];
+  if (job.gateType && job.gateQty) parts.push(`${job.gateType} × ${job.gateQty}`);
+  if (job.gateType2 && job.gateQty2) parts.push(`${job.gateType2} × ${job.gateQty2}`);
+  if (parts.length) return parts.join(", ");
+  return job.gates ? String(job.gates) : "0";
+}
+
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ id: string }> };
@@ -79,7 +93,28 @@ export default async function JobDetailPage({ params }: Props) {
         <Info label="Class" value={job.class ?? "-"} />
         <Info label="Fence" value={job.fenceType ?? "-"} />
         <Info label="Qty (LF)" value={job.qtyLf != null ? formatNumber(job.qtyLf, 0) : "-"} />
-        <Info label="Gates / Screen" value={`${job.gates} / ${job.screen ? "Yes" : "No"}`} />
+        <Info
+          label="Rails / weights"
+          value={[
+            job.topRail ? "Top rail" : null,
+            job.bottomRail ? "Bottom rail" : null,
+            job.weightMode || null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || "-"}
+        />
+        <Info
+          label="Gates"
+          value={formatJobGates(job)}
+        />
+        <Info
+          label="Screen"
+          value={job.screenSku || (job.screen ? "Yes" : "No")}
+        />
+        <Info
+          label="Manual terminals"
+          value={String(job.terminalsManual)}
+        />
         <Info label="Account exec" value={job.accountExec ?? "-"} />
         <Info label="Revenue" value={formatCurrency(job.revenue)} />
         <Info

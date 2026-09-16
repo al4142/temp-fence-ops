@@ -13,10 +13,10 @@ export const JOB_TYPES = [
 
 export const JOB_CLASSES = ["EVENT", "CONSTRUCTION", "OTHER"] as const;
 
-export const FENCE_TYPES = [
-  "6ft Temp",
-  "8ft Temp",
-  "Chain Link",
-  "Panel",
-  "Other",
-] as const;
+export {
+  FENCE_TYPES,
+  FENCE_TYPE_LABELS,
+  GATE_TYPES,
+  SCREEN_SKUS,
+  WEIGHT_MODES,
+} from "./bom/catalog";

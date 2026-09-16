@@ -25,7 +25,7 @@ At least one header alias for each:
 
 ## Optional columns
 
-`class`, `customer`, `address`, `city`, `fenceType`, `qtyLf`, `screen`, `notes`, `accountExec`, `revenue`, `labor` / `assigned`, `hours`, `ot`.
+`class`, `customer`, `address`, `city`, `fenceType`, `qtyLf`, `screen` (Yes/No **or** a screen SKU such as `BLACK6`), `notes`, `accountExec`, `revenue`, `labor` / `assigned`, `hours`, `ot`.
 
 Material columns whose header looks like a SKU (`PANEL-6`, `BASE-STD`) are treated as quantities for that SKU on the job’s branch.
 

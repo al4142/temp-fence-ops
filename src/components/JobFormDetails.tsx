@@ -1,6 +1,6 @@
 "use client";
 
-import { FENCE_TYPES, JOB_CLASSES, JOB_TYPES } from "@/lib/job-constants";
+import { JOB_CLASSES, JOB_TYPES } from "@/lib/job-constants";
 import type { BranchOption } from "@/components/JobForm";
 
 type Props = {
@@ -15,10 +15,6 @@ type Props = {
   address: string; setAddress: (v: string) => void;
   city: string; setCity: (v: string) => void;
   jobType: string; setJobType: (v: string) => void;
-  fenceType: string; setFenceType: (v: string) => void;
-  qtyLf: string; setQtyLf: (v: string) => void;
-  screen: boolean; setScreen: (v: boolean) => void;
-  gates: string; setGates: (v: string) => void;
   notes: string; setNotes: (v: string) => void;
   accountExec: string; setAccountExec: (v: string) => void;
   revenue: string; setRevenue: (v: string) => void;
@@ -29,8 +25,7 @@ export function JobFormDetails(p: Props) {
     branches, inputClass, labelClass,
     date, setDate, branchId, setBranchId, jobClass, setJobClass,
     orderNumber, setOrderNumber, customer, setCustomer, address, setAddress,
-    city, setCity, jobType, setJobType, fenceType, setFenceType, qtyLf, setQtyLf,
-    screen, setScreen, gates, setGates, notes, setNotes, accountExec, setAccountExec,
+    city, setCity, jobType, setJobType, notes, setNotes, accountExec, setAccountExec,
     revenue, setRevenue,
   } = p;
 
@@ -80,27 +75,6 @@ export function JobFormDetails(p: Props) {
           <div>
             <label className={labelClass} htmlFor="city">City</label>
             <input id="city" className={inputClass} value={city} onChange={(e) => setCity(e.target.value)} />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="fenceType">Fence type</label>
-            <select id="fenceType" className={inputClass} value={fenceType} onChange={(e) => setFenceType(e.target.value)}>
-              <option value="">-</option>
-              {FENCE_TYPES.map((f) => (<option key={f} value={f}>{f}</option>))}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="qtyLf">Qty (LF)</label>
-            <input id="qtyLf" type="number" step="any" min="0" className={inputClass} value={qtyLf} onChange={(e) => setQtyLf(e.target.value)} />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="gates">Gates</label>
-            <input id="gates" type="number" min="0" step="1" className={inputClass} value={gates} onChange={(e) => setGates(e.target.value)} />
-          </div>
-          <div className="flex items-end pb-2">
-            <label className="flex items-center gap-2 text-sm text-slate-800">
-              <input type="checkbox" checked={screen} onChange={(e) => setScreen(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
-              Screen / privacy wrap
-            </label>
           </div>
           <div>
             <label className={labelClass} htmlFor="accountExec">Account exec</label>

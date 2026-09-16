@@ -1,5 +1,6 @@
 import { parseCsv, rowToObject } from "./csv";
 import { dateOnlyToUtc, parseOptionalNumber, parseRequiredNumber } from "./job-form";
+import { normalizeScreenSku } from "./bom/catalog";
 
 /** Canonical field keys we map CSV columns onto. */
 export const IMPORT_FIELDS = [
@@ -111,6 +112,7 @@ export type ParsedImportRow = {
   fenceType: string | null;
   qtyLf: number | null;
   screen: boolean;
+  screenSku: string | null;
   notes: string | null;
   accountExec: string | null;
   revenue: number;
@@ -194,6 +196,9 @@ export function parseImportText(text: string): {
       if (qty !== null && qty !== 0) materials.push({ sku: mc.sku, quantity: qty });
     }
 
+    const screenRaw = cell(cells, mapping.screen);
+    const screenSku = normalizeScreenSku(screenRaw);
+
     const row: ParsedImportRow = {
       rowNumber,
       date: date ?? "",
@@ -206,7 +211,8 @@ export function parseImportText(text: string): {
       jobType,
       fenceType: cell(cells, mapping.fenceType) || null,
       qtyLf: parseOptionalNumber(cell(cells, mapping.qtyLf)),
-      screen: parseBool(cell(cells, mapping.screen)),
+      screen: Boolean(screenSku) || parseBool(screenRaw),
+      screenSku,
       notes: cell(cells, mapping.notes) || null,
       accountExec: cell(cells, mapping.accountExec) || null,
       revenue: parseRequiredNumber(cell(cells, mapping.revenue), 0),

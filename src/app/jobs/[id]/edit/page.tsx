@@ -52,7 +52,18 @@ export default async function EditJobPage({ params }: Props) {
     fenceType: job.fenceType ?? "",
     qtyLf: job.qtyLf != null ? String(job.qtyLf) : "",
     screen: job.screen,
+    screenSku: job.screenSku ?? "",
     gates: String(job.gates),
+    gateType: job.gateType ?? "",
+    gateQty: String(
+      job.gateQty > 0 ? job.gateQty : !job.gateType && !job.gateType2 ? job.gates : job.gateQty
+    ),
+    gateType2: job.gateType2 ?? "",
+    gateQty2: String(job.gateQty2),
+    topRail: job.topRail,
+    bottomRail: job.bottomRail,
+    weightMode: job.weightMode ?? "",
+    terminalsManual: String(job.terminalsManual),
     notes: job.notes ?? "",
     accountExec: job.accountExec ?? "",
     revenue: String(job.revenue),

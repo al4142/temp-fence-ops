@@ -1,5 +1,6 @@
 import { JOB_TYPES } from "./job-constants";
 import { VARIANCE_REASONS } from "./ops-constants";
+import { isPlusOneType, normalizeFenceType, normalizeWeightMode } from "./bom/catalog";
 
 export type MaterialInput = {
   inventoryItemId: string | null;
@@ -52,7 +53,16 @@ export type JobFormValues = {
   fenceType: string;
   qtyLf: string;
   screen: boolean;
+  screenSku: string;
   gates: string;
+  gateType: string;
+  gateQty: string;
+  gateType2: string;
+  gateQty2: string;
+  topRail: boolean;
+  bottomRail: boolean;
+  weightMode: string;
+  terminalsManual: string;
   notes: string;
   accountExec: string;
   revenue: string;
@@ -76,7 +86,16 @@ export type JobFormPayload = {
   fenceType: string | null;
   qtyLf: number | null;
   screen: boolean;
+  screenSku: string | null;
   gates: number;
+  gateType: string | null;
+  gateQty: number;
+  gateType2: string | null;
+  gateQty2: number;
+  topRail: boolean;
+  bottomRail: boolean;
+  weightMode: string | null;
+  terminalsManual: number;
   notes: string | null;
   accountExec: string | null;
   revenue: number;
@@ -134,7 +153,16 @@ export function emptyJobFormValues(defaults?: {
     fenceType: "",
     qtyLf: "",
     screen: false,
+    screenSku: "",
     gates: "0",
+    gateType: "",
+    gateQty: "0",
+    gateType2: "",
+    gateQty2: "0",
+    topRail: false,
+    bottomRail: false,
+    weightMode: "",
+    terminalsManual: "0",
     notes: "",
     accountExec: "",
     revenue: "0",
@@ -263,6 +291,23 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
   const freight = freightLines.reduce((s, l) => s + l.cost, 0);
   const misc = miscLines.reduce((s, l) => s + l.amount, 0);
 
+  const fenceTypeRaw = input.fenceType.trim();
+  const fenceType = fenceTypeRaw || null;
+  const weightRaw = (input.weightMode ?? "").trim().toUpperCase();
+  if (weightRaw && !normalizeWeightMode(weightRaw)) {
+    return { ok: false, error: "Weight mode must be BFOOT, SBAG, or blank." };
+  }
+  const gateQty = Math.max(0, Math.floor(parseRequiredNumber(input.gateQty, 0)));
+  const gateQty2 = Math.max(0, Math.floor(parseRequiredNumber(input.gateQty2, 0)));
+  const gatesFromPairs = gateQty + gateQty2;
+  const legacyGates = Math.max(0, Math.floor(parseRequiredNumber(input.gates, 0)));
+  const gates = gatesFromPairs > 0 ? gatesFromPairs : legacyGates;
+  const screenSku = (input.screenSku ?? "").trim() || null;
+  const screen = Boolean(screenSku) || Boolean(input.screen);
+  const canonical = normalizeFenceType(fenceType);
+  const topRail =
+    input.topRail ?? (canonical ? isPlusOneType(canonical) : false);
+
   return {
     ok: true,
     data: {
@@ -274,10 +319,19 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
       address: input.address.trim() || null,
       city: input.city.trim() || null,
       jobType,
-      fenceType: input.fenceType.trim() || null,
+      fenceType,
       qtyLf: parseOptionalNumber(input.qtyLf),
-      screen: Boolean(input.screen),
-      gates: Math.max(0, Math.floor(parseRequiredNumber(input.gates, 0))),
+      screen,
+      screenSku,
+      gates,
+      gateType: (input.gateType ?? "").trim() || null,
+      gateQty,
+      gateType2: (input.gateType2 ?? "").trim() || null,
+      gateQty2,
+      topRail: Boolean(topRail),
+      bottomRail: Boolean(input.bottomRail),
+      weightMode: weightRaw || null,
+      terminalsManual: Math.max(0, Math.floor(parseRequiredNumber(input.terminalsManual, 0))),
       notes: input.notes.trim() || null,
       accountExec: input.accountExec.trim() || null,
       revenue: parseRequiredNumber(input.revenue, 0),

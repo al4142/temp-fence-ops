@@ -1,9 +1,8 @@
-# BOM formulas from Excel — DRAFT for review
+# BOM formulas from Excel — DRAFT (historical)
 
-**Status:** DRAFT for Alex to confirm — **not implemented** in the app yet.  
-**Source:** `DAILY TRACKER` material columns (AS–CX) on the ops workbook (formulas present from ~row 1252 onward; Excel Table `Table24`).  
-**Method:** Formulas read with `data_only=False`; sample calculated values with `data_only=True` for INST/PU × panel / chainlink / barricade rows.  
-**Do not treat this as shipping logic** until open questions below are answered.
+**Status:** Historical reverse-engineer. **Not the live product rules.**  
+**Live rules:** [BOM_APPROVED.md](./BOM_APPROVED.md) (locked Sep 15–16, 2026). Implementation: `src/lib/bom/`.  
+**Use this draft only where APPROVED points at Excel** (swing/slide gate hardware, temp tension-band multipliers `*3` CL6 / `*4` CL8). On conflict, APPROVED wins.
 
 ---
 
