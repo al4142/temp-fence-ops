@@ -1,13 +1,13 @@
 // Temp Fence Ops — Prisma schema
-// Demo uses SQLite. For company deploy, change provider to "postgresql"
-// and set DATABASE_URL accordingly (see .env.example and README).
+// PostgreSQL for local, demo, and company deploy (Neon or Docker).
+// See .env.example and README for DATABASE_URL.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

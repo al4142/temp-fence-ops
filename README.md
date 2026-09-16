@@ -9,22 +9,24 @@ Replaces a slow Excel workbook covering daily jobs, inventory by branch, and P&L
 
 - Next.js (App Router) + TypeScript + Tailwind CSS
 - Prisma ORM
-- SQLite for the public demo (`file:./dev.db`)
+- PostgreSQL (Neon for demo/production; Docker or a Neon branch locally)
 - ExcelJS for **Export Project** (.xlsx)
 
-Company / private deploys can switch to PostgreSQL by changing the Prisma `provider` and setting `DATABASE_URL` (see `.env.example`).
+Prisma `provider` is `postgresql`. SQLite (`file:./dev.db`) is no longer supported. See `.env.example` for local Docker vs Neon `DATABASE_URL` examples.
 
 ## Quick start (fresh)
 
+You need a Postgres database first (Docker example in `.env.example`, or a Neon branch).
+
 ```bash
 npm install
-cp .env.example .env   # set DATABASE_URL + AUTH_SECRET
-npx prisma migrate dev
+cp .env.example .env   # set Postgres DATABASE_URL + AUTH_SECRET
+npx prisma migrate deploy   # or: npx prisma migrate dev
 npm run db:seed
 npm run dev
 ```
 
-### After pull (existing DB)
+### After pull (existing Postgres)
 
 ```bash
 git pull
@@ -32,6 +34,8 @@ npx prisma migrate deploy
 npx prisma generate
 npm run dev
 ```
+
+If you still have a local SQLite `dev.db` from before this change, point `DATABASE_URL` at Postgres and run `migrate deploy` against a **fresh** database (do not reuse the SQLite file).
 
 Open [http://localhost:3000](http://localhost:3000) — you will be redirected to **Sign in**.
 
@@ -88,7 +92,7 @@ Inventory movement: `INST` / `DELIVERY` decrease on-hand; `PU` / `PICKUP` increa
 | | Public demo (this repo) | Private company deploy |
 |--|-------------------------|-------------------------|
 | Data | Fake sample only | Real ops data (private) |
-| Database | SQLite file | Prefer PostgreSQL |
+| Database | PostgreSQL (Neon or local Docker) | PostgreSQL (Neon) |
 | Auth | Demo credentials (seeded) | Private deploy: real users + strong AUTH_SECRET |
 | PII | None beyond name/rate/role | Keep sensitive HR fields out or gated |
 
