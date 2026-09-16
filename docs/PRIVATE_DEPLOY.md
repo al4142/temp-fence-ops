@@ -9,43 +9,31 @@ Guidance for running Temp Fence Ops as an internal tool for a small office (1–
 - Never commit production `.env`, database dumps with real staff, or workbook exports that include HR fields.
 - Strip or replace demo seed before loading history; import carefully and gate sensitive columns.
 
-## 2. Switch SQLite → PostgreSQL
+## 2. PostgreSQL (Neon or other managed Postgres)
 
-Local demo uses SQLite (`provider = "sqlite"`, `DATABASE_URL="file:./dev.db"`).
+Prisma `provider` is `postgresql`. Local and company deploys both use Postgres (Docker locally, or a Neon branch / production project). SQLite file URLs are not supported.
 
-For a company deploy:
-
-1. In `prisma/schema.prisma`, set:
-
-   ```prisma
-   datasource db {
-     provider = "postgresql"
-     url      = env("DATABASE_URL")
-   }
-   ```
-
-2. Set `DATABASE_URL` to your managed Postgres URL, e.g.:
+1. Set `DATABASE_URL` to your managed Postgres URL, e.g.:
 
    ```
    DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/temp_fence_ops?schema=public"
    ```
 
-3. Create a fresh migration history for Postgres (do not reuse the SQLite migration SQL as-is on a new empty Postgres DB without regenerating). Typical approach:
+   Neon: use the **direct** (non-pooler) connection string for `prisma migrate deploy`, typically with `sslmode=require`. See `.env.example`.
+
+2. Apply the checked-in Postgres baseline on an **empty** database:
 
    ```bash
-   # After switching provider and pointing DATABASE_URL at empty Postgres
-   npx prisma migrate deploy   # if you maintain Postgres-compatible migrations
-   # or for a greenfield private fork:
-   npx prisma db push          # pragmatic for small internal apps
+   npx prisma migrate deploy
    ```
 
-SQLite and Postgres differ slightly (e.g. types). Prefer generating migrations against Postgres for production.
+   Migration history is a single PostgreSQL baseline (`prisma/migrations`), not the old SQLite SQL. Do not run this against a leftover SQLite `dev.db`.
 
 ## 3. Environment variables
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `DATABASE_URL` | Yes | Postgres connection string (or SQLite file for local demo) |
+| `DATABASE_URL` | Yes | PostgreSQL connection string (Neon or local Docker; see `.env.example`) |
 | `AUTH_SECRET` | Yes | HMAC secret for signed session cookies. Generate: `openssl rand -base64 32` |
 | `NODE_ENV` | Host sets | `production` enables Secure cookies |
 
@@ -71,7 +59,6 @@ Next.js + Prisma fits Vercel well (serverless/Node runtime, easy env UI).
 
    ```bash
    npx prisma migrate deploy
-   # or prisma db push for a small greenfield internal app
    ```
 
 7. Create real users (see §5). Do **not** rely on demo passwords in production.
@@ -92,7 +79,7 @@ Next.js + Prisma fits Vercel well (serverless/Node runtime, easy env UI).
 - **Migrations** (`prisma migrate deploy`) apply schema only — use this in production.
 - **Seed** (`npm run db:seed`) loads **fake Miami/Davie demo data and demo logins**. Use seed for local/demo only.
 - For production:
-  1. Migrate (or `db push`) the empty schema.
+  1. Migrate the empty schema (`npx prisma migrate deploy`).
   2. Create real users with bcrypt-hashed passwords (small script or one-off `tsx`):
 
      ```ts
@@ -134,7 +121,7 @@ Demo logins (local seed only) are documented in the README — **demo-only**.
 ## Checklist
 
 - [ ] Private repo / no real PII in public remotes
-- [ ] Postgres `DATABASE_URL` + Prisma provider `postgresql`
+- [ ] Postgres `DATABASE_URL` (Neon direct URL for migrations)
 - [ ] Strong unique `AUTH_SECRET`
 - [ ] Migrate schema; do not seed demo data into production
 - [ ] Create real users; remove demo accounts

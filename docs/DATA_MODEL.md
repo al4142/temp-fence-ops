@@ -1,6 +1,6 @@
 # Data model
 
-ER-style overview of the Temp Fence Ops schema (Prisma / SQLite demo).
+ER-style overview of the Temp Fence Ops schema (Prisma / PostgreSQL).
 
 ## Entities
 
@@ -121,10 +121,11 @@ Implementation: `src/lib/inventory.ts`.
 
 Transfers, write-offs, and yard expenses are **not** in job P&L / analytics.
 
-## SQLite vs PostgreSQL
+## PostgreSQL
 
-Demo `datasource` uses `provider = "sqlite"`. For company deploy, switch to `postgresql`
-and set `DATABASE_URL` (see `.env.example`). Schema types are portable; re-run migrate.
+`datasource` uses `provider = "postgresql"`. Local (Docker or a Neon branch) and
+demo/production (Neon) share the same provider. Set `DATABASE_URL` (see `.env.example`).
+Apply schema with `npx prisma migrate deploy` on a fresh Postgres database.
 
 ## Auth users
 

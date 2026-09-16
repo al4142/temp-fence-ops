@@ -6,7 +6,7 @@ Construction rollups, Master installer table).
 ## Phase 0 - Scaffold + schema + seed
 
 - Next.js App Router, TypeScript, Tailwind, Prisma
-- SQLite demo database
+- PostgreSQL database (SQLite was the original demo; provider is now postgresql)
 - Models: Branch, Employee, InventoryItem, Job, JobMaterial, JobLabor, InventoryAdjustment
 - Seed with fake Miami / Davie-style data (install vs pickup inventory impact)
 - Docs: DATA_MODEL, BUILD_PLAN, README
