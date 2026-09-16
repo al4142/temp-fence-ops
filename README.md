@@ -3,6 +3,8 @@
 Public demo of an operations tracker for temporary fence install and pickup work (events & construction).
 Replaces a slow Excel workbook covering daily jobs, inventory by branch, and P&L by order number.
 
+**Operators / office users:** [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — sign-in, navigation, jobs, Generate BOM, inventory, and known limits for the live Hardpoint demo ([temp-fence-ops.vercel.app](https://temp-fence-ops.vercel.app)).
+
 **This repository uses fake sample data only.** Employee records include name, hourly rate, position, and branch - no SSN, DOB, address, phone, or personal email.
 
 ## Stack
@@ -106,6 +108,7 @@ Simple credentials for 1–2 office users: bcrypt-hashed passwords in Prisma `Us
 
 ## Docs
 
+- [docs/USER_GUIDE.md](docs/USER_GUIDE.md) - **operator's guide** (access, nav, jobs, BOM, inventory)
 - [docs/DATA_MODEL.md](docs/DATA_MODEL.md) - tables, inventory rules, P&L
 - [docs/BOM_APPROVED.md](docs/BOM_APPROVED.md) - **live** temporary-fence BOM recipes (locked)
 - [docs/BOM_FROM_EXCEL_DRAFT.md](docs/BOM_FROM_EXCEL_DRAFT.md) - historical Excel reverse-engineer (use only where APPROVED points at it)
