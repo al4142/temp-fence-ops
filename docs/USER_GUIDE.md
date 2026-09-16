@@ -4,7 +4,7 @@ Office and admin guide for the live app. This is a **public demo** with fake sam
 
 **Live app:** [https://temp-fence-ops.vercel.app](https://temp-fence-ops.vercel.app)
 
-BOM recipes (locked): [BOM_APPROVED.md](./BOM_APPROVED.md). Private-company deploy (real users, no demo seed): [PRIVATE_DEPLOY.md](./PRIVATE_DEPLOY.md).
+BOM recipes (locked): [BOM_APPROVED.md](./BOM_APPROVED.md). Architecture: [TECH_SPEC.md](./TECH_SPEC.md). Deploy / env / incidents: [RUNBOOK.md](./RUNBOOK.md). Private-company deploy (real users, no demo seed): [PRIVATE_DEPLOY.md](./PRIVATE_DEPLOY.md).
 
 ---
 
@@ -224,7 +224,7 @@ Yard expenses are a separate ledger (`/expenses`) and are **not** forced onto jo
 
 ## 6. Access & environment
 
-Short ops notes for the live demo (not a company cutover runbook).
+Short ops notes for the live demo. Full deploy / migrate / incident steps: [RUNBOOK.md](./RUNBOOK.md). Private-company cutover: [PRIVATE_DEPLOY.md](./PRIVATE_DEPLOY.md).
 
 | Item | Value |
 |------|--------|
@@ -247,4 +247,4 @@ Environment variables (set in the host; **never commit secrets**):
 - Live demo: seed users only (`admin@demo.local` / `DemoAdmin123!`, `office@demo.local` / `DemoOffice123!`).
 - Real client data: **do not use this demo.** Fork/private deploy, migrate schema **without** demo seed, create real users, rotate `AUTH_SECRET`, delete leftover demo accounts. See [PRIVATE_DEPLOY.md](./PRIVATE_DEPLOY.md).
 
-Local / engineering: README quick start (`npm install`, `.env`, `prisma migrate deploy`, `npm run db:seed`, `npm run dev`).
+Local / engineering: [README](../README.md) (clone, env, Docker Postgres, seed, tests).
