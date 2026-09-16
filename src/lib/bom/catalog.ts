@@ -53,7 +53,7 @@ export const SCREEN_SKUS = [
 ] as const;
 export type ScreenSku = (typeof SCREEN_SKUS)[number];
 
-/** Excel GATE / GATE2 body SKUs, plus 12x8 (dropdown gap — still emitted with a warning). */
+/** Excel GATE / GATE2 body SKUs, plus 4x6 / 12x8 (dropdown gaps — emit with a warning). `4x8` is removed from the product (not selectable). */
 export const GATE_TYPES = [
   "4x6",
   "5x6",
@@ -66,7 +66,6 @@ export const GATE_TYPES = [
   "15x6 SLIDE",
   "20x6",
   "20x6 SLIDE",
-  "4x8",
   "6x8",
   "10x8",
   "12x8",
@@ -87,8 +86,8 @@ export const SLIDE_GATE_TYPES = [
 export const SHORT_SLIDE_GATE_TYPES = ["15x6 SLIDE", "14x8 SLIDE"] as const;
 export const LONG_SLIDE_GATE_TYPES = ["20x6 SLIDE", "20x8 SLIDE"] as const;
 
-/** Names that have no inventory SKU in the ops workbook (still emit the line + warning). */
-export const KNOWN_SKU_GAPS = new Set<string>(["12x8", "4x6", "CUSTOM"]);
+/** Names with no inventory SKU / not sold. Still emit the line + warning if they appear (import/legacy). `4x8` is also not selectable. */
+export const KNOWN_SKU_GAPS = new Set<string>(["12x8", "4x6", "4x8", "CUSTOM"]);
 
 export type BomSeedItem = {
   sku: string;
@@ -112,7 +111,6 @@ const GATE_SEED_STATS: Partial<Record<GateType, { startingQty: number; unitCost:
   "15x6 SLIDE": { startingQty: 4, unitCost: 240 },
   "20x6": { startingQty: 3, unitCost: 220 },
   "20x6 SLIDE": { startingQty: 3, unitCost: 280 },
-  "4x8": { startingQty: 10, unitCost: 125 },
   "6x8": { startingQty: 8, unitCost: 140 },
   "10x8": { startingQty: 6, unitCost: 170 },
   "14x8": { startingQty: 4, unitCost: 200 },
@@ -315,6 +313,15 @@ export function chainlinkBase(t: ChainlinkFenceType): "CL6" | "CL8" {
 export function normalizeScreenSku(raw: string | null | undefined): ScreenSku | null {
   if (!raw) return null;
   return SCREEN_LOOKUP.get(raw.trim().toUpperCase()) ?? null;
+}
+
+export function isKnownSkuGap(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const key = raw.trim().toUpperCase();
+  for (const g of KNOWN_SKU_GAPS) {
+    if (g.toUpperCase() === key) return g;
+  }
+  return null;
 }
 
 export function normalizeGateType(raw: string | null | undefined): GateType | null {

@@ -9,6 +9,7 @@ export {
   BOM_GATE_SEED_ITEMS,
   KNOWN_SKU_GAPS,
   gateTypesExpectedInSeed,
+  isKnownSkuGap,
   normalizeFenceType,
   normalizeGateType,
   normalizeScreenSku,

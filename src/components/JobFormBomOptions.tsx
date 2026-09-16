@@ -47,6 +47,10 @@ export function JobFormBomOptions(p: Props) {
     p.fenceType && !FENCE_TYPES.includes(p.fenceType as (typeof FENCE_TYPES)[number])
       ? [p.fenceType, ...FENCE_TYPES]
       : [...FENCE_TYPES];
+  const gateList = (current: string) =>
+    current && !(GATE_TYPES as readonly string[]).includes(current)
+      ? [current, ...GATE_TYPES]
+      : [...GATE_TYPES];
 
   function onFenceTypeChange(next: string) {
     p.setFenceType(next);
@@ -192,9 +196,11 @@ export function JobFormBomOptions(p: Props) {
             onChange={(e) => p.setGateType(e.target.value)}
           >
             <option value="">-</option>
-            {GATE_TYPES.map((g) => (
+            {gateList(p.gateType).map((g) => (
               <option key={g} value={g}>
-                {g}
+                {(GATE_TYPES as readonly string[]).includes(g)
+                  ? g
+                  : `${g} (removed — catalog gap)`}
               </option>
             ))}
           </select>
@@ -224,9 +230,11 @@ export function JobFormBomOptions(p: Props) {
             onChange={(e) => p.setGateType2(e.target.value)}
           >
             <option value="">-</option>
-            {GATE_TYPES.map((g) => (
+            {gateList(p.gateType2).map((g) => (
               <option key={g} value={g}>
-                {g}
+                {(GATE_TYPES as readonly string[]).includes(g)
+                  ? g
+                  : `${g} (removed — catalog gap)`}
               </option>
             ))}
           </select>

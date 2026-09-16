@@ -4,6 +4,7 @@ import {
   PANEL_WIDTH,
   chainlinkBase,
   isChainlinkType,
+  isKnownSkuGap,
   isLongSlideGate,
   isPanelType,
   isPlusOneType,
@@ -68,14 +69,16 @@ function parseGate(
     return { type: typeRaw, canonical: normalizeGateType(typeRaw), qty: 0 };
   }
   const canonical = normalizeGateType(typeRaw);
+  const gap = isKnownSkuGap(typeRaw);
+  if (gap) {
+    warnings.push(
+      `${label}: ${gap} is a known catalog gap (no inventory SKU). Line is still emitted as free-text; inventory will not move.`
+    );
+    return { type: gap, canonical, qty };
+  }
   if (!canonical) {
     warnings.push(`${label}: unrecognized gate type "${typeRaw}" — emitted as free-text; treated as swing unless name includes SLIDE.`);
     return { type: typeRaw, canonical: null, qty };
-  }
-  if (KNOWN_SKU_GAPS.has(canonical)) {
-    warnings.push(
-      `${label}: ${canonical} is a known catalog gap (Excel dropdown vs inventory). Line is still emitted.`
-    );
   }
   return { type: canonical, canonical, qty };
 }
