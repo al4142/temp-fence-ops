@@ -5,6 +5,7 @@ import { logoutAction } from "@/app/login/actions";
 const links = [
   { href: "/", label: "Dashboard" },
   { href: "/jobs", label: "Jobs" },
+  { href: "/action-items", label: "Action items" },
   { href: "/inventory", label: "Inventory" },
   { href: "/transfers", label: "Transfers" },
   { href: "/write-offs", label: "Write-offs" },

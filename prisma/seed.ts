@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   await prisma.user.deleteMany();
+  await prisma.actionItem.deleteMany();
   await prisma.jobLabor.deleteMany();
   await prisma.jobMaterial.deleteMany();
   await prisma.jobLodgingLine.deleteMany();
@@ -370,7 +371,48 @@ async function main() {
     },
   });
 
-  console.log("Seeded branches, employees, inventory, jobs.");
+  const utcDaysAgo = (days: number) => {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - days);
+    d.setUTCHours(12, 0, 0, 0);
+    return d;
+  };
+
+  await prisma.actionItem.createMany({
+    data: [
+      {
+        date: utcDaysAgo(0),
+        task: "Call Sunrise Builders about Phase 2 pickup window",
+        assignedTo: "Lisa Nguyen",
+        notes: "Confirm Griffin Rd leave-until date",
+        status: "Open",
+      },
+      {
+        date: utcDaysAgo(6),
+        task: "Restock PANEL-6 at Davie after ORD-2044",
+        assignedTo: "Jamal Brooks",
+        notes: "Count came in short — order from Miami if needed",
+        status: "Open",
+      },
+      {
+        date: utcDaysAgo(12),
+        task: "Return leftover screen rolls from Bayfront festival",
+        assignedTo: "Carlos Rivera",
+        notes: "Completed after weekend pickup",
+        status: "Done",
+        completedAt: utcDaysAgo(10),
+      },
+      {
+        date: utcDaysAgo(2),
+        task: "Confirm South Beach Markets drop photos",
+        assignedTo: "A. Lopez",
+        notes: null,
+        status: "Open",
+      },
+    ],
+  });
+
+  console.log("Seeded branches, employees, inventory, jobs, action items.");
   console.log("Sample orders: ORD-1001 (install+pickup), ORD-2044 (install), ORD-1105 (delivery).");
   console.log("Demo users (demo-only): admin@demo.local / DemoAdmin123! ; office@demo.local / DemoOffice123!");
 }
