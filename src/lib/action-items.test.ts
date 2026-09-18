@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   ACTION_ITEM_OVERDUE_DAYS,
   actionItemOpenDays,
+  actionItemsForTab,
+  actionItemsPath,
   applyComplete,
   applyReopen,
   calendarDaysBetween,
@@ -9,6 +11,7 @@ import {
   isActionItemOverdue,
   isActionItemStatus,
   parseActionItemInput,
+  parseActionItemTab,
 } from "./action-items";
 
 const utc = (iso: string) => new Date(`${iso}T12:00:00.000Z`);
@@ -64,6 +67,35 @@ describe("complete / reopen", () => {
     expect(isActionItemStatus("Open")).toBe(true);
     expect(isActionItemStatus("Done")).toBe(true);
     expect(isActionItemStatus("open")).toBe(false);
+  });
+});
+
+describe("Open / Completed tabs", () => {
+  const rows = [
+    { id: "1", status: "Open", task: "Restock Davie" },
+    { id: "2", status: "Done", task: "Return screen rolls" },
+    { id: "3", status: "Open", task: "Call Sunrise" },
+  ];
+
+  it("defaults to Open unless tab=completed", () => {
+    expect(parseActionItemTab(undefined)).toBe("open");
+    expect(parseActionItemTab("")).toBe("open");
+    expect(parseActionItemTab("open")).toBe("open");
+    expect(parseActionItemTab("bogus")).toBe("open");
+    expect(parseActionItemTab("completed")).toBe("completed");
+  });
+
+  it("filters Open vs Done and never mixes them", () => {
+    expect(actionItemsForTab(rows, "open").map((r) => r.id)).toEqual(["1", "3"]);
+    expect(actionItemsForTab(rows, "completed").map((r) => r.id)).toEqual(["2"]);
+    expect(actionItemsForTab(rows, "open").every((r) => r.status === "Open")).toBe(true);
+    expect(actionItemsForTab(rows, "completed").every((r) => r.status === "Done")).toBe(true);
+  });
+
+  it("builds tab URLs for the dashboard and page", () => {
+    expect(actionItemsPath("open")).toBe("/action-items");
+    expect(actionItemsPath()).toBe("/action-items");
+    expect(actionItemsPath("completed")).toBe("/action-items?tab=completed");
   });
 });
 

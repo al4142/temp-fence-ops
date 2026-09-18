@@ -1,6 +1,25 @@
 export const ACTION_ITEM_STATUSES = ["Open", "Done"] as const;
 export type ActionItemStatus = (typeof ACTION_ITEM_STATUSES)[number];
 
+export const ACTION_ITEM_TABS = ["open", "completed"] as const;
+export type ActionItemTab = (typeof ACTION_ITEM_TABS)[number];
+
+export function parseActionItemTab(value: string | undefined | null): ActionItemTab {
+  return value === "completed" ? "completed" : "open";
+}
+
+export function actionItemsPath(tab: ActionItemTab = "open"): string {
+  return tab === "completed" ? "/action-items?tab=completed" : "/action-items";
+}
+
+export function actionItemsForTab<T extends { status: string }>(
+  items: T[],
+  tab: ActionItemTab,
+): T[] {
+  const wanted = tab === "open" ? "Open" : "Done";
+  return items.filter((item) => item.status === wanted);
+}
+
 export const ACTION_ITEM_OVERDUE_DAYS = 3;
 
 const MS_PER_DAY = 86_400_000;

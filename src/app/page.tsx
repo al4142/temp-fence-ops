@@ -2,7 +2,12 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import { computeOnHand } from "@/lib/inventory";
-import { actionItemOpenDays, formatOpenDays, isActionItemOverdue } from "@/lib/action-items";
+import {
+  actionItemOpenDays,
+  actionItemsPath,
+  formatOpenDays,
+  isActionItemOverdue,
+} from "@/lib/action-items";
 import { ActionItemStatusBadge } from "@/components/ActionItemStatusBadge";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +25,7 @@ export default async function HomePage() {
     writeOffs,
     variances,
     openActionItems,
+    completedActionItemCount,
   ] = await Promise.all([
       prisma.job.count(),
       prisma.branch.count(),
@@ -46,6 +52,7 @@ export default async function HomePage() {
         orderBy: [{ date: "asc" }, { createdAt: "asc" }],
         take: 6,
       }),
+      prisma.actionItem.count({ where: { status: "Done" } }),
     ]);
 
   const onHand = computeOnHand({
@@ -152,9 +159,17 @@ export default async function HomePage() {
             <h2 className="font-semibold text-slate-900">Action items</h2>
             <p className="text-xs text-slate-500">Open tasks for the yard</p>
           </div>
-          <Link href="/action-items" className="text-sm text-blue-700 hover:underline">
-            View all
-          </Link>
+          <div className="flex items-center gap-3 text-sm">
+            <Link
+              href={actionItemsPath("completed")}
+              className="text-slate-500 hover:underline"
+            >
+              {completedActionItemCount} completed
+            </Link>
+            <Link href={actionItemsPath("open")} className="text-blue-700 hover:underline">
+              View all
+            </Link>
+          </div>
         </div>
         {openActionItems.length === 0 ? (
           <p className="text-sm text-slate-600">No open action items.</p>
