@@ -105,9 +105,7 @@ onHand = startingQty
 | Pickup | +1 | Return to yard |
 | Other (and unrecognized) | 0 | No inventory effect |
 
-Legacy codes (`INST`, `INSTALL`, `PU`, `PICKUP`, `DELIVERY`, `DEL`, `DROP`, `RETURN`, `RET`, `OTHER`) map to the same signs when reading older tickets.
-
-Implementation: `src/lib/inventory.ts`.
+Only these four Title Case labels are recognized. Implementation: `src/lib/inventory.ts`.
 
 ## P&L derivation (by order number)
 

@@ -112,7 +112,7 @@ P&L is derived by order number (`src/lib/pnl.ts`): revenue, labor (OT @ 1.5×), 
 
 Required ticket fields: order #, date, branch, job type. **Generate BOM** lives on the job form under Materials — there is no standalone BOM page. Generate BOM previews in the browser; **Apply to materials** then **Create job** / **Save changes** writes the ticket.
 
-Job types that move inventory: outbound `Install` / `Drop`; inbound `Pickup`. `Other` has no inventory effect. Legacy codes (`INST`, `PU`, `DELIVERY`, …) still map to those signs when reading older tickets.
+Job types that move inventory: outbound `Install` / `Drop`; inbound `Pickup`. `Other` (and any unrecognized string) has no inventory effect. The four Title Case labels are the only recognized values.
 
 ### Inventory
 

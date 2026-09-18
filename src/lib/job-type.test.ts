@@ -3,7 +3,6 @@ import {
   JOB_TYPES,
   canonicalJobType,
   isJobType,
-  jobTypeQueryValues,
   normalizeJobType,
 } from "./job-constants";
 import { computeOnHand, inventorySignForJobType } from "./inventory";
@@ -24,21 +23,24 @@ describe("normalizeJobType", () => {
     expect(normalizeJobType("Other")).toBe("Other");
   });
 
-  it("title-cases known labels", () => {
+  it("title-cases the four known labels", () => {
     expect(normalizeJobType("install")).toBe("Install");
     expect(normalizeJobType(" PICKUP ")).toBe("Pickup");
+    expect(normalizeJobType("DROP")).toBe("Drop");
+    expect(normalizeJobType("other")).toBe("Other");
   });
 
-  it("maps legacy codes", () => {
-    expect(normalizeJobType("INST")).toBe("Install");
-    expect(normalizeJobType("INSTALL")).toBe("Install");
-    expect(normalizeJobType("PU")).toBe("Pickup");
-    expect(normalizeJobType("PICK-UP")).toBe("Pickup");
-    expect(normalizeJobType("RETURN")).toBe("Pickup");
-    expect(normalizeJobType("RET")).toBe("Pickup");
-    expect(normalizeJobType("DELIVERY")).toBe("Drop");
-    expect(normalizeJobType("DEL")).toBe("Drop");
-    expect(normalizeJobType("OTHER")).toBe("Other");
+  it("does not map former codes INST / PU / DELIVERY / RETURN", () => {
+    expect(normalizeJobType("INST")).toBe("INST");
+    expect(normalizeJobType("PU")).toBe("PU");
+    expect(normalizeJobType("PICK-UP")).toBe("PICK-UP");
+    expect(normalizeJobType("RETURN")).toBe("RETURN");
+    expect(normalizeJobType("RET")).toBe("RET");
+    expect(normalizeJobType("DELIVERY")).toBe("DELIVERY");
+    expect(normalizeJobType("DEL")).toBe("DEL");
+    expect(isJobType("INST")).toBe(false);
+    expect(isJobType("PU")).toBe(false);
+    expect(isJobType("DELIVERY")).toBe(false);
   });
 
   it("leaves unknown values trimmed", () => {
@@ -49,7 +51,10 @@ describe("normalizeJobType", () => {
   it("canonicalJobType coerces unknown to Other", () => {
     expect(canonicalJobType("")).toBe("Other");
     expect(canonicalJobType("SWLK")).toBe("Other");
-    expect(canonicalJobType("inst")).toBe("Install");
+    expect(canonicalJobType("INST")).toBe("Other");
+    expect(canonicalJobType("PU")).toBe("Other");
+    expect(canonicalJobType("install")).toBe("Install");
+    expect(canonicalJobType("Drop")).toBe("Drop");
   });
 });
 
@@ -57,21 +62,20 @@ describe("inventorySignForJobType", () => {
   it("Install and Drop are outbound", () => {
     expect(inventorySignForJobType("Install")).toBe(-1);
     expect(inventorySignForJobType("Drop")).toBe(-1);
-    expect(inventorySignForJobType("INST")).toBe(-1);
-    expect(inventorySignForJobType("DELIVERY")).toBe(-1);
-    expect(inventorySignForJobType("DEL")).toBe(-1);
+    expect(inventorySignForJobType("install")).toBe(-1);
   });
 
   it("Pickup is inbound", () => {
     expect(inventorySignForJobType("Pickup")).toBe(1);
-    expect(inventorySignForJobType("PU")).toBe(1);
-    expect(inventorySignForJobType("PICKUP")).toBe(1);
-    expect(inventorySignForJobType("RETURN")).toBe(1);
+    expect(inventorySignForJobType("pickup")).toBe(1);
   });
 
-  it("Other and unknown have no inventory effect", () => {
+  it("Other and unrecognized strings have no inventory effect", () => {
     expect(inventorySignForJobType("Other")).toBe(0);
-    expect(inventorySignForJobType("OTHER")).toBe(0);
+    expect(inventorySignForJobType("INST")).toBe(0);
+    expect(inventorySignForJobType("PU")).toBe(0);
+    expect(inventorySignForJobType("DELIVERY")).toBe(0);
+    expect(inventorySignForJobType("RETURN")).toBe(0);
     expect(inventorySignForJobType("RELOCATE")).toBe(0);
   });
 
@@ -148,21 +152,10 @@ describe("jobTypeGroup", () => {
   it("groups outbound as Install and inbound as Pickup", () => {
     expect(jobTypeGroup("Install")).toBe("Install");
     expect(jobTypeGroup("Drop")).toBe("Install");
-    expect(jobTypeGroup("DELIVERY")).toBe("Install");
     expect(jobTypeGroup("Pickup")).toBe("Pickup");
-    expect(jobTypeGroup("PU")).toBe("Pickup");
     expect(jobTypeGroup("Other")).toBe("Other");
-  });
-});
-
-describe("jobTypeQueryValues", () => {
-  it("includes canonical plus legacy aliases", () => {
-    expect(jobTypeQueryValues("Install")).toEqual(
-      expect.arrayContaining(["Install", "INST", "INSTALL"])
-    );
-    expect(jobTypeQueryValues("Drop")).toEqual(
-      expect.arrayContaining(["Drop", "DELIVERY", "DEL", "DROP"])
-    );
+    expect(jobTypeGroup("INST")).toBe("Other");
+    expect(jobTypeGroup("PU")).toBe("Other");
   });
 });
 
@@ -180,14 +173,18 @@ describe("validateAndNormalize job type", () => {
     if (result.ok) expect(result.data.jobType).toBe("Install");
   });
 
-  it("maps legacy INST on save", () => {
-    const result = validateAndNormalize({ ...base(), jobType: "INST" });
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.data.jobType).toBe("Install");
+  it("accepts each of the four types", () => {
+    for (const jobType of JOB_TYPES) {
+      const result = validateAndNormalize({ ...base(), jobType });
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.data.jobType).toBe(jobType);
+    }
   });
 
-  it("rejects unknown types", () => {
-    const result = validateAndNormalize({ ...base(), jobType: "SWLK" });
-    expect(result.ok).toBe(false);
+  it("rejects former codes and unknown types", () => {
+    expect(validateAndNormalize({ ...base(), jobType: "INST" }).ok).toBe(false);
+    expect(validateAndNormalize({ ...base(), jobType: "PU" }).ok).toBe(false);
+    expect(validateAndNormalize({ ...base(), jobType: "DELIVERY" }).ok).toBe(false);
+    expect(validateAndNormalize({ ...base(), jobType: "SWLK" }).ok).toBe(false);
   });
 });

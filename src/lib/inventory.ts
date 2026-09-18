@@ -1,13 +1,10 @@
 /**
  * Inventory movement rules derived from job.jobType.
  *
- * Canonical labels (Title Case):
+ * Canonical labels (Title Case) only:
  *   OUTBOUND (negative on-hand): Install, Drop
  *   INBOUND  (positive on-hand): Pickup
- *   No movement: Other
- *
- * Legacy codes (INST, PU, DELIVERY, …) map to the same signs so older tickets
- * still move inventory until they are re-saved.
+ *   No movement: Other (and any unrecognized string)
  *
  * Also applied (not job analytics):
  * - Transfers: from yard -qty, to yard +qty

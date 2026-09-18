@@ -106,8 +106,8 @@ function parseYear(raw: string | undefined, fallback: number, allowed: number[])
 
 function parseGroup(raw: string | undefined): "all" | JobTypeGroup {
   const v = (raw ?? "all").trim().toLowerCase();
-  if (v === "install" || v === "inst") return "Install";
-  if (v === "pickup" || v === "pu") return "Pickup";
+  if (v === "install") return "Install";
+  if (v === "pickup") return "Pickup";
   if (v === "other") return "Other";
   return "all";
 }
