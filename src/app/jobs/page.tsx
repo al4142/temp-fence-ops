@@ -5,7 +5,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { describeInventoryEffect } from "@/lib/inventory";
 import { JobsFilters } from "@/components/JobsFilters";
 import { dateOnlyToUtc } from "@/lib/job-form";
-import { jobTypeQueryValues, normalizeJobType } from "@/lib/job-constants";
+import { normalizeJobType } from "@/lib/job-constants";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +54,7 @@ export default async function JobsPage({
   }
 
   if (jobType) {
-    where.jobType = { in: jobTypeQueryValues(jobType) };
+    where.jobType = jobType;
   }
 
   if (q) {
