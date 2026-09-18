@@ -167,7 +167,7 @@ export default async function HomePage() {
                     <th className="py-2 pr-3 font-medium">Date</th>
                     <th className="py-2 pr-3 font-medium">Task</th>
                     <th className="py-2 pr-3 font-medium">Assigned to</th>
-                    <th className="py-2 pr-3 text-right font-medium">Open days</th>
+                    <th className="whitespace-nowrap py-2 pr-3 text-right font-medium">Open days</th>
                     <th className="py-2 pl-3 font-medium">Status</th>
                   </tr>
                 </thead>

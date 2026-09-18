@@ -187,7 +187,7 @@ export function ActionItemsClient({ items, today, employeeNames }: Props) {
               <th className="px-3 py-2">Task</th>
               <th className="px-3 py-2">Assigned to</th>
               <th className="px-3 py-2">Notes</th>
-              <th className="px-3 py-2 text-right">Open days</th>
+              <th className="whitespace-nowrap px-3 py-2 text-right">Open days</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Completed</th>
               <th className="px-3 py-2"></th>
