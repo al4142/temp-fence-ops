@@ -5,6 +5,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { describeInventoryEffect } from "@/lib/inventory";
 import { JobsFilters } from "@/components/JobsFilters";
 import { dateOnlyToUtc } from "@/lib/job-form";
+import { jobTypeQueryValues, normalizeJobType } from "@/lib/job-constants";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,8 @@ export default async function JobsPage({
   const from = (sp.from ?? "").trim();
   const to = (sp.to ?? "").trim();
   const branchCode = (sp.branch ?? "").trim().toUpperCase();
-  const jobType = (sp.jobType ?? "").trim().toUpperCase();
+  const jobTypeParam = (sp.jobType ?? "").trim();
+  const jobType = jobTypeParam ? normalizeJobType(jobTypeParam) : "";
   const q = (sp.q ?? "").trim();
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
@@ -52,7 +54,7 @@ export default async function JobsPage({
   }
 
   if (jobType) {
-    where.jobType = jobType;
+    where.jobType = { in: jobTypeQueryValues(jobType) };
   }
 
   if (q) {

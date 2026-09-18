@@ -392,7 +392,7 @@ describe("guardrails", () => {
     expect(r.warnings.some((w) => /unrecognized fence type/i.test(w))).toBe(true);
   });
 
-  it("INST vs PU do not change quantities", () => {
+  it("Install vs Pickup do not change quantities", () => {
     const input = {
       fenceType: "CL6" as const,
       qtyLf: 100,
@@ -401,8 +401,8 @@ describe("guardrails", () => {
       gate: { type: "5x6", qty: 1 },
       screenSku: "GREEN6",
     };
-    const inst = calculateBom({ ...input, jobType: "INST" });
-    const pu = calculateBom({ ...input, jobType: "PU" });
+    const inst = calculateBom({ ...input, jobType: "Install" });
+    const pu = calculateBom({ ...input, jobType: "Pickup" });
     expect(inst.lines).toEqual(pu.lines);
   });
 

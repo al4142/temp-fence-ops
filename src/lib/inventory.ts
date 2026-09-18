@@ -1,9 +1,13 @@
 /**
  * Inventory movement rules derived from job.jobType.
  *
- * OUTBOUND (negative on-hand): INST, INSTALL, DELIVERY, DEL, DROP
- * INBOUND  (positive on-hand): PU, PICKUP, PICK-UP, RETURN, RET
- * Unknown / other types: zero effect (no inventory movement)
+ * Canonical labels (Title Case):
+ *   OUTBOUND (negative on-hand): Install, Drop
+ *   INBOUND  (positive on-hand): Pickup
+ *   No movement: Other
+ *
+ * Legacy codes (INST, PU, DELIVERY, …) map to the same signs so older tickets
+ * still move inventory until they are re-saved.
  *
  * Also applied (not job analytics):
  * - Transfers: from yard -qty, to yard +qty
@@ -11,28 +15,14 @@
  * - Job material variances: quantity is the inventory delta (+/-)
  */
 
-const OUTBOUND = new Set([
-  "INST",
-  "INSTALL",
-  "DELIVERY",
-  "DEL",
-  "DROP",
-]);
-
-const INBOUND = new Set([
-  "PU",
-  "PICKUP",
-  "PICK-UP",
-  "RETURN",
-  "RET",
-]);
+import { normalizeJobType } from "./job-constants";
 
 export type InventoryDirection = -1 | 0 | 1;
 
 export function inventorySignForJobType(jobType: string): InventoryDirection {
-  const key = jobType.trim().toUpperCase();
-  if (OUTBOUND.has(key)) return -1;
-  if (INBOUND.has(key)) return 1;
+  const key = normalizeJobType(jobType);
+  if (key === "Install" || key === "Drop") return -1;
+  if (key === "Pickup") return 1;
   return 0;
 }
 

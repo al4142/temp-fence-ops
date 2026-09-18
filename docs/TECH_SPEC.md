@@ -107,12 +107,12 @@ P&L is derived by order number (`src/lib/pnl.ts`): revenue, labor (OT @ 1.5×), 
 |------|------|
 | `src/app/jobs/` | List, create, detail, edit; `actions.ts` persist |
 | `src/components/JobForm*.tsx` | Create/edit form (details, BOM options, materials, labor, cost lines, variance) |
-| `src/lib/job-form.ts`, `src/lib/job-constants.ts` | Validation, job types (`INST`, `PU`, …), classes |
+| `src/lib/job-form.ts`, `src/lib/job-constants.ts` | Validation, job types (`Install`, `Pickup`, `Drop`, `Other`), classes |
 | `src/app/jobs/[id]/export/route.ts`, `src/lib/export-project.ts` | **Export Project** `.xlsx` |
 
 Required ticket fields: order #, date, branch, job type. **Generate BOM** lives on the job form under Materials — there is no standalone BOM page. Generate BOM previews in the browser; **Apply to materials** then **Create job** / **Save changes** writes the ticket.
 
-Job types that move inventory: outbound `INST` / `INSTALL` / `DELIVERY` / `DEL` / `DROP`; inbound `PU` / `PICKUP` / `PICK-UP` / `RETURN` / `RET`. Anything else (including `OTHER`) has no inventory effect.
+Job types that move inventory: outbound `Install` / `Drop`; inbound `Pickup`. `Other` has no inventory effect. Legacy codes (`INST`, `PU`, `DELIVERY`, …) still map to those signs when reading older tickets.
 
 ### Inventory
 
@@ -136,7 +136,7 @@ Catalog pick on a job line links `JobMaterial.inventoryItemId` and drives stock 
 | `src/lib/bom/calculate.test.ts` | Vitest coverage |
 | `src/components/JobForm.tsx` | Generate BOM preview / apply |
 
-INST vs PU does **not** change BOM quantities. Inventory sign is applied later from `jobType`. Unmatched names stay free-text; the app does not invent catalog rows.
+Install vs Pickup does **not** change BOM quantities. Inventory sign is applied later from `jobType`. Unmatched names stay free-text; the app does not invent catalog rows.
 
 Fence types, options, and the canonical smoke example are in [§6](#6-bom--fence-types-and-options). Point math: [BOM_APPROVED.md](./BOM_APPROVED.md).
 

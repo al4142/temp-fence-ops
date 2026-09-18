@@ -43,7 +43,7 @@ Construction rollups, Master installer table).
 
 ## Phase 4 - Construction / analytics dashboards
 
-- `/analytics` filters: year, branch, job type group (INST vs PU vs Other)
+- `/analytics` filters: year, branch, job type group (Install / Drop vs Pickup vs Other)
 - Monthly LF (`qtyLf`) table by branch x job type group (Construction Data-style)
 - Summary cards: jobs, install LF vs pickup LF, revenue, rough labor cost
 - SVG stacked bar chart for monthly LF (no heavy chart dependency)
@@ -96,6 +96,6 @@ Construction rollups, Master installer table).
 - Unit tests for panels, barricade, CL6/CL8 rails, CL6+1/CL8+1 barb, screens, swing/slide gates, terminal hybrid
 - Job create/edit: fence options + **Generate BOM** preview/apply (does not silently replace lines)
 - Catalog match by inventory name/SKU (aliases for SADDLE CLAMP, etc.)
-- Same qtys for INST and PU; inventory sign unchanged
+- Same qtys for Install and Pickup; inventory sign unchanged
 
 **Status: done**

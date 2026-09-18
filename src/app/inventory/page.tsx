@@ -57,7 +57,7 @@ export default async function InventoryPage({
           <h1 className="text-2xl font-semibold text-slate-900">Inventory by branch</h1>
           <p className="mt-1 text-sm text-slate-600">
             On-hand = starting + job movements + adjustments + transfers + write-offs + job
-            material variance. INST/DELIVERY reduce stock; PU/PICKUP increase it. Transfers and
+            material variance. Install and Drop reduce stock; Pickup increases it. Transfers and
             write-offs are excluded from job analytics.
           </p>
         </div>

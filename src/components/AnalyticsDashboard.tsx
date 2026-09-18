@@ -49,8 +49,8 @@ export function AnalyticsDashboard(props: Props) {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card label="Jobs" value={formatNumber(summary.jobCount, 0)} />
-        <Card label="LF install / delivery" value={formatNumber(summary.installLf, 0)} />
-        <Card label="LF pickup / return" value={formatNumber(summary.pickupLf, 0)} />
+        <Card label="LF install / drop" value={formatNumber(summary.installLf, 0)} />
+        <Card label="LF pickup" value={formatNumber(summary.pickupLf, 0)} />
         <Card label="Revenue" value={formatCurrency(summary.revenue)} />
         <Card label="Rough labor cost" value={formatCurrency(summary.laborCost)} />
       </div>

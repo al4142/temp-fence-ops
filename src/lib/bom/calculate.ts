@@ -231,7 +231,7 @@ function addGateRecipes(
 
 /**
  * Pure temporary-fence BOM calculator (APPROVED rules).
- * Job type (INST vs PU) does not change quantities.
+ * Job type (Install vs Pickup) does not change quantities.
  */
 export function calculateBom(input: BomInput): BomResult {
   const warnings: string[] = [];
@@ -302,7 +302,7 @@ export function calculateBom(input: BomInput): BomResult {
     notes.push("BFOOT/SBAG weights apply to panel T-stands only.");
   }
 
-  notes.push("BOM quantities are the same for INST and PU. Inventory sign is applied separately by job type.");
+  notes.push("BOM quantities are the same for Install and Pickup. Inventory sign is applied separately by job type.");
 
   return {
     lines: [...lines.values()].filter((l) => l.qty !== 0),

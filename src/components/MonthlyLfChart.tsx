@@ -8,7 +8,7 @@ type Props = {
 
 /**
  * Lightweight stacked bar chart (SVG) - no chart library dependency.
- * Bars show INST / PU / OTHER LF per month.
+ * Bars show Install / Drop, Pickup, and Other LF per month.
  */
 export function MonthlyLfChart({ series, title = "Monthly LF by job type group" }: Props) {
   const width = 640;
@@ -28,8 +28,8 @@ export function MonthlyLfChart({ series, title = "Monthly LF by job type group" 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold text-slate-900">{title}</h2>
         <ul className="flex flex-wrap gap-3 text-xs text-slate-600">
-          <Legend color="#2563eb" label="INST / delivery" />
-          <Legend color="#16a34a" label="PU / pickup" />
+          <Legend color="#2563eb" label="Install / Drop" />
+          <Legend color="#16a34a" label="Pickup" />
           <Legend color="#94a3b8" label="Other" />
         </ul>
       </div>
@@ -93,8 +93,8 @@ export function MonthlyLfChart({ series, title = "Monthly LF by job type group" 
                       rx={1}
                     >
                       <title>
-                        {s.label}: {formatNumber(s.totalLf, 0)} LF (INST{" "}
-                        {formatNumber(s.instLf, 0)}, PU {formatNumber(s.puLf, 0)})
+                        {s.label}: {formatNumber(s.totalLf, 0)} LF (Install/Drop{" "}
+                        {formatNumber(s.instLf, 0)}, Pickup {formatNumber(s.puLf, 0)})
                       </title>
                     </rect>
                   );

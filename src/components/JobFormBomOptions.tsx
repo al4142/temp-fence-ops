@@ -64,7 +64,7 @@ export function JobFormBomOptions(p: Props) {
       <p className="mb-3 text-xs text-slate-500">
         Canonical fence types only. Use <strong>Generate BOM</strong> on the materials
         section to preview suggested lines from LF + type + options. Tension wire is not in
-        v1. INST and PU use the same quantities.
+        v1. Install and Pickup use the same quantities.
       </p>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div>

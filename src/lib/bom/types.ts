@@ -15,7 +15,7 @@ export type BomInput = {
   gate?: BomGateInput | null;
   gate2?: BomGateInput | null;
   terminalsManual?: number | null;
-  /** Ignored by recipes (INST/PU use the same qtys). Accepted so callers can pass job type. */
+  /** Ignored by recipes (Install/Pickup use the same qtys). Accepted so callers can pass job type. */
   jobType?: string | null;
 };
 

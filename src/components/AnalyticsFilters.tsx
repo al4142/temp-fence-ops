@@ -80,9 +80,9 @@ export function AnalyticsFilters({
             className="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none"
           >
             <option value="all">All groups</option>
-            <option value="INST">INST / install / delivery</option>
-            <option value="PU">PU / pickup / return</option>
-            <option value="OTHER">Other</option>
+            <option value="Install">Install / Drop</option>
+            <option value="Pickup">Pickup</option>
+            <option value="Other">Other</option>
           </select>
         </div>
         <button
