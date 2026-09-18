@@ -2,19 +2,19 @@ import { inventorySignForJobType } from "./inventory";
 import { laborCostForLine } from "./pnl";
 
 /** Coarse groups used on Construction Data-style rollups. */
-export type JobTypeGroup = "INST" | "PU" | "OTHER";
+export type JobTypeGroup = "Install" | "Pickup" | "Other";
 
 export const JOB_TYPE_GROUP_LABELS: Record<JobTypeGroup, string> = {
-  INST: "INST / install / delivery",
-  PU: "PU / pickup / return",
-  OTHER: "Other",
+  Install: "Install / Drop",
+  Pickup: "Pickup",
+  Other: "Other",
 };
 
 export function jobTypeGroup(jobType: string): JobTypeGroup {
   const sign = inventorySignForJobType(jobType);
-  if (sign < 0) return "INST";
-  if (sign > 0) return "PU";
-  return "OTHER";
+  if (sign < 0) return "Install";
+  if (sign > 0) return "Pickup";
+  return "Other";
 }
 
 /** Job types belonging to a filter group (for Prisma `in` clauses). */
@@ -130,7 +130,7 @@ export function buildMonthlyLfTable(
     cell.total += lf;
   }
 
-  const groupOrder: JobTypeGroup[] = ["INST", "PU", "OTHER"];
+  const groupOrder: JobTypeGroup[] = ["Install", "Pickup", "Other"];
   return [...map.values()].sort((a, b) => {
     const bc = a.branchCode.localeCompare(b.branchCode);
     if (bc !== 0) return bc;
@@ -153,8 +153,8 @@ export function buildMonthlySeries(jobs: AnalyticsJobRow[]): MonthlySeries[] {
     if (!lf) continue;
     const m = job.date.getUTCMonth();
     const group = jobTypeGroup(job.jobType);
-    if (group === "INST") series[m].instLf += lf;
-    else if (group === "PU") series[m].puLf += lf;
+    if (group === "Install") series[m].instLf += lf;
+    else if (group === "Pickup") series[m].puLf += lf;
     else series[m].otherLf += lf;
     series[m].totalLf += lf;
   }
@@ -178,8 +178,8 @@ export function summarizeJobs(
   for (const job of jobs) {
     const lf = job.qtyLf ?? 0;
     const group = jobTypeGroup(job.jobType);
-    if (group === "INST") installLf += lf;
-    else if (group === "PU") pickupLf += lf;
+    if (group === "Install") installLf += lf;
+    else if (group === "Pickup") pickupLf += lf;
     else otherLf += lf;
     revenue += job.revenue;
   }

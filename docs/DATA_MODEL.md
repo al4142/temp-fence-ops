@@ -53,7 +53,7 @@ BOM generator inputs (optional; used by **Generate BOM** on create/edit):
 - `screen` stays in sync as `Boolean(screenSku)` for legacy views
 
 Live recipes: [BOM_APPROVED.md](./BOM_APPROVED.md). Calculator: `src/lib/bom/`.
-INST vs PU does **not** change BOM quantities (inventory sign is separate).
+Install vs Pickup does **not** change BOM quantities (inventory sign is separate).
 
 ### Job cost lines
 - `JobLodgingLine` - amount, hotel/facility, notes
@@ -100,10 +100,12 @@ onHand = startingQty
 
 | jobType (normalized) | Sign | Meaning |
 |----------------------|------|---------|
-| INST, INSTALL | -1 | Leave yard / install on site |
-| DELIVERY, DEL, DROP | -1 | Outbound delivery |
-| PU, PICKUP, PICK-UP, RETURN, RET | +1 | Return to yard |
-| Anything else | 0 | No inventory effect |
+| Install | -1 | Leave yard / install on site |
+| Drop | -1 | Outbound delivery / drop |
+| Pickup | +1 | Return to yard |
+| Other (and unrecognized) | 0 | No inventory effect |
+
+Legacy codes (`INST`, `INSTALL`, `PU`, `PICKUP`, `DELIVERY`, `DEL`, `DROP`, `RETURN`, `RET`, `OTHER`) map to the same signs when reading older tickets.
 
 Implementation: `src/lib/inventory.ts`.
 

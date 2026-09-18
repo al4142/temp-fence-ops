@@ -1,4 +1,4 @@
-import { JOB_TYPES } from "./job-constants";
+import { isJobType, normalizeJobType } from "./job-constants";
 import { VARIANCE_REASONS } from "./ops-constants";
 import { isPlusOneType, normalizeFenceType, normalizeWeightMode } from "./bom/catalog";
 
@@ -149,7 +149,7 @@ export function emptyJobFormValues(defaults?: {
     customer: "",
     address: "",
     city: "",
-    jobType: "INST",
+    jobType: "Install",
     fenceType: "",
     qtyLf: "",
     screen: false,
@@ -179,21 +179,19 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
   const orderNumber = input.orderNumber.trim();
   const branchId = input.branchId.trim();
   const date = input.date.trim();
-  const jobType = input.jobType.trim().toUpperCase();
+  const jobType = normalizeJobType(input.jobType);
   const customer = input.customer.trim() || "TBD";
 
   if (!orderNumber) return { ok: false, error: "Order number is required." };
   if (!branchId) return { ok: false, error: "Branch is required." };
   if (!date) return { ok: false, error: "Date is required." };
   if (!jobType) return { ok: false, error: "Job type is required." };
+  if (!isJobType(jobType)) {
+    return { ok: false, error: "Job type must be Install, Pickup, Drop, or Other." };
+  }
 
   if (Number.isNaN(Date.parse(date))) {
     return { ok: false, error: "Date is invalid." };
-  }
-
-  const known = new Set<string>(JOB_TYPES as unknown as string[]);
-  if (!known.has(jobType) && jobType.length > 12) {
-    return { ok: false, error: "Job type looks invalid." };
   }
 
   const materials: MaterialInput[] = [];

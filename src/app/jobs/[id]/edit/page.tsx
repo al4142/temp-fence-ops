@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { toDateInputValue, type JobFormValues } from "@/lib/job-form";
+import { normalizeJobType } from "@/lib/job-constants";
 import { JobForm } from "@/components/JobForm";
 import { deleteJob, updateJob } from "../../actions";
 
@@ -48,7 +49,7 @@ export default async function EditJobPage({ params }: Props) {
     customer: job.customer,
     address: job.address ?? "",
     city: job.city ?? "",
-    jobType: job.jobType,
+    jobType: normalizeJobType(job.jobType) || job.jobType,
     fenceType: job.fenceType ?? "",
     qtyLf: job.qtyLf != null ? String(job.qtyLf) : "",
     screen: job.screen,

@@ -182,8 +182,8 @@ TRACK BRACKET 2-1/2 =
 
 ## 8. Pickup
 
-- BOM qtys: same recipes for INST and PU.
-- Inventory: **INST decreases** on-hand; **PU increases** on-hand (warehouse return). Damage/missing → variance/write-off, not PU credit.
+- BOM qtys: same recipes for Install and Pickup.
+- Inventory: **Install** and **Drop** decrease on-hand; **Pickup** increases on-hand (warehouse return). Damage/missing → variance/write-off, not Pickup credit.
 
 ---
 
@@ -200,7 +200,7 @@ TRACK BRACKET 2-1/2 =
 [x] Barb: arm per line post; 3 strands; terminal secure
 [x] Screens CEIL/50; zip 110/roll
 [x] Slide + swing = Excel
-[x] PU inventory up
+[x] Pickup inventory up
 [x] Barb terminal bands: 3 per terminal (one per strand)
 [x] Rail ends on terminals for top and/or bottom (Excel-style + tension band)
 [x] Tension wire: out of scope v1

@@ -1,4 +1,4 @@
 date,branch,class,orderNumber,customer,address,city,jobType,fenceType,qtyLf,screen,notes,accountExec,revenue,labor,hours,ot,PANEL-6,BASE-STD
-2026-04-01,MIA,EVENT,ORD-2001,Sample Fest LLC,100 Biscayne Blvd,Miami,INST,6ft Temp,240,yes,Install for weekend event,Alex R,1850,Carlos Rivera,8,0,40,40
-2026-04-03,MIA,EVENT,ORD-2001,Sample Fest LLC,100 Biscayne Blvd,Miami,PU,6ft Temp,240,yes,Pickup after event,Alex R,0,Carlos Rivera,6,0,40,40
-2026-04-02,DAV,CONSTRUCTION,ORD-2002,Harbor Build Co,55 Griffin Rd,Davie,INST,Chain Link,120,no,,Jordan K,980,Lisa Nguyen,8,2,20,20
+2026-04-01,MIA,EVENT,ORD-2001,Sample Fest LLC,100 Biscayne Blvd,Miami,Install,6ft Temp,240,yes,Install for weekend event,Alex R,1850,Carlos Rivera,8,0,40,40
+2026-04-03,MIA,EVENT,ORD-2001,Sample Fest LLC,100 Biscayne Blvd,Miami,Pickup,6ft Temp,240,yes,Pickup after event,Alex R,0,Carlos Rivera,6,0,40,40
+2026-04-02,DAV,CONSTRUCTION,ORD-2002,Harbor Build Co,55 Griffin Rd,Davie,Install,Chain Link,120,no,,Jordan K,980,Lisa Nguyen,8,2,20,20

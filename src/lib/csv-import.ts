@@ -1,4 +1,5 @@
 import { parseCsv, rowToObject } from "./csv";
+import { canonicalJobType } from "./job-constants";
 import { dateOnlyToUtc, parseOptionalNumber, parseRequiredNumber } from "./job-form";
 import { normalizeScreenSku } from "./bom/catalog";
 
@@ -187,7 +188,7 @@ export function parseImportText(text: string): {
     const date = normalizeDate(dateRaw);
     const orderNumber = cell(cells, mapping.orderNumber);
     const branchCode = cell(cells, mapping.branch).toUpperCase();
-    const jobType = cell(cells, mapping.jobType).toUpperCase() || "OTHER";
+    const jobType = canonicalJobType(cell(cells, mapping.jobType));
     const customer = cell(cells, mapping.customer) || "TBD";
 
     const materials: Array<{ sku: string; quantity: number }> = [];

@@ -1,6 +1,6 @@
 "use client";
 
-import { JOB_CLASSES, JOB_TYPES } from "@/lib/job-constants";
+import { isJobType, JOB_CLASSES, JOB_TYPES } from "@/lib/job-constants";
 import type { BranchOption } from "@/components/JobForm";
 
 type Props = {
@@ -55,6 +55,9 @@ export function JobFormDetails(p: Props) {
             <label className={labelClass} htmlFor="jobType">Job type *</label>
             <select id="jobType" required className={inputClass} value={jobType} onChange={(e) => setJobType(e.target.value)}>
               {JOB_TYPES.map((t) => (<option key={t} value={t}>{t}</option>))}
+              {jobType && !isJobType(jobType) ? (
+                <option value={jobType}>{jobType}</option>
+              ) : null}
             </select>
           </div>
           <div>

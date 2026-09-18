@@ -21,7 +21,7 @@ At least one header alias for each:
 | date | `date`, `Job Date` |
 | branch | `branch`, `yard` (use branch **code**: `MIA`, `DAV`) |
 | orderNumber | `orderNumber`, `Order #`, `WO` |
-| jobType | `jobType`, `Type`, `Txn` (`INST`, `PU`, …) |
+| jobType | `jobType`, `Type`, `Txn` (`Install`, `Pickup`, `Drop`, `Other`; legacy `INST` / `PU` / `DELIVERY` still map) |
 
 ## Optional columns
 

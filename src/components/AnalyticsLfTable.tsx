@@ -22,7 +22,8 @@ export function AnalyticsLfTable({ year, defaultYear, knownTypes, table }: Props
         </h2>
         <p className="text-sm text-slate-600">
           Totals use <code className="rounded bg-slate-100 px-1">qtyLf</code>. Job types map
-          to INST (outbound), PU (inbound), or Other via inventory movement rules.
+          to Install / Drop (outbound), Pickup (inbound), or Other via inventory movement
+          rules.
         </p>
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
           <table className="min-w-full text-left text-sm">
@@ -101,13 +102,13 @@ export function AnalyticsLfTable({ year, defaultYear, knownTypes, table }: Props
         <p className="font-medium text-slate-900">How groups are assigned</p>
         <ul className="mt-2 list-inside list-disc space-y-1">
           <li>
-            <strong>INST</strong>: INST, INSTALL, DELIVERY, DEL, DROP (outbound inventory)
+            <strong>Install / Drop</strong>: Install and Drop (outbound inventory)
           </li>
           <li>
-            <strong>PU</strong>: PU, PICKUP, RETURN, RET (inbound inventory)
+            <strong>Pickup</strong>: Pickup (inbound inventory)
           </li>
           <li>
-            <strong>OTHER</strong>: anything else (no inventory effect)
+            <strong>Other</strong>: no inventory effect
           </li>
         </ul>
         <p className="mt-2 text-slate-600">

@@ -80,7 +80,7 @@ There is no separate “BOM page.” Generate BOM lives on the job create/edit f
 
 1. Sign in as `admin@demo.local`.
 2. Click **Jobs** → **New job**.
-3. Fill **Job details** (order #, date, branch, job type). Use **INST** to pull stock, **PU** (or **PICKUP**) to return it.
+3. Fill **Job details** (order #, date, branch, job type). Use **Install** or **Drop** to pull stock, **Pickup** to return it.
 4. In **Fence / BOM options**, set fence type, LF, and options (weights, rails, screen SKU, gates).
 5. In **Materials**, click **Generate BOM**. Review the preview table (Item / Qty / Match).
 6. Click **Apply to materials** (confirms if you already have material rows).
@@ -96,7 +96,7 @@ There is no separate “BOM page.” Generate BOM lives on the job create/edit f
 
 Required: **Order #**, **Date**, **Branch**, **Job type**. Class is EVENT / CONSTRUCTION / OTHER. Also: customer, address, city, account exec, revenue, notes.
 
-Job types in the form: `INST`, `PU`, `PICKUP`, `DELIVERY`, `INSTALL`, `DEL`, `DROP`, `RETURN`, `RET`, `OTHER`.
+Job types in the form: **Install**, **Pickup**, **Drop**, **Other**.
 
 Form sections (in order):
 
@@ -117,7 +117,7 @@ Job list filters (shareable in the URL): from / to date, branch, job type, searc
 
 ### Generate BOM
 
-Recipes are locked in [BOM_APPROVED.md](./BOM_APPROVED.md). Calculator: fence type + LF + options. **Same quantities for INST and PU**; inventory sign is applied later by job type.
+Recipes are locked in [BOM_APPROVED.md](./BOM_APPROVED.md). Calculator: fence type + LF + options. **Same quantities for Install and Pickup**; inventory sign is applied later by job type.
 
 Canonical fence types only:
 
@@ -177,7 +177,7 @@ On the job form, the inventory dropdown prefers items for the selected branch. Y
 
 Maintain the catalog on **Inv. admin** (`/admin/inventory`): add/edit/delete items, starting qty, unit cost, reusable flag, and **manual adjustments**. On-hand uses the same math as `/inventory`.
 
-### Inventory (INST vs PU)
+### Inventory (Install vs Pickup)
 
 On-hand =
 
@@ -185,13 +185,13 @@ starting qty + job movements + adjustments + transfers + write-offs + job materi
 
 | Job type | Effect on catalog lines |
 |----------|-------------------------|
-| INST, INSTALL, DELIVERY, DEL, DROP | **Outbound (−)** — on-hand down |
-| PU, PICKUP, PICK-UP, RETURN, RET | **Inbound (+)** — on-hand up |
-| OTHER (and unrecognized) | No inventory effect |
+| Install, Drop | **Outbound (−)** — on-hand down |
+| Pickup | **Inbound (+)** — on-hand up |
+| Other | No inventory effect |
 
-BOM quantities are the same for INST and PU. Only the sign changes.
+BOM quantities are the same for Install and Pickup. Only the sign changes.
 
-Free-text material lines do not move stock. Damage / missing on a pickup is **variance** or a **write-off**, not extra PU credit.
+Free-text material lines do not move stock. Damage / missing on a pickup is **variance** or a **write-off**, not extra Pickup credit.
 
 Transfers (`/transfers`): from yard → to yard; destination SKU is created if missing (starting qty 0). Write-offs (`/write-offs`): damaged / scrap / shrink. Both change on-hand; both are excluded from job analytics.
 
@@ -203,7 +203,7 @@ Shown: revenue, labor (OT @ 1.5×), material cost (catalog unit cost × qty; fre
 
 Yard expenses are a separate ledger (`/expenses`) and are **not** forced onto job P&L.
 
-**Analytics** (`/analytics`): monthly LF by branch and job-type group (INST / PU / OTHER), plus job count, install/delivery LF, pickup/return LF, revenue, rough labor. Job tickets only — not transfers or write-offs.
+**Analytics** (`/analytics`): monthly LF by branch and job-type group (Install / Drop vs Pickup vs Other), plus job count, install/drop LF, pickup LF, revenue, rough labor. Job tickets only — not transfers or write-offs.
 
 ---
 
