@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { formatCurrency, formatNumber } from "@/lib/format";
+import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import { computeOnHand } from "@/lib/inventory";
+import { actionItemOpenDays, formatOpenDays, isActionItemOverdue } from "@/lib/action-items";
+import { ActionItemStatusBadge } from "@/components/ActionItemStatusBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,7 @@ export default async function HomePage() {
     transferLines,
     writeOffs,
     variances,
+    openActionItems,
   ] = await Promise.all([
       prisma.job.count(),
       prisma.branch.count(),
@@ -37,6 +40,11 @@ export default async function HomePage() {
       prisma.writeOff.findMany({ select: { inventoryItemId: true, quantity: true } }),
       prisma.jobMaterialVariance.findMany({
         select: { inventoryItemId: true, quantity: true },
+      }),
+      prisma.actionItem.findMany({
+        where: { status: "Open" },
+        orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+        take: 6,
       }),
     ]);
 
@@ -137,6 +145,93 @@ export default async function HomePage() {
           )}
         </section>
       </div>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-slate-900">Action items</h2>
+            <p className="text-xs text-slate-500">Open tasks for the yard</p>
+          </div>
+          <Link href="/action-items" className="text-sm text-blue-700 hover:underline">
+            View all
+          </Link>
+        </div>
+        {openActionItems.length === 0 ? (
+          <p className="text-sm text-slate-600">No open action items.</p>
+        ) : (
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="min-w-full text-left text-sm">
+                <thead className="border-b border-slate-100 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="py-2 pr-3 font-medium">Date</th>
+                    <th className="py-2 pr-3 font-medium">Task</th>
+                    <th className="py-2 pr-3 font-medium">Assigned to</th>
+                    <th className="py-2 pr-3 text-right font-medium">Open days</th>
+                    <th className="py-2 pl-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {openActionItems.map((item) => {
+                    const openDays = actionItemOpenDays(item);
+                    const overdue = isActionItemOverdue(openDays);
+                    return (
+                      <tr key={item.id} className={overdue ? "bg-amber-50/70" : undefined}>
+                        <td className="whitespace-nowrap py-2 pr-3 text-slate-700">
+                          {formatDate(item.date)}
+                        </td>
+                        <td className="py-2 pr-3 font-medium text-slate-900">{item.task}</td>
+                        <td className="py-2 pr-3 text-slate-600">{item.assignedTo ?? "—"}</td>
+                        <td
+                          className={
+                            overdue
+                              ? "py-2 pr-3 text-right tabular-nums font-medium text-amber-900"
+                              : "py-2 pr-3 text-right tabular-nums text-slate-700"
+                          }
+                        >
+                          {formatOpenDays(openDays)}
+                        </td>
+                        <td className="py-2 pl-3">
+                          <ActionItemStatusBadge status={item.status} openDays={openDays} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <ul className="divide-y divide-slate-100 text-sm md:hidden">
+              {openActionItems.map((item) => {
+                const openDays = actionItemOpenDays(item);
+                const overdue = isActionItemOverdue(openDays);
+                return (
+                  <li key={item.id} className="flex items-start justify-between gap-3 py-2">
+                    <div>
+                      <div className="font-medium text-slate-900">{item.task}</div>
+                      <div className="text-slate-500">
+                        {formatDate(item.date)}
+                        {item.assignedTo ? ` · ${item.assignedTo}` : ""}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <ActionItemStatusBadge status={item.status} openDays={openDays} />
+                      <div
+                        className={
+                          overdue
+                            ? "mt-1 text-xs font-medium text-amber-900"
+                            : "mt-1 text-xs text-slate-500"
+                        }
+                      >
+                        {formatOpenDays(openDays)}d
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+      </section>
 
       <section className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-700">
         <p className="font-medium text-slate-900">Phase status</p>
