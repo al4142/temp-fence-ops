@@ -154,7 +154,7 @@ Leave weights blank → no BIG FEET / SAND BAG. **SBAG** uses the same 2× stand
 
 **Barricade:** `CEILING(LF / 7)` of BARRICADE. Example: 275 LF → 40.
 
-**Chainlink (CL6 / CL8 / +1):** wire rolls `CEILING(LF/50)`; line posts `CEILING(LF/10)` (1-5/8″; CL6 8′ post, CL8 10′); aluminum ties `(LF/10)*8` CL6 or `*10` CL8, plus extra ties if top rail. Optional **Top rail** / **Bottom rail** (same 1-3/8″ tube). **Tension wire is not in v1.** Manual terminals = corners + start/stop + extras; auto terminals = (gate qty × 2).
+**Chainlink (CL6 / CL8 / +1):** wire rolls `CEILING(LF/50)`; line posts `CEILING(LF/10)` (1-5/8″; driven CL6 8′ post, CL8 10′). Optional **Post mount: Driven | Plate (concrete)** — plate uses fence-height posts (`6'` / `8'` LINE/TERMINAL POST W/ PLATE) plus `SCREW-BOLT+ 3/8x3` = `(line_posts × 2) + (terminals × 4)`. Aluminum ties `(LF/10)*8` CL6 or `*10` CL8, plus extra ties if top rail. Optional **Top rail** / **Bottom rail** (same 1-3/8″ tube). **Tension wire is not in v1.** Manual terminals = corners + start/stop + extras; auto terminals = (gate qty × 2).
 
 **CL6+1 / CL8+1:** full CL base, then barb arms (one per line post), barb wire `CEILING((LF×3)/1320)` rolls, plus 3 tension bands per terminal. Top rail defaults **on** for +1 (overridable).
 

@@ -1,6 +1,11 @@
 import { isJobType, normalizeJobType } from "./job-constants";
 import { VARIANCE_REASONS } from "./ops-constants";
-import { isPlusOneType, normalizeFenceType, normalizeWeightMode } from "./bom/catalog";
+import {
+  isPlusOneType,
+  normalizeFenceType,
+  normalizePostMount,
+  normalizeWeightMode,
+} from "./bom/catalog";
 
 export type MaterialInput = {
   inventoryItemId: string | null;
@@ -62,6 +67,7 @@ export type JobFormValues = {
   topRail: boolean;
   bottomRail: boolean;
   weightMode: string;
+  postMount: string;
   terminalsManual: string;
   notes: string;
   accountExec: string;
@@ -95,6 +101,7 @@ export type JobFormPayload = {
   topRail: boolean;
   bottomRail: boolean;
   weightMode: string | null;
+  postMount: string | null;
   terminalsManual: number;
   notes: string | null;
   accountExec: string | null;
@@ -162,6 +169,7 @@ export function emptyJobFormValues(defaults?: {
     topRail: false,
     bottomRail: false,
     weightMode: "",
+    postMount: "driven",
     terminalsManual: "0",
     notes: "",
     accountExec: "",
@@ -295,6 +303,11 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
   if (weightRaw && !normalizeWeightMode(weightRaw)) {
     return { ok: false, error: "Weight mode must be BFOOT, SBAG, or blank." };
   }
+  const postMountRaw = (input.postMount ?? "").trim();
+  const postMount = normalizePostMount(postMountRaw);
+  if (postMountRaw && !postMount) {
+    return { ok: false, error: "Post mount must be driven, plate, or blank." };
+  }
   const gateQty = Math.max(0, Math.floor(parseRequiredNumber(input.gateQty, 0)));
   const gateQty2 = Math.max(0, Math.floor(parseRequiredNumber(input.gateQty2, 0)));
   const gatesFromPairs = gateQty + gateQty2;
@@ -329,6 +342,7 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
       topRail: Boolean(topRail),
       bottomRail: Boolean(input.bottomRail),
       weightMode: weightRaw || null,
+      postMount: postMount === "plate" ? "plate" : "driven",
       terminalsManual: Math.max(0, Math.floor(parseRequiredNumber(input.terminalsManual, 0))),
       notes: input.notes.trim() || null,
       accountExec: input.accountExec.trim() || null,

@@ -95,6 +95,7 @@ export function JobForm({
   const [topRail, setTopRail] = useState(initial.topRail ?? false);
   const [bottomRail, setBottomRail] = useState(initial.bottomRail ?? false);
   const [weightMode, setWeightMode] = useState(initial.weightMode ?? "");
+  const [postMount, setPostMount] = useState(initial.postMount || "driven");
   const [terminalsManual, setTerminalsManual] = useState(initial.terminalsManual ?? "0");
   const [notes, setNotes] = useState(initial.notes);
   const [accountExec, setAccountExec] = useState(initial.accountExec);
@@ -202,6 +203,7 @@ export function JobForm({
       topRail,
       bottomRail,
       weightMode,
+      postMount,
       terminalsManual,
       notes,
       accountExec,
@@ -250,6 +252,7 @@ export function JobForm({
       topRail,
       bottomRail,
       weightMode: weightMode || null,
+      postMount: postMount || "driven",
       screenSku: screenSku || null,
       gate: { type: gateType || null, qty: Number(gateQty) || 0 },
       gate2: { type: gateType2 || null, qty: Number(gateQty2) || 0 },
@@ -369,6 +372,8 @@ export function JobForm({
         setBottomRail={setBottomRail}
         weightMode={weightMode}
         setWeightMode={setWeightMode}
+        postMount={postMount}
+        setPostMount={setPostMount}
         screenSku={screenSku}
         setScreenSku={setScreenSku}
         gateType={gateType}

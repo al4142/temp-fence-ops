@@ -92,6 +92,8 @@ model Job {
   bottomRail  Boolean  @default(false)
   /// BFOOT | SBAG — panel T-stand weights. Blank = none.
   weightMode  String?
+  /// Chainlink only: driven (default / bury) | plate (concrete floor plates).
+  postMount   String?
   /// Corners + start/stop + extras (not including 2 per gate).
   terminalsManual Int  @default(0)
   notes       String?

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import { describeInventoryEffect, inventorySignForJobType } from "@/lib/inventory";
 import { laborCostForLine, materialCostForLine } from "@/lib/pnl";
+import { isChainlinkType, normalizeFenceType, POST_MOUNT_LABELS } from "@/lib/bom/catalog";
 
 function formatJobGates(job: {
   gates: number;
@@ -39,6 +40,11 @@ export default async function JobDetailPage({ params }: Props) {
   });
   if (!job) notFound();
 
+  const fenceType = normalizeFenceType(job.fenceType);
+  const postMountLabel =
+    fenceType && isChainlinkType(fenceType)
+      ? POST_MOUNT_LABELS[job.postMount === "plate" ? "plate" : "driven"]
+      : "-";
   const sign = inventorySignForJobType(job.jobType);
   const laborTotal = job.labor.reduce(
     (sum, l) =>
@@ -102,6 +108,10 @@ export default async function JobDetailPage({ params }: Props) {
           ]
             .filter(Boolean)
             .join(" · ") || "-"}
+        />
+        <Info
+          label="Post mount"
+          value={postMountLabel}
         />
         <Info
           label="Gates"

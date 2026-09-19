@@ -12,11 +12,13 @@ import {
   isSlideGate,
   normalizeFenceType,
   normalizeGateType,
+  normalizePostMount,
   normalizeScreenSku,
   normalizeWeightMode,
   type FenceType,
   type GateType,
   type PanelType,
+  type PostMount,
 } from "./catalog";
 import type { BomGateInput, BomInput, BomLine, BomResult } from "./types";
 
@@ -107,7 +109,8 @@ function addChainlinkRecipe(
   lf: number,
   topRail: boolean,
   bottomRail: boolean,
-  terminalsTotal: number
+  terminalsTotal: number,
+  postMount: PostMount
 ) {
   if (!isChainlinkType(type)) return;
   const base = chainlinkBase(type);
@@ -116,10 +119,33 @@ function addChainlinkRecipe(
   const tiesPer = base === "CL6" ? 8 : 10;
   let ties = (lf / 10) * tiesPer;
   if (topRail) ties += (lf / 10) * 5;
+  const plate = postMount === "plate";
+  const linePostName = plate
+    ? base === "CL6"
+      ? BOM_NAMES.cl6LinePostPlate
+      : BOM_NAMES.cl8LinePostPlate
+    : base === "CL6"
+      ? BOM_NAMES.cl6LinePost
+      : BOM_NAMES.cl8LinePost;
+  const terminalName = plate
+    ? base === "CL6"
+      ? BOM_NAMES.cl6TerminalPlate
+      : BOM_NAMES.cl8TerminalPlate
+    : base === "CL6"
+      ? BOM_NAMES.cl6Terminal
+      : BOM_NAMES.cl8Terminal;
 
   addLine(map, base === "CL6" ? BOM_NAMES.cl6Wire : BOM_NAMES.cl8Wire, wireRolls);
-  addLine(map, base === "CL6" ? BOM_NAMES.cl6LinePost : BOM_NAMES.cl8LinePost, linePosts);
+  addLine(map, linePostName, linePosts);
   addLine(map, BOM_NAMES.ties, ties);
+  if (plate) {
+    addLine(
+      map,
+      BOM_NAMES.screwBolt38x3,
+      linePosts * 2 + terminalsTotal * 4,
+      "DeWalt SCREW-BOLT+; 2 per line plate, 4 per terminal plate"
+    );
+  }
 
   const railSticks = topRail || bottomRail ? ceil(lf / 21) : 0;
   if (topRail) {
@@ -134,7 +160,7 @@ function addChainlinkRecipe(
   const railEnds = terminalsTotal * (topRail ? 1 : 0) + terminalsTotal * (bottomRail ? 1 : 0);
 
   if (terminalsTotal > 0) {
-    addLine(map, base === "CL6" ? BOM_NAMES.cl6Terminal : BOM_NAMES.cl8Terminal, terminalsTotal);
+    addLine(map, terminalName, terminalsTotal);
     addLine(
       map,
       base === "CL6" ? BOM_NAMES.cl6TensionBar : BOM_NAMES.cl8TensionBar,
@@ -257,6 +283,11 @@ export function calculateBom(input: BomInput): BomResult {
   if (input.weightMode?.trim() && !weightMode) {
     warnings.push(`Unrecognized weight mode "${input.weightMode}". Use BFOOT or SBAG.`);
   }
+  const postMount = normalizePostMount(input.postMount);
+  if (input.postMount?.trim() && !postMount) {
+    warnings.push(`Unrecognized post mount "${input.postMount}". Use driven or plate.`);
+  }
+  const resolvedMount: PostMount = postMount ?? "driven";
 
   if (plusOne && input.topRail == null) {
     notes.push("Top rail defaulted on for +1 (overridable).");
@@ -279,16 +310,25 @@ export function calculateBom(input: BomInput): BomResult {
     if (topRail || bottomRail) {
       notes.push("Top/bottom rail options apply to chainlink only — ignored for panels.");
     }
+    if (resolvedMount === "plate") {
+      notes.push("Post mount Plate applies to chainlink only — ignored for panels.");
+    }
   } else if (fenceType === "BARRICADE") {
     if (qtyLf > 0) addLine(lines, BOM_NAMES.barricade, ceil(qtyLf / 7));
     else warnings.push("Barricade recipe needs LF > 0.");
+    if (resolvedMount === "plate") {
+      notes.push("Post mount Plate applies to chainlink only — ignored for barricade.");
+    }
   } else if (fenceType && isChainlinkType(fenceType)) {
     if (qtyLf > 0) {
-      addChainlinkRecipe(lines, fenceType, qtyLf, topRail, bottomRail, terminalsTotal);
+      addChainlinkRecipe(lines, fenceType, qtyLf, topRail, bottomRail, terminalsTotal, resolvedMount);
     } else {
       warnings.push("Chainlink recipe needs LF > 0.");
     }
     notes.push("Tension wire is out of scope for v1 and is not included.");
+    if (resolvedMount === "plate") {
+      notes.push("Plate (concrete) mount: fence-height posts on floor plates; SCREW-BOLT+ 3/8x3 is consumable.");
+    }
   }
 
   addScreenRecipe(lines, qtyLf, screenSku, input.screenSku, warnings);
@@ -312,6 +352,7 @@ export function calculateBom(input: BomInput): BomResult {
     qtyLf,
     terminalsTotal,
     weightMode,
+    postMount: resolvedMount,
     screenSku,
     gates: resultGates,
   };

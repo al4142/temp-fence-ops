@@ -113,6 +113,45 @@ From `terminals_total` (temp fence — **fewer bands than permanent/Hoover**):
 
 These *3 / *4 band multipliers are the **temporary** counts from the ops workbook — intentionally lower than permanent install calculators.
 
+### Post mount — Driven vs Plate (concrete) (approved)
+
+Chainlink jobs (`CL6` / `CL8` / `CL6+1` / `CL8+1`) choose how posts attach. **Not** for panels or barricade. The rest of the fence BOM (wire, rails, ties, gates, barb, tension bars/bands, etc.) is unchanged.
+
+| Mode | Default | Use case | Posts |
+|------|---------|----------|-------|
+| **Driven** | Yes | Ground / bury (current path) | Existing line/terminal SKUs (8′ / 10′ bury lengths) |
+| **Plate (concrete)** | No | Interior warehouse / concrete floor | Posts welded/bolted to **floor plates**; height = **fence height**, not bury length |
+
+**Plate post SKUs** (1-5/8″ line OD, 2-1/2″ terminal OD):
+
+| Fence | Line post w/ plate | Terminal post w/ plate |
+|-------|--------------------|------------------------|
+| CL6 / CL6+1 | `6' LINE POST W/ PLATE` | `6' TERMINAL POST W/ PLATE` |
+| CL8 / CL8+1 | `8' LINE POST W/ PLATE` | `8' TERMINAL POST W/ PLATE` |
+
+Counts are the same as driven:
+
+```
+line_posts      = CEILING(LF / 10)
+terminals_total = (GATE_QTY + GATE_QTY2) * 2 + terminals_manual
+```
+
+**SCREW-BOLT+ (consumable)** — DeWalt SCREW-BOLT+ ⅜″×3″, PFM1411240 (hex washer head, carbon steel zinc). Canonical BOM name: `SCREW-BOLT+ 3/8x3` (aliases: DeWalt / PFM1411240).
+
+```
+SCREW_BOLTS = (line_posts × 2) + (terminals_total × 4)
+```
+
+- Line plate: **2** bolts per post
+- Terminal plate: **4** bolts per post (corners)
+
+**Inventory / reusable**
+
+- Plate posts: **reusable** (restock on Pickup) — same family as driven line/terminal posts
+- `SCREW-BOLT+ 3/8x3`: **reusable: false** (consumable — never restock on Pickup)
+
+Driven path is unchanged when post mount is blank or `driven`.
+
 ---
 
 ## 5. Barb pack — `CL6+1` / `CL8+1` (approved)
@@ -206,6 +245,7 @@ TRACK BRACKET 2-1/2 =
 [x] Tension wire: out of scope v1
 [x] Bottom rail: same 1-3/8″ tube as top + boulevard clamp per line post
 [x] Barb rolls: 1320′
+[x] Post mount: Driven vs Plate (concrete) + SCREW-BOLT+ 3/8x3
 [ ] Weights default when blank; gate SKU gaps (12x8, 4x6)
 ```
 

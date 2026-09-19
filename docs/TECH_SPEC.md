@@ -168,11 +168,12 @@ Canonical fence types only (`src/lib/bom/catalog.ts` `FENCE_TYPES`):
 
 No free-text aliases. Legacy labels (seed jobs use `6ft Panel`) → Generate BOM warns and skips the fence recipe.
 
-Options on the job form (`Job.fenceType`, `qtyLf`, `topRail`, `bottomRail`, `weightMode`, `screenSku`, gates, `terminalsManual`):
+Options on the job form (`Job.fenceType`, `qtyLf`, `topRail`, `bottomRail`, `weightMode`, `postMount`, `screenSku`, gates, `terminalsManual`):
 
 | Option | Applies to | Behavior |
 |--------|------------|----------|
 | **Top rail** / **Bottom rail** | Chainlink | Same 1-3/8″ tube; independent toggles. Top rail defaults on for `+1` in the UI (overridable). |
+| **Post mount** | Chainlink | `Driven` (default, bury-length posts) or `Plate (concrete)` (fence-height posts on floor plates + `SCREW-BOLT+ 3/8x3` = 2× line + 4× terminals). |
 | **Weights** | Panels | `BFOOT` (big feet) or `SBAG` (sand bags) = 2 × T-stands. Blank = no weights. |
 | **Screen SKU** | Any | SKU pick (`BLACK6`, …), not Yes/No. `CUSTOM` is a known catalog gap. |
 | **Gates** | Any | Gate + Gate 2 type/qty. Auto terminals = (gate qty × 2). Known gaps `4x6`, `12x8` emit free-text. |

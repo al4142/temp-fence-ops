@@ -64,6 +64,7 @@ export default async function EditJobPage({ params }: Props) {
     topRail: job.topRail,
     bottomRail: job.bottomRail,
     weightMode: job.weightMode ?? "",
+    postMount: job.postMount === "plate" ? "plate" : "driven",
     terminalsManual: String(job.terminalsManual),
     notes: job.notes ?? "",
     accountExec: job.accountExec ?? "",

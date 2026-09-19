@@ -6,6 +6,8 @@ import {
   GATE_TYPES,
   SCREEN_SKUS,
   WEIGHT_MODES,
+  POST_MOUNTS,
+  POST_MOUNT_LABELS,
   isChainlinkType,
   isPanelType,
   isPlusOneType,
@@ -25,6 +27,8 @@ type Props = {
   setBottomRail: (v: boolean) => void;
   weightMode: string;
   setWeightMode: (v: string) => void;
+  postMount: string;
+  setPostMount: (v: string) => void;
   screenSku: string;
   setScreenSku: (v: string) => void;
   gateType: string;
@@ -123,6 +127,27 @@ export function JobFormBomOptions(p: Props) {
         ) : null}
         {showChainlink ? (
           <>
+            <div>
+              <label className={p.labelClass} htmlFor="postMount">
+                Post mount
+              </label>
+              <select
+                id="postMount"
+                className={p.inputClass}
+                value={p.postMount || "driven"}
+                onChange={(e) => p.setPostMount(e.target.value)}
+              >
+                {POST_MOUNTS.map((m) => (
+                  <option key={m} value={m}>
+                    {POST_MOUNT_LABELS[m]}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                Driven (default) or plate on concrete. Plate posts = fence height; SCREW-BOLT+
+                3/8×3 anchors the plates.
+              </p>
+            </div>
             <div className="flex items-end pb-2">
               <label className="flex items-center gap-2 text-sm text-slate-800">
                 <input

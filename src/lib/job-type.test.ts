@@ -187,4 +187,17 @@ describe("validateAndNormalize job type", () => {
     expect(validateAndNormalize({ ...base(), jobType: "DELIVERY" }).ok).toBe(false);
     expect(validateAndNormalize({ ...base(), jobType: "SWLK" }).ok).toBe(false);
   });
+
+  it("normalizes post mount plate / driven / blank", () => {
+    const plate = validateAndNormalize({ ...base(), postMount: "plate" });
+    expect(plate.ok).toBe(true);
+    if (plate.ok) expect(plate.data.postMount).toBe("plate");
+    const driven = validateAndNormalize({ ...base(), postMount: "driven" });
+    expect(driven.ok).toBe(true);
+    if (driven.ok) expect(driven.data.postMount).toBe("driven");
+    const blank = validateAndNormalize({ ...base(), postMount: "" });
+    expect(blank.ok).toBe(true);
+    if (blank.ok) expect(blank.data.postMount).toBe("driven");
+    expect(validateAndNormalize({ ...base(), postMount: "welded" }).ok).toBe(false);
+  });
 });

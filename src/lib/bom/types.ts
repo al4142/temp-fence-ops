@@ -1,4 +1,4 @@
-import type { FenceType, GateType, ScreenSku, WeightMode } from "./catalog";
+import type { FenceType, GateType, PostMount, ScreenSku, WeightMode } from "./catalog";
 
 export type BomGateInput = {
   type: string | null | undefined;
@@ -15,6 +15,8 @@ export type BomInput = {
   gate?: BomGateInput | null;
   gate2?: BomGateInput | null;
   terminalsManual?: number | null;
+  /** Chainlink only. `driven` (default) or `plate`. Blank = driven. */
+  postMount?: string | null;
   /** Ignored by recipes (Install/Pickup use the same qtys). Accepted so callers can pass job type. */
   jobType?: string | null;
 };
@@ -33,6 +35,7 @@ export type BomResult = {
   qtyLf: number;
   terminalsTotal: number;
   weightMode: WeightMode | null;
+  postMount: PostMount | null;
   screenSku: ScreenSku | null;
   gates: Array<{ type: GateType | string; qty: number; kind: "swing" | "slide" }>;
 };

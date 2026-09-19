@@ -47,9 +47,10 @@ fence specs, `revenue`. `lodging` / `freight` / `misc` are **denormalized sums**
 
 BOM generator inputs (optional; used by **Generate BOM** on create/edit):
 - `fenceType` — canonical only: `CL6`, `CL8`, `CL6+1`, `CL8+1`, `6x10`, `6x12`, `8x10`, `8x12`, `BARRICADE`
-- `qtyLf`, `topRail`, `bottomRail`, `weightMode` (`BFOOT` / `SBAG`), `screenSku`
+- `qtyLf`, `topRail`, `bottomRail`, `weightMode` (`BFOOT` / `SBAG`), `postMount` (`driven` / `plate`), `screenSku`
 - `gateType` + `gateQty`, `gateType2` + `gateQty2` (`gates` is the denormalized total)
 - `terminalsManual` — corners / start-stop / extras; auto terminals = gate qty × 2
+- `postMount` — chainlink only: `driven` (default, bury-length posts) or `plate` (fence-height posts on floor plates + SCREW-BOLT+ 3/8x3)
 - `screen` stays in sync as `Boolean(screenSku)` for legacy views
 
 Live recipes: [BOM_APPROVED.md](./BOM_APPROVED.md). Calculator: `src/lib/bom/`.
