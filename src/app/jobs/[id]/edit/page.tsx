@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { toDateInputValue, type JobFormValues } from "@/lib/job-form";
+import { sectionsForJob, storedToFormSection } from "@/lib/bom/sections";
 import { normalizeJobType } from "@/lib/job-constants";
 import { JobForm } from "@/components/JobForm";
 import { deleteJob, updateJob } from "../../actions";
@@ -66,6 +67,7 @@ export default async function EditJobPage({ params }: Props) {
     weightMode: job.weightMode ?? "",
     postMount: job.postMount === "plate" ? "plate" : "driven",
     terminalsManual: String(job.terminalsManual),
+    sections: sectionsForJob(job).map(storedToFormSection),
     notes: job.notes ?? "",
     accountExec: job.accountExec ?? "",
     revenue: String(job.revenue),

@@ -5,20 +5,35 @@ export type BomGateInput = {
   qty: number;
 };
 
-export type BomInput = {
+/** One fence run on a job. Gates and terminals are per-section. */
+export type BomSectionInput = {
   fenceType: string | null | undefined;
   qtyLf: number | null | undefined;
   topRail?: boolean | null;
   bottomRail?: boolean | null;
   weightMode?: string | null;
-  screenSku?: string | null;
+  /** Chainlink only. `driven` (default) or `plate`. Blank = driven. Ignored for panels/barricade. */
+  postMount?: string | null;
   gate?: BomGateInput | null;
   gate2?: BomGateInput | null;
   terminalsManual?: number | null;
-  /** Chainlink only. `driven` (default) or `plate`. Blank = driven. */
-  postMount?: string | null;
+};
+
+export type BomInput = Partial<BomSectionInput> & {
+  /** When set and non-empty, each section is calculated and lines are merged. Else top-level fields are one section. */
+  sections?: BomSectionInput[] | null;
+  /** Job-level screen (rolls from total LF). */
+  screenSku?: string | null;
   /** Ignored by recipes (Install/Pickup use the same qtys). Accepted so callers can pass job type. */
   jobType?: string | null;
+};
+
+export type BomSectionResult = {
+  fenceType: FenceType | null;
+  qtyLf: number;
+  terminalsTotal: number;
+  weightMode: WeightMode | null;
+  postMount: PostMount | null;
 };
 
 export type BomLine = {
@@ -38,6 +53,7 @@ export type BomResult = {
   postMount: PostMount | null;
   screenSku: ScreenSku | null;
   gates: Array<{ type: GateType | string; qty: number; kind: "swing" | "slide" }>;
+  sections: BomSectionResult[];
 };
 
 export type CatalogItem = {

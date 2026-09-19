@@ -81,7 +81,7 @@ There is no separate “BOM page.” Generate BOM lives on the job create/edit f
 1. Sign in as `admin@demo.local`.
 2. Click **Jobs** → **New job**.
 3. Fill **Job details** (order #, date, branch, job type). Use **Install** or **Drop** to pull stock, **Pickup** to return it.
-4. In **Fence / BOM options**, set fence type, LF, and options (weights, rails, screen SKU, gates).
+4. In **Fence / BOM options**, set the first section (fence type, LF, rails/weights, post mount for chainlink, gates). Add a section to mix driven + plate or panel + chainlink.
 5. In **Materials**, click **Generate BOM**. Review the preview table (Item / Qty / Match).
 6. Click **Apply to materials** (confirms if you already have material rows).
 7. Add **Labor** (and cost lines / variance if needed) → **Create job**.
@@ -154,7 +154,7 @@ Leave weights blank → no BIG FEET / SAND BAG. **SBAG** uses the same 2× stand
 
 **Barricade:** `CEILING(LF / 7)` of BARRICADE. Example: 275 LF → 40.
 
-**Chainlink (CL6 / CL8 / +1):** wire rolls `CEILING(LF/50)`; line posts `CEILING(LF/10)` (1-5/8″; driven CL6 8′ post, CL8 10′). Optional **Post mount: Driven | Plate (concrete)** — plate uses fence-height posts (`6'` / `8'` LINE/TERMINAL POST W/ PLATE) plus `SCREW-BOLT+ 3/8x3` = `(line_posts × 2) + (terminals × 4)`. Aluminum ties `(LF/10)*8` CL6 or `*10` CL8, plus extra ties if top rail. Optional **Top rail** / **Bottom rail** (same 1-3/8″ tube). **Tension wire is not in v1.** Manual terminals = corners + start/stop + extras; auto terminals = (gate qty × 2).
+**Chainlink (CL6 / CL8 / +1):** per section. Wire rolls `CEILING(section LF/50)`; line posts `CEILING(section LF/10)`. **Post mount** is per chainlink section: Driven (bury-length posts) or Plate (fence-height posts + `SCREW-BOLT+ 3/8x3` = `(line×2)+(terminals×4)`). Mixed warehouse/yard = two chainlink sections with the LF split. Aluminum ties `(LF/10)*8` CL6 or `*10` CL8, plus extra ties if top rail. Optional **Top rail** / **Bottom rail**. **Tension wire is not in v1.** Gates and manual terminals are per section; auto terminals = (that section’s gate qty × 2).
 
 **CL6+1 / CL8+1:** full CL base, then barb arms (one per line post), barb wire `CEILING((LF×3)/1320)` rolls, plus 3 tension bands per terminal. Top rail defaults **on** for +1 (overridable).
 

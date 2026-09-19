@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import {
@@ -85,6 +86,7 @@ export async function createJob(values: JobFormValues): Promise<ActionResult> {
           weightMode: data.weightMode,
           postMount: data.postMount,
           terminalsManual: data.terminalsManual,
+          fenceSections: data.fenceSections as Prisma.InputJsonValue,
           notes: data.notes,
           accountExec: data.accountExec,
           revenue: data.revenue,
@@ -221,6 +223,7 @@ export async function updateJob(
           weightMode: data.weightMode,
           postMount: data.postMount,
           terminalsManual: data.terminalsManual,
+          fenceSections: data.fenceSections as Prisma.InputJsonValue,
           notes: data.notes,
           accountExec: data.accountExec,
           revenue: data.revenue,

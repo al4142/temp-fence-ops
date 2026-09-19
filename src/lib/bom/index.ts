@@ -22,5 +22,15 @@ export {
   isPlusOneType,
 } from "./catalog";
 export { calculateBom } from "./calculate";
+export {
+  emptyJobFenceSectionForm,
+  resolveFormSections,
+  formSectionsToBom,
+  sectionsForJob,
+  summarizeSections,
+  formatSectionLabel,
+  resolveBomSections,
+} from "./sections";
 export { matchCatalogItem, bomLinesToMaterials, catalogMatchWarnings, normalizeCatalogKey } from "./match-catalog";
-export type { BomInput, BomLine, BomResult, BomGateInput, MatchedBomMaterial } from "./types";
+export type { BomInput, BomLine, BomResult, BomGateInput, BomSectionInput, BomSectionResult, MatchedBomMaterial } from "./types";
+export type { JobFenceSectionForm, StoredFenceSection } from "./sections";

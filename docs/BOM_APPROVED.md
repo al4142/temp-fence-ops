@@ -115,7 +115,7 @@ These *3 / *4 band multipliers are the **temporary** counts from the ops workboo
 
 ### Post mount — Driven vs Plate (concrete) (approved)
 
-Chainlink jobs (`CL6` / `CL8` / `CL6+1` / `CL8+1`) choose how posts attach. **Not** for panels or barricade. The rest of the fence BOM (wire, rails, ties, gates, barb, tension bars/bands, etc.) is unchanged.
+`postMount` is a **per-section** chainlink option, not a job-wide toggle. **Not** for panels or barricade. The rest of that section’s fence BOM (wire, rails, ties, barb, tension bars/bands) is unchanged.
 
 | Mode | Default | Use case | Posts |
 |------|---------|----------|-------|
@@ -129,14 +129,14 @@ Chainlink jobs (`CL6` / `CL8` / `CL6+1` / `CL8+1`) choose how posts attach. **No
 | CL6 / CL6+1 | `6' LINE POST W/ PLATE` | `6' TERMINAL POST W/ PLATE` |
 | CL8 / CL8+1 | `8' LINE POST W/ PLATE` | `8' TERMINAL POST W/ PLATE` |
 
-Counts are the same as driven:
+Counts are the same as driven, using **that section’s** LF and terminals:
 
 ```
-line_posts      = CEILING(LF / 10)
-terminals_total = (GATE_QTY + GATE_QTY2) * 2 + terminals_manual
+line_posts      = CEILING(section_LF / 10)
+terminals_total = (section GATE_QTY + GATE_QTY2) * 2 + section terminals_manual
 ```
 
-**SCREW-BOLT+ (consumable)** — DeWalt SCREW-BOLT+ ⅜″×3″, PFM1411240 (hex washer head, carbon steel zinc). Canonical BOM name: `SCREW-BOLT+ 3/8x3` (aliases: DeWalt / PFM1411240).
+**SCREW-BOLT+ (consumable)** — DeWalt SCREW-BOLT+ ⅜″×3″, PFM1411240. Canonical: `SCREW-BOLT+ 3/8x3` (aliases: DeWalt / PFM1411240). Plate sections only:
 
 ```
 SCREW_BOLTS = (line_posts × 2) + (terminals_total × 4)
@@ -145,12 +145,33 @@ SCREW_BOLTS = (line_posts × 2) + (terminals_total × 4)
 - Line plate: **2** bolts per post
 - Terminal plate: **4** bolts per post (corners)
 
+Driven sections emit bury-length posts and **no** SCREW-BOLT+.
+
 **Inventory / reusable**
 
-- Plate posts: **reusable** (restock on Pickup) — same family as driven line/terminal posts
+- Plate posts: **reusable** (restock on Pickup)
 - `SCREW-BOLT+ 3/8x3`: **reusable: false** (consumable — never restock on Pickup)
 
-Driven path is unchanged when post mount is blank or `driven`.
+---
+
+## 4a. Multi-section jobs (approved)
+
+A job has **one or more fence sections**. Generate BOM runs each section’s recipe and **merges** material lines (same SKU adds).
+
+| Section type | Options | Notes |
+|--------------|---------|-------|
+| Chainlink driven | rails, gates, manual terminals | Default new job = **one** driven section |
+| Chainlink plate | rails, gates, manual terminals | Warehouse / concrete; plate posts + SCREW-BOLT+ |
+| Panel `6x10` / `6x12` / `8x10` / `8x12` | BFOOT / SBAG weights, gates | T-stands recipe; post mount ignored |
+| Barricade | LF, gates | `CEILING(LF/7)` |
+
+**Mixed driven + plate** = two (or more) chainlink sections with the LF split (Option A). Panels with T-stands can sit on the same job as chainlink.
+
+**Gates are per-section** (panel and/or chainlink), not job-global only. Auto terminals (2 per gate) and manual terminals apply to **that section’s** terminal count (chainlink posts/bands only).
+
+Screen SKU stays **job-level**: rolls = `CEILING(sum of section LF / 50)`.
+
+Legacy jobs with no `fenceSections` JSON map to **one driven section** from the existing columns.
 
 ---
 
@@ -245,7 +266,8 @@ TRACK BRACKET 2-1/2 =
 [x] Tension wire: out of scope v1
 [x] Bottom rail: same 1-3/8″ tube as top + boulevard clamp per line post
 [x] Barb rolls: 1320′
-[x] Post mount: Driven vs Plate (concrete) + SCREW-BOLT+ 3/8x3
+[x] Post mount: Driven vs Plate (concrete) + SCREW-BOLT+ 3/8x3 (per chainlink section)
+[x] Multi-section BOM (driven / plate / panel / barricade; gates per section; merge lines)
 [ ] Weights default when blank; gate SKU gaps (12x8, 4x6)
 ```
 

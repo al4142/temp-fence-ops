@@ -1,11 +1,13 @@
 import { isJobType, normalizeJobType } from "./job-constants";
 import { VARIANCE_REASONS } from "./ops-constants";
+import { normalizeFenceType, normalizePostMount, normalizeWeightMode } from "./bom/catalog";
 import {
-  isPlusOneType,
-  normalizeFenceType,
-  normalizePostMount,
-  normalizeWeightMode,
-} from "./bom/catalog";
+  emptyJobFenceSectionForm,
+  resolveFormSections,
+  summarizeSections,
+  type JobFenceSectionForm,
+  type StoredFenceSection,
+} from "./bom/sections";
 
 export type MaterialInput = {
   inventoryItemId: string | null;
@@ -69,6 +71,8 @@ export type JobFormValues = {
   weightMode: string;
   postMount: string;
   terminalsManual: string;
+  /** Source of truth for Generate BOM. Default is one driven chainlink section. */
+  sections: JobFenceSectionForm[];
   notes: string;
   accountExec: string;
   revenue: string;
@@ -103,6 +107,7 @@ export type JobFormPayload = {
   weightMode: string | null;
   postMount: string | null;
   terminalsManual: number;
+  fenceSections: StoredFenceSection[];
   notes: string | null;
   accountExec: string | null;
   revenue: number;
@@ -171,6 +176,7 @@ export function emptyJobFormValues(defaults?: {
     weightMode: "",
     postMount: "driven",
     terminalsManual: "0",
+    sections: [emptyJobFenceSectionForm()],
     notes: "",
     accountExec: "",
     revenue: "0",
@@ -297,27 +303,43 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
   const freight = freightLines.reduce((s, l) => s + l.cost, 0);
   const misc = miscLines.reduce((s, l) => s + l.amount, 0);
 
-  const fenceTypeRaw = input.fenceType.trim();
-  const fenceType = fenceTypeRaw || null;
-  const weightRaw = (input.weightMode ?? "").trim().toUpperCase();
-  if (weightRaw && !normalizeWeightMode(weightRaw)) {
-    return { ok: false, error: "Weight mode must be BFOOT, SBAG, or blank." };
+  const resolvedSections = resolveFormSections(input);
+  const fenceSections: StoredFenceSection[] = [];
+  for (let i = 0; i < resolvedSections.length; i++) {
+    const s = resolvedSections[i];
+    const weightRaw = (s.weightMode ?? "").trim().toUpperCase();
+    if (weightRaw && !normalizeWeightMode(weightRaw)) {
+      return { ok: false, error: `Section ${i + 1}: weight mode must be BFOOT, SBAG, or blank.` };
+    }
+    const postMountRaw = (s.postMount ?? "").trim();
+    const postMount = normalizePostMount(postMountRaw);
+    if (postMountRaw && !postMount) {
+      return { ok: false, error: `Section ${i + 1}: post mount must be driven, plate, or blank.` };
+    }
+    const qtyLf = parseOptionalNumber(s.qtyLf);
+    if (s.qtyLf.trim() && qtyLf === null) {
+      return { ok: false, error: `Section ${i + 1}: LF is not a number.` };
+    }
+    fenceSections.push({
+      fenceType: s.fenceType.trim() || null,
+      qtyLf,
+      topRail: Boolean(s.topRail),
+      bottomRail: Boolean(s.bottomRail),
+      weightMode: weightRaw || null,
+      postMount: postMount === "plate" ? "plate" : "driven",
+      gateType: (s.gateType ?? "").trim() || null,
+      gateQty: Math.max(0, Math.floor(parseRequiredNumber(s.gateQty, 0))),
+      gateType2: (s.gateType2 ?? "").trim() || null,
+      gateQty2: Math.max(0, Math.floor(parseRequiredNumber(s.gateQty2, 0))),
+      terminalsManual: Math.max(0, Math.floor(parseRequiredNumber(s.terminalsManual, 0))),
+    });
   }
-  const postMountRaw = (input.postMount ?? "").trim();
-  const postMount = normalizePostMount(postMountRaw);
-  if (postMountRaw && !postMount) {
-    return { ok: false, error: "Post mount must be driven, plate, or blank." };
-  }
-  const gateQty = Math.max(0, Math.floor(parseRequiredNumber(input.gateQty, 0)));
-  const gateQty2 = Math.max(0, Math.floor(parseRequiredNumber(input.gateQty2, 0)));
-  const gatesFromPairs = gateQty + gateQty2;
-  const legacyGates = Math.max(0, Math.floor(parseRequiredNumber(input.gates, 0)));
-  const gates = gatesFromPairs > 0 ? gatesFromPairs : legacyGates;
+
+  const summary = summarizeSections(fenceSections);
   const screenSku = (input.screenSku ?? "").trim() || null;
   const screen = Boolean(screenSku) || Boolean(input.screen);
-  const canonical = normalizeFenceType(fenceType);
-  const topRail =
-    input.topRail ?? (canonical ? isPlusOneType(canonical) : false);
+  const firstType = fenceSections[0]?.fenceType ?? (input.fenceType.trim() || null);
+  const canonicalFirst = normalizeFenceType(firstType);
 
   return {
     ok: true,
@@ -330,20 +352,21 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
       address: input.address.trim() || null,
       city: input.city.trim() || null,
       jobType,
-      fenceType,
-      qtyLf: parseOptionalNumber(input.qtyLf),
+      fenceType: summary.fenceType ?? canonicalFirst,
+      qtyLf: summary.qtyLf,
       screen,
       screenSku,
-      gates,
-      gateType: (input.gateType ?? "").trim() || null,
-      gateQty,
-      gateType2: (input.gateType2 ?? "").trim() || null,
-      gateQty2,
-      topRail: Boolean(topRail),
-      bottomRail: Boolean(input.bottomRail),
-      weightMode: weightRaw || null,
-      postMount: postMount === "plate" ? "plate" : "driven",
-      terminalsManual: Math.max(0, Math.floor(parseRequiredNumber(input.terminalsManual, 0))),
+      gates: summary.gates,
+      gateType: summary.gateType,
+      gateQty: summary.gateQty,
+      gateType2: summary.gateType2,
+      gateQty2: summary.gateQty2,
+      topRail: summary.topRail,
+      bottomRail: summary.bottomRail,
+      weightMode: summary.weightMode,
+      postMount: summary.postMount,
+      terminalsManual: summary.terminalsManual,
+      fenceSections,
       notes: input.notes.trim() || null,
       accountExec: input.accountExec.trim() || null,
       revenue: parseRequiredNumber(input.revenue, 0),

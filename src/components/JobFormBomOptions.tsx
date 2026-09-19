@@ -13,271 +13,337 @@ import {
   isPlusOneType,
   normalizeFenceType,
 } from "@/lib/bom/catalog";
+import { emptyJobFenceSectionForm, type JobFenceSectionForm } from "@/lib/bom/sections";
 
 type Props = {
   inputClass: string;
   labelClass: string;
-  fenceType: string;
-  setFenceType: (v: string) => void;
-  qtyLf: string;
-  setQtyLf: (v: string) => void;
-  topRail: boolean;
-  setTopRail: (v: boolean) => void;
-  bottomRail: boolean;
-  setBottomRail: (v: boolean) => void;
-  weightMode: string;
-  setWeightMode: (v: string) => void;
-  postMount: string;
-  setPostMount: (v: string) => void;
+  sections: JobFenceSectionForm[];
+  setSections: (next: JobFenceSectionForm[]) => void;
   screenSku: string;
   setScreenSku: (v: string) => void;
-  gateType: string;
-  setGateType: (v: string) => void;
-  gateQty: string;
-  setGateQty: (v: string) => void;
-  gateType2: string;
-  setGateType2: (v: string) => void;
-  gateQty2: string;
-  setGateQty2: (v: string) => void;
-  terminalsManual: string;
-  setTerminalsManual: (v: string) => void;
 };
 
+function patch(
+  sections: JobFenceSectionForm[],
+  index: number,
+  partial: Partial<JobFenceSectionForm>
+): JobFenceSectionForm[] {
+  return sections.map((s, i) => (i === index ? { ...s, ...partial } : s));
+}
+
 export function JobFormBomOptions(p: Props) {
-  const canonical = normalizeFenceType(p.fenceType);
-  const showChainlink = !canonical || isChainlinkType(canonical);
-  const showPanelWeights = !canonical || isPanelType(canonical);
-  const fenceOptions =
-    p.fenceType && !FENCE_TYPES.includes(p.fenceType as (typeof FENCE_TYPES)[number])
-      ? [p.fenceType, ...FENCE_TYPES]
-      : [...FENCE_TYPES];
   const gateList = (current: string) =>
     current && !(GATE_TYPES as readonly string[]).includes(current)
       ? [current, ...GATE_TYPES]
       : [...GATE_TYPES];
 
-  function onFenceTypeChange(next: string) {
-    p.setFenceType(next);
+  function onFenceTypeChange(index: number, next: string) {
     const t = normalizeFenceType(next);
-    if (t && isPlusOneType(t)) p.setTopRail(true);
+    const updates: Partial<JobFenceSectionForm> = { fenceType: next };
+    if (t && isPlusOneType(t)) updates.topRail = true;
+    p.setSections(patch(p.sections, index, updates));
+  }
+
+  function addSection() {
+    p.setSections([...p.sections, emptyJobFenceSectionForm()]);
+  }
+
+  function removeSection(index: number) {
+    if (p.sections.length <= 1) return;
+    p.setSections(p.sections.filter((_, i) => i !== index));
   }
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <h2 className="mb-1 font-semibold text-slate-900">Fence / BOM options</h2>
       <p className="mb-3 text-xs text-slate-500">
-        Canonical fence types only. Use <strong>Generate BOM</strong> on the materials
-        section to preview suggested lines from LF + type + options. Tension wire is not in
-        v1. Install and Pickup use the same quantities.
+        A job can have one or more fence sections. Generate BOM runs each section and merges
+        lines. Default is one driven chainlink section. Mixed driven + plate is two chainlink
+        sections with the LF split. Gates and manual terminals are per section (auto terminals
+        = gate qty × 2 on that section). Tension wire is not in v1.
       </p>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div>
-          <label className={p.labelClass} htmlFor="fenceType">
-            Fence type
-          </label>
-          <select
-            id="fenceType"
-            className={p.inputClass}
-            value={p.fenceType}
-            onChange={(e) => onFenceTypeChange(e.target.value)}
-          >
-            <option value="">-</option>
-            {fenceOptions.map((f) => (
-              <option key={f} value={f}>
-                {f in FENCE_TYPE_LABELS
-                  ? `${f} — ${FENCE_TYPE_LABELS[f as keyof typeof FENCE_TYPE_LABELS]}`
-                  : `${f} (legacy — BOM will warn)`}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={p.labelClass} htmlFor="qtyLf">
-            Qty (LF)
-          </label>
-          <input
-            id="qtyLf"
-            type="number"
-            step="any"
-            min="0"
-            className={p.inputClass}
-            value={p.qtyLf}
-            onChange={(e) => p.setQtyLf(e.target.value)}
-          />
-        </div>
-        {showPanelWeights ? (
-          <div>
-            <label className={p.labelClass} htmlFor="weightMode">
-              Weights (panels)
-            </label>
-            <select
-              id="weightMode"
-              className={p.inputClass}
-              value={p.weightMode}
-              onChange={(e) => p.setWeightMode(e.target.value)}
+
+      <div className="space-y-4">
+        {p.sections.map((s, index) => {
+          const canonical = normalizeFenceType(s.fenceType);
+          const showChainlink = !canonical || isChainlinkType(canonical);
+          const showPanelWeights = !canonical || isPanelType(canonical);
+          const fenceOptions =
+            s.fenceType && !FENCE_TYPES.includes(s.fenceType as (typeof FENCE_TYPES)[number])
+              ? [s.fenceType, ...FENCE_TYPES]
+              : [...FENCE_TYPES];
+          const id = (name: string) => `${name}-${index}`;
+
+          return (
+            <div
+              key={index}
+              className="rounded-md border border-slate-200 bg-slate-50/60 p-3"
             >
-              <option value="">None</option>
-              {WEIGHT_MODES.map((m) => (
-                <option key={m} value={m}>
-                  {m === "BFOOT" ? "BFOOT — big feet (2× stands)" : "SBAG — sand bags (2× stands)"}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-        {showChainlink ? (
-          <>
-            <div>
-              <label className={p.labelClass} htmlFor="postMount">
-                Post mount
-              </label>
-              <select
-                id="postMount"
-                className={p.inputClass}
-                value={p.postMount || "driven"}
-                onChange={(e) => p.setPostMount(e.target.value)}
-              >
-                {POST_MOUNTS.map((m) => (
-                  <option key={m} value={m}>
-                    {POST_MOUNT_LABELS[m]}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-slate-500">
-                Driven (default) or plate on concrete. Plate posts = fence height; SCREW-BOLT+
-                3/8×3 anchors the plates.
-              </p>
-            </div>
-            <div className="flex items-end pb-2">
-              <label className="flex items-center gap-2 text-sm text-slate-800">
-                <input
-                  type="checkbox"
-                  checked={p.topRail}
-                  onChange={(e) => p.setTopRail(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300"
-                />
-                Top rail
-                {canonical && isPlusOneType(canonical) ? (
-                  <span className="text-xs text-slate-500">(recommended for +1)</span>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-slate-800">
+                  Section {index + 1}
+                  {p.sections.length > 1 && s.fenceType ? (
+                    <span className="ml-2 font-normal text-slate-500">{s.fenceType}</span>
+                  ) : null}
+                </h3>
+                {p.sections.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => removeSection(index)}
+                    className="text-xs text-red-700 hover:underline"
+                  >
+                    Remove section
+                  </button>
                 ) : null}
-              </label>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <label className={p.labelClass} htmlFor={id("fenceType")}>
+                    Fence type
+                  </label>
+                  <select
+                    id={id("fenceType")}
+                    className={p.inputClass}
+                    value={s.fenceType}
+                    onChange={(e) => onFenceTypeChange(index, e.target.value)}
+                  >
+                    <option value="">-</option>
+                    {fenceOptions.map((f) => (
+                      <option key={f} value={f}>
+                        {f in FENCE_TYPE_LABELS
+                          ? `${f} — ${FENCE_TYPE_LABELS[f as keyof typeof FENCE_TYPE_LABELS]}`
+                          : `${f} (legacy — BOM will warn)`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={p.labelClass} htmlFor={id("qtyLf")}>
+                    Qty (LF)
+                  </label>
+                  <input
+                    id={id("qtyLf")}
+                    type="number"
+                    step="any"
+                    min="0"
+                    className={p.inputClass}
+                    value={s.qtyLf}
+                    onChange={(e) => p.setSections(patch(p.sections, index, { qtyLf: e.target.value }))}
+                  />
+                </div>
+                {showPanelWeights ? (
+                  <div>
+                    <label className={p.labelClass} htmlFor={id("weightMode")}>
+                      Weights (panels)
+                    </label>
+                    <select
+                      id={id("weightMode")}
+                      className={p.inputClass}
+                      value={s.weightMode}
+                      onChange={(e) =>
+                        p.setSections(patch(p.sections, index, { weightMode: e.target.value }))
+                      }
+                    >
+                      <option value="">None</option>
+                      {WEIGHT_MODES.map((m) => (
+                        <option key={m} value={m}>
+                          {m === "BFOOT"
+                            ? "BFOOT — big feet (2× stands)"
+                            : "SBAG — sand bags (2× stands)"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                {showChainlink ? (
+                  <>
+                    <div>
+                      <label className={p.labelClass} htmlFor={id("postMount")}>
+                        Post mount
+                      </label>
+                      <select
+                        id={id("postMount")}
+                        className={p.inputClass}
+                        value={s.postMount || "driven"}
+                        onChange={(e) =>
+                          p.setSections(patch(p.sections, index, { postMount: e.target.value }))
+                        }
+                      >
+                        {POST_MOUNTS.map((m) => (
+                          <option key={m} value={m}>
+                            {POST_MOUNT_LABELS[m]}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Driven (default, bury-length posts) or plate on concrete (fence-height
+                        posts + SCREW-BOLT+ 3/8×3).
+                      </p>
+                    </div>
+                    <div className="flex items-end pb-2">
+                      <label className="flex items-center gap-2 text-sm text-slate-800">
+                        <input
+                          type="checkbox"
+                          checked={s.topRail}
+                          onChange={(e) =>
+                            p.setSections(patch(p.sections, index, { topRail: e.target.checked }))
+                          }
+                          className="h-4 w-4 rounded border-slate-300"
+                        />
+                        Top rail
+                        {canonical && isPlusOneType(canonical) ? (
+                          <span className="text-xs text-slate-500">(recommended for +1)</span>
+                        ) : null}
+                      </label>
+                    </div>
+                    <div className="flex items-end pb-2">
+                      <label className="flex items-center gap-2 text-sm text-slate-800">
+                        <input
+                          type="checkbox"
+                          checked={s.bottomRail}
+                          onChange={(e) =>
+                            p.setSections(patch(p.sections, index, { bottomRail: e.target.checked }))
+                          }
+                          className="h-4 w-4 rounded border-slate-300"
+                        />
+                        Bottom rail
+                      </label>
+                    </div>
+                    <div>
+                      <label className={p.labelClass} htmlFor={id("terminalsManual")}>
+                        Manual terminals
+                      </label>
+                      <input
+                        id={id("terminalsManual")}
+                        type="number"
+                        min="0"
+                        step="1"
+                        className={p.inputClass}
+                        value={s.terminalsManual}
+                        onChange={(e) =>
+                          p.setSections(
+                            patch(p.sections, index, { terminalsManual: e.target.value })
+                          )
+                        }
+                      />
+                      <p className="mt-1 text-xs text-slate-500">
+                        This section only. Corners + start/stop + extras. Auto terminals = (this
+                        section&apos;s gate qty × 2).
+                      </p>
+                    </div>
+                  </>
+                ) : null}
+                <div>
+                  <label className={p.labelClass} htmlFor={id("gateType")}>
+                    Gate
+                  </label>
+                  <select
+                    id={id("gateType")}
+                    className={p.inputClass}
+                    value={s.gateType}
+                    onChange={(e) =>
+                      p.setSections(patch(p.sections, index, { gateType: e.target.value }))
+                    }
+                  >
+                    <option value="">-</option>
+                    {gateList(s.gateType).map((g) => (
+                      <option key={g} value={g}>
+                        {(GATE_TYPES as readonly string[]).includes(g)
+                          ? g
+                          : `${g} (removed — catalog gap)`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={p.labelClass} htmlFor={id("gateQty")}>
+                    Gate qty
+                  </label>
+                  <input
+                    id={id("gateQty")}
+                    type="number"
+                    min="0"
+                    step="1"
+                    className={p.inputClass}
+                    value={s.gateQty}
+                    onChange={(e) =>
+                      p.setSections(patch(p.sections, index, { gateQty: e.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className={p.labelClass} htmlFor={id("gateType2")}>
+                    Gate 2
+                  </label>
+                  <select
+                    id={id("gateType2")}
+                    className={p.inputClass}
+                    value={s.gateType2}
+                    onChange={(e) =>
+                      p.setSections(patch(p.sections, index, { gateType2: e.target.value }))
+                    }
+                  >
+                    <option value="">-</option>
+                    {gateList(s.gateType2).map((g) => (
+                      <option key={g} value={g}>
+                        {(GATE_TYPES as readonly string[]).includes(g)
+                          ? g
+                          : `${g} (removed — catalog gap)`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={p.labelClass} htmlFor={id("gateQty2")}>
+                    Gate 2 qty
+                  </label>
+                  <input
+                    id={id("gateQty2")}
+                    type="number"
+                    min="0"
+                    step="1"
+                    className={p.inputClass}
+                    value={s.gateQty2}
+                    onChange={(e) =>
+                      p.setSections(patch(p.sections, index, { gateQty2: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex items-end pb-2">
-              <label className="flex items-center gap-2 text-sm text-slate-800">
-                <input
-                  type="checkbox"
-                  checked={p.bottomRail}
-                  onChange={(e) => p.setBottomRail(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300"
-                />
-                Bottom rail
-              </label>
-            </div>
-            <div>
-              <label className={p.labelClass} htmlFor="terminalsManual">
-                Manual terminals
-              </label>
-              <input
-                id="terminalsManual"
-                type="number"
-                min="0"
-                step="1"
-                className={p.inputClass}
-                value={p.terminalsManual}
-                onChange={(e) => p.setTerminalsManual(e.target.value)}
-              />
-              <p className="mt-1 text-xs text-slate-500">
-                Corners + start/stop + extras. Auto terminals = (gate qty × 2).
-              </p>
-            </div>
-          </>
-        ) : null}
-        <div>
-          <label className={p.labelClass} htmlFor="screenSku">
-            Screen SKU
-          </label>
-          <select
-            id="screenSku"
-            className={p.inputClass}
-            value={p.screenSku}
-            onChange={(e) => p.setScreenSku(e.target.value)}
-          >
-            <option value="">None</option>
-            {SCREEN_SKUS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={p.labelClass} htmlFor="gateType">
-            Gate
-          </label>
-          <select
-            id="gateType"
-            className={p.inputClass}
-            value={p.gateType}
-            onChange={(e) => p.setGateType(e.target.value)}
-          >
-            <option value="">-</option>
-            {gateList(p.gateType).map((g) => (
-              <option key={g} value={g}>
-                {(GATE_TYPES as readonly string[]).includes(g)
-                  ? g
-                  : `${g} (removed — catalog gap)`}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={p.labelClass} htmlFor="gateQty">
-            Gate qty
-          </label>
-          <input
-            id="gateQty"
-            type="number"
-            min="0"
-            step="1"
-            className={p.inputClass}
-            value={p.gateQty}
-            onChange={(e) => p.setGateQty(e.target.value)}
-          />
-        </div>
-        <div>
-          <label className={p.labelClass} htmlFor="gateType2">
-            Gate 2
-          </label>
-          <select
-            id="gateType2"
-            className={p.inputClass}
-            value={p.gateType2}
-            onChange={(e) => p.setGateType2(e.target.value)}
-          >
-            <option value="">-</option>
-            {gateList(p.gateType2).map((g) => (
-              <option key={g} value={g}>
-                {(GATE_TYPES as readonly string[]).includes(g)
-                  ? g
-                  : `${g} (removed — catalog gap)`}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={p.labelClass} htmlFor="gateQty2">
-            Gate 2 qty
-          </label>
-          <input
-            id="gateQty2"
-            type="number"
-            min="0"
-            step="1"
-            className={p.inputClass}
-            value={p.gateQty2}
-            onChange={(e) => p.setGateQty2(e.target.value)}
-          />
-        </div>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={addSection}
+        className="mt-3 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-50"
+      >
+        Add section
+      </button>
+
+      <div className="mt-4 max-w-sm">
+        <label className={p.labelClass} htmlFor="screenSku">
+          Screen SKU (job total LF)
+        </label>
+        <select
+          id="screenSku"
+          className={p.inputClass}
+          value={p.screenSku}
+          onChange={(e) => p.setScreenSku(e.target.value)}
+        >
+          <option value="">None</option>
+          {SCREEN_SKUS.map((sku) => (
+            <option key={sku} value={sku}>
+              {sku}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-slate-500">
+          Rolls = CEILING(sum of section LF / 50). Not per-section.
+        </p>
       </div>
     </section>
   );
