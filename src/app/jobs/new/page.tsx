@@ -7,7 +7,7 @@ import { createJob } from "../actions";
 export const dynamic = "force-dynamic";
 
 export default async function NewJobPage() {
-  const [branches, employees, inventory] = await Promise.all([
+  const loaded = await Promise.all([
     prisma.branch.findMany({ where: { active: true }, orderBy: { code: "asc" } }),
     prisma.employee.findMany({
       orderBy: { name: "asc" },
@@ -17,7 +17,11 @@ export default async function NewJobPage() {
       orderBy: [{ sku: "asc" }, { name: "asc" }],
       select: { id: true, sku: true, name: true, unit: true, branchId: true },
     }),
-  ]);
+  ]).catch((e) => {
+    console.error("New job lookups failed; rendering form with empty options.", e);
+    return [[], [], []];
+  });
+  const [branches, employees, inventory] = loaded;
 
   const initial = emptyJobFormValues({
     branchId: branches[0]?.id ?? "",

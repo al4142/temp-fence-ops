@@ -12,13 +12,16 @@ import {
   isSlideGate,
   normalizeFenceType,
   normalizeGateType,
+  normalizePostMount,
   normalizeScreenSku,
   normalizeWeightMode,
   type FenceType,
   type GateType,
   type PanelType,
+  type PostMount,
 } from "./catalog";
-import type { BomGateInput, BomInput, BomLine, BomResult } from "./types";
+import { resolveBomSections, resultFenceType, resultPostMount } from "./sections";
+import type { BomGateInput, BomInput, BomLine, BomResult, BomSectionInput, BomSectionResult } from "./types";
 
 function ceil(n: number): number {
   if (!Number.isFinite(n) || n <= 0) return 0;
@@ -107,7 +110,8 @@ function addChainlinkRecipe(
   lf: number,
   topRail: boolean,
   bottomRail: boolean,
-  terminalsTotal: number
+  terminalsTotal: number,
+  postMount: PostMount
 ) {
   if (!isChainlinkType(type)) return;
   const base = chainlinkBase(type);
@@ -116,10 +120,33 @@ function addChainlinkRecipe(
   const tiesPer = base === "CL6" ? 8 : 10;
   let ties = (lf / 10) * tiesPer;
   if (topRail) ties += (lf / 10) * 5;
+  const plate = postMount === "plate";
+  const linePostName = plate
+    ? base === "CL6"
+      ? BOM_NAMES.cl6LinePostPlate
+      : BOM_NAMES.cl8LinePostPlate
+    : base === "CL6"
+      ? BOM_NAMES.cl6LinePost
+      : BOM_NAMES.cl8LinePost;
+  const terminalName = plate
+    ? base === "CL6"
+      ? BOM_NAMES.cl6TerminalPlate
+      : BOM_NAMES.cl8TerminalPlate
+    : base === "CL6"
+      ? BOM_NAMES.cl6Terminal
+      : BOM_NAMES.cl8Terminal;
 
   addLine(map, base === "CL6" ? BOM_NAMES.cl6Wire : BOM_NAMES.cl8Wire, wireRolls);
-  addLine(map, base === "CL6" ? BOM_NAMES.cl6LinePost : BOM_NAMES.cl8LinePost, linePosts);
+  addLine(map, linePostName, linePosts);
   addLine(map, BOM_NAMES.ties, ties);
+  if (plate) {
+    addLine(
+      map,
+      BOM_NAMES.screwBolt38x3,
+      linePosts * 2 + terminalsTotal * 4,
+      "DeWalt SCREW-BOLT+; 2 per line plate, 4 per terminal plate"
+    );
+  }
 
   const railSticks = topRail || bottomRail ? ceil(lf / 21) : 0;
   if (topRail) {
@@ -134,7 +161,7 @@ function addChainlinkRecipe(
   const railEnds = terminalsTotal * (topRail ? 1 : 0) + terminalsTotal * (bottomRail ? 1 : 0);
 
   if (terminalsTotal > 0) {
-    addLine(map, base === "CL6" ? BOM_NAMES.cl6Terminal : BOM_NAMES.cl8Terminal, terminalsTotal);
+    addLine(map, terminalName, terminalsTotal);
     addLine(
       map,
       base === "CL6" ? BOM_NAMES.cl6TensionBar : BOM_NAMES.cl8TensionBar,
@@ -229,78 +256,141 @@ function addGateRecipes(
   }
 }
 
+function applySectionFence(
+  section: BomSectionInput,
+  map: Map<string, BomLine>,
+  warnings: string[],
+  notes: string[],
+  labelPrefix: string
+): BomSectionResult & { typedGates: Array<{ type: string; qty: number }> } {
+  const rawType = section.fenceType?.trim() ?? "";
+  const fenceType = normalizeFenceType(rawType);
+  const lf = section.qtyLf != null && Number.isFinite(section.qtyLf) ? Number(section.qtyLf) : 0;
+  const qtyLf = lf > 0 ? lf : 0;
+
+  if (rawType && !fenceType) {
+    warnings.push(
+      `${labelPrefix}Unrecognized fence type "${rawType}". Canonical codes only (CL6, CL8, CL6+1, CL8+1, 6x10, 6x12, 8x10, 8x12, BARRICADE). Fence recipe skipped.`
+    );
+  }
+
+  const plusOne = fenceType ? isPlusOneType(fenceType) : false;
+  const topRail = section.topRail ?? plusOne;
+  const bottomRail = Boolean(section.bottomRail);
+  const weightMode = normalizeWeightMode(section.weightMode);
+  if (section.weightMode?.trim() && !weightMode) {
+    warnings.push(`${labelPrefix}Unrecognized weight mode "${section.weightMode}". Use BFOOT or SBAG.`);
+  }
+  const postMount = normalizePostMount(section.postMount);
+  if (section.postMount?.trim() && !postMount) {
+    warnings.push(`${labelPrefix}Unrecognized post mount "${section.postMount}". Use driven or plate.`);
+  }
+  const resolvedMount: PostMount = postMount ?? "driven";
+
+  if (plusOne && section.topRail == null) {
+    notes.push(`${labelPrefix}Top rail defaulted on for +1 (overridable).`);
+  }
+  if (section.topRail === false && plusOne) {
+    notes.push(`${labelPrefix}Top rail overridden off on a +1 job.`);
+  }
+
+  const g1 = parseGate(section.gate, warnings, `${labelPrefix}Gate`.trim() || "Gate");
+  const g2 = parseGate(section.gate2, warnings, `${labelPrefix}Gate 2`.trim() || "Gate 2");
+  const gateQtyTotal = g1.qty + g2.qty;
+  const terminalsManual = nonNegInt(section.terminalsManual);
+  const terminalsTotal = gateQtyTotal * 2 + terminalsManual;
+
+  if (fenceType && isPanelType(fenceType)) {
+    if (qtyLf > 0) addPanelRecipe(map, fenceType, qtyLf, weightMode);
+    else warnings.push(`${labelPrefix}Panel recipe needs LF > 0.`);
+    if (topRail || bottomRail) {
+      notes.push(`${labelPrefix}Top/bottom rail options apply to chainlink only — ignored for panels.`);
+    }
+    if (resolvedMount === "plate") {
+      notes.push(`${labelPrefix}Post mount Plate applies to chainlink only — ignored for panels.`);
+    }
+  } else if (fenceType === "BARRICADE") {
+    if (qtyLf > 0) addLine(map, BOM_NAMES.barricade, ceil(qtyLf / 7));
+    else warnings.push(`${labelPrefix}Barricade recipe needs LF > 0.`);
+    if (resolvedMount === "plate") {
+      notes.push(`${labelPrefix}Post mount Plate applies to chainlink only — ignored for barricade.`);
+    }
+  } else if (fenceType && isChainlinkType(fenceType)) {
+    if (qtyLf > 0) {
+      addChainlinkRecipe(map, fenceType, qtyLf, topRail, bottomRail, terminalsTotal, resolvedMount);
+    } else {
+      warnings.push(`${labelPrefix}Chainlink recipe needs LF > 0.`);
+    }
+  }
+
+  if (weightMode && fenceType && !isPanelType(fenceType)) {
+    notes.push(`${labelPrefix}BFOOT/SBAG weights apply to panel T-stands only.`);
+  }
+
+  const typedGates: Array<{ type: string; qty: number }> = [];
+  if (g1.qty > 0 && g1.type) typedGates.push({ type: g1.type, qty: g1.qty });
+  if (g2.qty > 0 && g2.type) typedGates.push({ type: g2.type, qty: g2.qty });
+
+  return {
+    fenceType,
+    qtyLf,
+    terminalsTotal,
+    weightMode,
+    postMount: fenceType && isChainlinkType(fenceType) ? resolvedMount : fenceType ? null : resolvedMount,
+    typedGates,
+  };
+}
+
 /**
  * Pure temporary-fence BOM calculator (APPROVED rules).
  * Job type (Install vs Pickup) does not change quantities.
+ * `sections[]` runs each fence run and merges lines; omitted sections = one run from top-level fields.
  */
 export function calculateBom(input: BomInput): BomResult {
   const warnings: string[] = [];
   const notes: string[] = [];
   const lines = new Map<string, BomLine>();
   const resultGates: BomResult["gates"] = [];
+  const sectionResults: BomSectionResult[] = [];
 
-  const rawType = input.fenceType?.trim() ?? "";
-  const fenceType = normalizeFenceType(rawType);
-  const lf = input.qtyLf != null && Number.isFinite(input.qtyLf) ? Number(input.qtyLf) : 0;
-  const qtyLf = lf > 0 ? lf : 0;
+  const rawSections = resolveBomSections(input);
+  const multi = rawSections.length > 1;
+  const typedGates: Array<{ type: string; qty: number }> = [];
+  let anyChainlink = false;
+  let anyPlate = false;
 
-  if (rawType && !fenceType) {
-    warnings.push(
-      `Unrecognized fence type "${rawType}". Canonical codes only (CL6, CL8, CL6+1, CL8+1, 6x10, 6x12, 8x10, 8x12, BARRICADE). Fence recipe skipped.`
-    );
-  }
-
-  const plusOne = fenceType ? isPlusOneType(fenceType) : false;
-  const topRail = input.topRail ?? plusOne;
-  const bottomRail = Boolean(input.bottomRail);
-  const weightMode = normalizeWeightMode(input.weightMode);
-  if (input.weightMode?.trim() && !weightMode) {
-    warnings.push(`Unrecognized weight mode "${input.weightMode}". Use BFOOT or SBAG.`);
-  }
-
-  if (plusOne && input.topRail == null) {
-    notes.push("Top rail defaulted on for +1 (overridable).");
-  }
-  if (input.topRail === false && plusOne) {
-    notes.push("Top rail overridden off on a +1 job.");
-  }
-
-  const g1 = parseGate(input.gate, warnings, "Gate");
-  const g2 = parseGate(input.gate2, warnings, "Gate 2");
-  const gateQtyTotal = g1.qty + g2.qty;
-  const terminalsManual = nonNegInt(input.terminalsManual);
-  const terminalsTotal = gateQtyTotal * 2 + terminalsManual;
-
-  const screenSku = normalizeScreenSku(input.screenSku);
-
-  if (fenceType && isPanelType(fenceType)) {
-    if (qtyLf > 0) addPanelRecipe(lines, fenceType, qtyLf, weightMode);
-    else warnings.push("Panel recipe needs LF > 0.");
-    if (topRail || bottomRail) {
-      notes.push("Top/bottom rail options apply to chainlink only — ignored for panels.");
+  rawSections.forEach((section, idx) => {
+    const prefix = multi ? `Section ${idx + 1}: ` : "";
+    const applied = applySectionFence(section, lines, warnings, notes, prefix);
+    sectionResults.push({
+      fenceType: applied.fenceType,
+      qtyLf: applied.qtyLf,
+      terminalsTotal: applied.terminalsTotal,
+      weightMode: applied.weightMode,
+      postMount: applied.postMount,
+    });
+    typedGates.push(...applied.typedGates);
+    if (applied.fenceType && isChainlinkType(applied.fenceType)) {
+      anyChainlink = true;
+      if (applied.postMount === "plate") anyPlate = true;
     }
-  } else if (fenceType === "BARRICADE") {
-    if (qtyLf > 0) addLine(lines, BOM_NAMES.barricade, ceil(qtyLf / 7));
-    else warnings.push("Barricade recipe needs LF > 0.");
-  } else if (fenceType && isChainlinkType(fenceType)) {
-    if (qtyLf > 0) {
-      addChainlinkRecipe(lines, fenceType, qtyLf, topRail, bottomRail, terminalsTotal);
-    } else {
-      warnings.push("Chainlink recipe needs LF > 0.");
-    }
+  });
+
+  if (anyChainlink) {
     notes.push("Tension wire is out of scope for v1 and is not included.");
   }
-
-  addScreenRecipe(lines, qtyLf, screenSku, input.screenSku, warnings);
-
-  const typedGates: Array<{ type: string; qty: number }> = [];
-  if (g1.qty > 0 && g1.type) typedGates.push({ type: g1.type, qty: g1.qty });
-  if (g2.qty > 0 && g2.type) typedGates.push({ type: g2.type, qty: g2.qty });
-  addGateRecipes(lines, typedGates, resultGates);
-
-  if (weightMode && fenceType && !isPanelType(fenceType)) {
-    notes.push("BFOOT/SBAG weights apply to panel T-stands only.");
+  if (anyPlate) {
+    notes.push("Plate (concrete) mount: fence-height posts on floor plates; SCREW-BOLT+ 3/8x3 is consumable.");
   }
+  if (multi) {
+    notes.push(`Merged ${rawSections.length} fence sections into one BOM.`);
+  }
+
+  const qtyLf = sectionResults.reduce((s, r) => s + r.qtyLf, 0);
+  const terminalsTotal = sectionResults.reduce((s, r) => s + r.terminalsTotal, 0);
+  const screenSku = normalizeScreenSku(input.screenSku);
+  addScreenRecipe(lines, qtyLf, screenSku, input.screenSku, warnings);
+  addGateRecipes(lines, typedGates, resultGates);
 
   notes.push("BOM quantities are the same for Install and Pickup. Inventory sign is applied separately by job type.");
 
@@ -308,11 +398,13 @@ export function calculateBom(input: BomInput): BomResult {
     lines: [...lines.values()].filter((l) => l.qty !== 0),
     warnings,
     notes,
-    fenceType,
+    fenceType: resultFenceType(sectionResults.map((s) => s.fenceType)),
     qtyLf,
     terminalsTotal,
-    weightMode,
+    weightMode: sectionResults.find((s) => s.weightMode)?.weightMode ?? null,
+    postMount: resultPostMount(sectionResults.map((s) => s.postMount)),
     screenSku,
     gates: resultGates,
+    sections: sectionResults,
   };
 }

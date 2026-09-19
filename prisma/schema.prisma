@@ -92,8 +92,12 @@ model Job {
   bottomRail  Boolean  @default(false)
   /// BFOOT | SBAG — panel T-stand weights. Blank = none.
   weightMode  String?
-  /// Corners + start/stop + extras (not including 2 per gate).
+  /// Chainlink only (denormalized from first chainlink section): driven | plate.
+  postMount   String?
+  /// Corners + start/stop + extras (not including 2 per gate). Denormalized sum across sections.
   terminalsManual Int  @default(0)
+  /// Source of truth for multi-section BOM. Null = one section from the columns above.
+  fenceSections Json?
   notes       String?
   accountExec String?
   revenue     Float    @default(0)

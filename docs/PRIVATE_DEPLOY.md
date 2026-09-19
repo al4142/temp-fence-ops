@@ -71,6 +71,7 @@ Next.js + Prisma fits Vercel well (serverless/Node runtime, easy env UI).
 
 | Host | Fit | Notes |
 |------|-----|--------|
+| **Vercel** | Live demo host | `npm run build` runs `prisma generate && prisma migrate deploy && next build`. Use the **direct** Neon URL. |
 | **Railway** | Excellent | One service for Next.js + Postgres plugin; set env; `npm run build` + `npm run start`; run migrate on release. |
 | **Render** | Good | Web service + Postgres; use start command `npx prisma migrate deploy && npm run start`. |
 | **Fly.io** | Good | Containers; bundle Next standalone output; attach Fly Postgres or external DB. |

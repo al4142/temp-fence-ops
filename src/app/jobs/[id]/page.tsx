@@ -4,19 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import { describeInventoryEffect, inventorySignForJobType } from "@/lib/inventory";
 import { laborCostForLine, materialCostForLine } from "@/lib/pnl";
+import { isChainlinkType, normalizeFenceType, POST_MOUNT_LABELS } from "@/lib/bom/catalog";
+import { formatSectionLabel, sectionsForJob, type StoredFenceSection } from "@/lib/bom/sections";
 
-function formatJobGates(job: {
-  gates: number;
-  gateType: string | null;
-  gateQty: number;
-  gateType2: string | null;
-  gateQty2: number;
-}): string {
+function formatSectionGates(s: StoredFenceSection): string {
   const parts: string[] = [];
-  if (job.gateType && job.gateQty) parts.push(`${job.gateType} × ${job.gateQty}`);
-  if (job.gateType2 && job.gateQty2) parts.push(`${job.gateType2} × ${job.gateQty2}`);
+  if (s.gateType && s.gateQty) parts.push(`${s.gateType} × ${s.gateQty}`);
+  if (s.gateType2 && s.gateQty2) parts.push(`${s.gateType2} × ${s.gateQty2}`);
   if (parts.length) return parts.join(", ");
-  return job.gates ? String(job.gates) : "0";
+  return "0";
 }
 
 export const dynamic = "force-dynamic";
@@ -25,20 +21,27 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function JobDetailPage({ params }: Props) {
   const { id } = await params;
-  const job = await prisma.job.findUnique({
-    where: { id },
-    include: {
-      branch: true,
-      materials: { include: { inventoryItem: true } },
-      labor: { include: { employee: true } },
-      lodgingLines: true,
-      freightLines: true,
-      miscLines: true,
-      variances: { include: { inventoryItem: true } },
-    },
-  });
+  const job = await prisma.job
+    .findUnique({
+      where: { id },
+      include: {
+        branch: true,
+        materials: { include: { inventoryItem: true } },
+        labor: { include: { employee: true } },
+        lodgingLines: true,
+        freightLines: true,
+        miscLines: true,
+        variances: { include: { inventoryItem: true } },
+      },
+    })
+    .catch((e) => {
+      console.error("Job detail query failed.", e);
+      return null;
+    });
   if (!job) notFound();
 
+  const fenceSections = sectionsForJob(job);
+  const totalLf = fenceSections.reduce((n, s) => n + (s.qtyLf ?? 0), 0);
   const sign = inventorySignForJobType(job.jobType);
   const laborTotal = job.labor.reduce(
     (sum, l) =>
@@ -91,29 +94,18 @@ export default async function JobDetailPage({ params }: Props) {
         <Info label="Customer" value={job.customer} />
         <Info label="Site" value={[job.address, job.city].filter(Boolean).join(", ") || "-"} />
         <Info label="Class" value={job.class ?? "-"} />
-        <Info label="Fence" value={job.fenceType ?? "-"} />
-        <Info label="Qty (LF)" value={job.qtyLf != null ? formatNumber(job.qtyLf, 0) : "-"} />
         <Info
-          label="Rails / weights"
-          value={[
-            job.topRail ? "Top rail" : null,
-            job.bottomRail ? "Bottom rail" : null,
-            job.weightMode || null,
-          ]
-            .filter(Boolean)
-            .join(" · ") || "-"}
+          label="Fence sections"
+          value={
+            fenceSections.length > 1
+              ? `${fenceSections.length} sections · ${formatNumber(totalLf, 0)} LF`
+              : formatSectionLabel(fenceSections[0], 0)
+          }
         />
-        <Info
-          label="Gates"
-          value={formatJobGates(job)}
-        />
+        <Info label="Qty (LF)" value={totalLf ? formatNumber(totalLf, 0) : job.qtyLf != null ? formatNumber(job.qtyLf, 0) : "-"} />
         <Info
           label="Screen"
           value={job.screenSku || (job.screen ? "Yes" : "No")}
-        />
-        <Info
-          label="Manual terminals"
-          value={String(job.terminalsManual)}
         />
         <Info label="Account exec" value={job.accountExec ?? "-"} />
         <Info label="Revenue" value={formatCurrency(job.revenue)} />
@@ -122,6 +114,40 @@ export default async function JobDetailPage({ params }: Props) {
           value={`${formatCurrency(lodgingTotal)} / ${formatCurrency(freightTotal)} / ${formatCurrency(miscTotal)}`}
         />
       </div>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="font-semibold text-slate-900">Fence sections</h2>
+        <p className="mb-3 text-xs text-slate-500">
+          Generate BOM ran each section and merged material lines. Jobs with no saved
+          sections show as one driven section from the legacy fields.
+        </p>
+        <ul className="space-y-3 text-sm">
+          {fenceSections.map((s, i) => {
+            const ft = normalizeFenceType(s.fenceType);
+            const mount =
+              ft && isChainlinkType(ft)
+                ? POST_MOUNT_LABELS[s.postMount === "plate" ? "plate" : "driven"]
+                : null;
+            return (
+              <li key={i} className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2">
+                <div className="font-medium text-slate-900">{formatSectionLabel(s, i)}</div>
+                <div className="mt-1 text-xs text-slate-600">
+                  {[
+                    mount,
+                    s.topRail ? "Top rail" : null,
+                    s.bottomRail ? "Bottom rail" : null,
+                    s.weightMode,
+                    `Gates: ${formatSectionGates(s)}`,
+                    s.terminalsManual ? `Manual terminals: ${s.terminalsManual}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
       {job.notes ? (
         <p className="rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-700">

@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import Link from "next/link";
 import type { ActionResult, JobFormValues } from "@/lib/job-form";
-import { parseOptionalNumber } from "@/lib/job-form";
+import { emptyJobFenceSectionForm, formSectionsToBom, resolveFormSections } from "@/lib/bom/sections";
 import { VARIANCE_REASONS } from "@/lib/ops-constants";
 import { bomLinesToMaterials, calculateBom, catalogMatchWarnings, type BomResult, type MatchedBomMaterial } from "@/lib/bom";
 import { JobFormDetails } from "@/components/JobFormDetails";
@@ -85,17 +85,11 @@ export function JobForm({
   const [address, setAddress] = useState(initial.address);
   const [city, setCity] = useState(initial.city);
   const [jobType, setJobType] = useState(initial.jobType);
-  const [fenceType, setFenceType] = useState(initial.fenceType);
-  const [qtyLf, setQtyLf] = useState(initial.qtyLf);
   const [screenSku, setScreenSku] = useState(initial.screenSku ?? "");
-  const [gateType, setGateType] = useState(initial.gateType ?? "");
-  const [gateQty, setGateQty] = useState(initial.gateQty ?? "0");
-  const [gateType2, setGateType2] = useState(initial.gateType2 ?? "");
-  const [gateQty2, setGateQty2] = useState(initial.gateQty2 ?? "0");
-  const [topRail, setTopRail] = useState(initial.topRail ?? false);
-  const [bottomRail, setBottomRail] = useState(initial.bottomRail ?? false);
-  const [weightMode, setWeightMode] = useState(initial.weightMode ?? "");
-  const [terminalsManual, setTerminalsManual] = useState(initial.terminalsManual ?? "0");
+  const [sections, setSections] = useState(() => {
+    const resolved = resolveFormSections(initial);
+    return resolved.length > 0 ? resolved : [emptyJobFenceSectionForm()];
+  });
   const [notes, setNotes] = useState(initial.notes);
   const [accountExec, setAccountExec] = useState(initial.accountExec);
   const [revenue, setRevenue] = useState(initial.revenue);
@@ -190,19 +184,23 @@ export function JobForm({
       address,
       city,
       jobType,
-      fenceType,
-      qtyLf,
+      fenceType: sections[0]?.fenceType ?? "",
+      qtyLf: sections[0]?.qtyLf ?? "",
       screen: Boolean(screenSku),
       screenSku,
-      gates: String((Number(gateQty) || 0) + (Number(gateQty2) || 0)),
-      gateType,
-      gateQty,
-      gateType2,
-      gateQty2,
-      topRail,
-      bottomRail,
-      weightMode,
-      terminalsManual,
+      gates: String(
+        sections.reduce((n, s) => n + (Number(s.gateQty) || 0) + (Number(s.gateQty2) || 0), 0)
+      ),
+      gateType: sections[0]?.gateType ?? "",
+      gateQty: sections[0]?.gateQty ?? "0",
+      gateType2: sections[0]?.gateType2 ?? "",
+      gateQty2: sections[0]?.gateQty2 ?? "0",
+      topRail: sections[0]?.topRail ?? false,
+      bottomRail: sections[0]?.bottomRail ?? false,
+      weightMode: sections[0]?.weightMode ?? "",
+      postMount: sections[0]?.postMount || "driven",
+      terminalsManual: sections[0]?.terminalsManual ?? "0",
+      sections,
       notes,
       accountExec,
       revenue,
@@ -243,17 +241,9 @@ export function JobForm({
   }
 
   function handleGenerateBom() {
-    const lf = parseOptionalNumber(qtyLf) ?? 0;
     const result = calculateBom({
-      fenceType,
-      qtyLf: lf,
-      topRail,
-      bottomRail,
-      weightMode: weightMode || null,
+      sections: formSectionsToBom(sections),
       screenSku: screenSku || null,
-      gate: { type: gateType || null, qty: Number(gateQty) || 0 },
-      gate2: { type: gateType2 || null, qty: Number(gateQty2) || 0 },
-      terminalsManual: Number(terminalsManual) || 0,
       jobType,
     });
     const matched = bomLinesToMaterials(result.lines, filteredInventory);
@@ -359,28 +349,10 @@ export function JobForm({
       <JobFormBomOptions
         inputClass={inputClass}
         labelClass={labelClass}
-        fenceType={fenceType}
-        setFenceType={setFenceType}
-        qtyLf={qtyLf}
-        setQtyLf={setQtyLf}
-        topRail={topRail}
-        setTopRail={setTopRail}
-        bottomRail={bottomRail}
-        setBottomRail={setBottomRail}
-        weightMode={weightMode}
-        setWeightMode={setWeightMode}
+        sections={sections}
+        setSections={setSections}
         screenSku={screenSku}
         setScreenSku={setScreenSku}
-        gateType={gateType}
-        setGateType={setGateType}
-        gateQty={gateQty}
-        setGateQty={setGateQty}
-        gateType2={gateType2}
-        setGateType2={setGateType2}
-        gateQty2={gateQty2}
-        setGateQty2={setGateQty2}
-        terminalsManual={terminalsManual}
-        setTerminalsManual={setTerminalsManual}
       />
 
       <JobFormCostLines

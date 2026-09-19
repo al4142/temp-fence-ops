@@ -200,6 +200,224 @@ describe("chainlink core", () => {
   });
 });
 
+describe("chainlink plate mount", () => {
+  it("CL6 plate: fence-height plate posts + bolts = 2×line + 4×terminals", () => {
+    const r = calculateBom({
+      fenceType: "CL6",
+      qtyLf: 100,
+      topRail: false,
+      terminalsManual: 2,
+      postMount: "plate",
+    });
+    expect(r.postMount).toBe("plate");
+    expect(r.terminalsTotal).toBe(2);
+    expect(qty(r, BOM_NAMES.cl6LinePostPlate)).toBe(10);
+    expect(qty(r, BOM_NAMES.cl6TerminalPlate)).toBe(2);
+    expect(qty(r, BOM_NAMES.screwBolt38x3)).toBe(10 * 2 + 2 * 4);
+    expect(qty(r, BOM_NAMES.cl6LinePost)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl6Wire)).toBe(2);
+    expect(qty(r, BOM_NAMES.ties)).toBe(80);
+    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(2);
+    expect(r.notes.some((n) => /plate \(concrete\)/i.test(n))).toBe(true);
+  });
+
+  it("CL8 plate: 8′ plate posts and bolt math", () => {
+    const r = calculateBom({
+      fenceType: "CL8",
+      qtyLf: 216,
+      topRail: false,
+      postMount: "plate",
+    });
+    expect(qty(r, BOM_NAMES.cl8LinePostPlate)).toBe(22);
+    expect(qty(r, BOM_NAMES.cl8TerminalPlate)).toBe(0);
+    expect(qty(r, BOM_NAMES.screwBolt38x3)).toBe(44);
+    expect(qty(r, BOM_NAMES.cl8LinePost)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl8Terminal)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl8Wire)).toBe(5);
+    expect(qty(r, BOM_NAMES.ties)).toBe(216);
+  });
+
+  it("CL6 plate mixed terminals: gates*2 + manual", () => {
+    const r = calculateBom({
+      fenceType: "CL6",
+      qtyLf: 100,
+      topRail: false,
+      postMount: "plate",
+      gate: { type: "5x6", qty: 1 },
+      gate2: { type: "6x6", qty: 1 },
+      terminalsManual: 3,
+    });
+    expect(r.terminalsTotal).toBe(7);
+    expect(qty(r, BOM_NAMES.cl6LinePostPlate)).toBe(10);
+    expect(qty(r, BOM_NAMES.cl6TerminalPlate)).toBe(7);
+    expect(qty(r, BOM_NAMES.screwBolt38x3)).toBe(10 * 2 + 7 * 4);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(0);
+    expect(qty(r, "5x6")).toBe(1);
+    expect(qty(r, "6x6")).toBe(1);
+  });
+
+  it("CL8 plate mixed terminals: gate qty + manual", () => {
+    const r = calculateBom({
+      fenceType: "CL8",
+      qtyLf: 400,
+      topRail: true,
+      postMount: "plate",
+      terminalsManual: 4,
+      gate: { type: "14x8", qty: 2 },
+    });
+    expect(r.terminalsTotal).toBe(8);
+    expect(qty(r, BOM_NAMES.cl8LinePostPlate)).toBe(40);
+    expect(qty(r, BOM_NAMES.cl8TerminalPlate)).toBe(8);
+    expect(qty(r, BOM_NAMES.screwBolt38x3)).toBe(40 * 2 + 8 * 4);
+    expect(qty(r, BOM_NAMES.cl8LinePost)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl8Terminal)).toBe(0);
+    expect(qty(r, BOM_NAMES.tube138)).toBe(20);
+    expect(qty(r, BOM_NAMES.loopCap)).toBe(40);
+    expect(qty(r, "14x8")).toBe(2);
+  });
+
+  it("driven (default or explicit) does not emit plate posts or SCREW-BOLT+", () => {
+    const omitted = calculateBom({ fenceType: "CL6", qtyLf: 100, topRail: false, terminalsManual: 2 });
+    const driven = calculateBom({
+      fenceType: "CL6",
+      qtyLf: 100,
+      topRail: false,
+      terminalsManual: 2,
+      postMount: "driven",
+    });
+    expect(omitted.lines).toEqual(driven.lines);
+    expect(qty(driven, BOM_NAMES.cl6LinePost)).toBe(10);
+    expect(qty(driven, BOM_NAMES.cl6Terminal)).toBe(2);
+    expect(qty(driven, BOM_NAMES.cl6LinePostPlate)).toBe(0);
+    expect(qty(driven, BOM_NAMES.screwBolt38x3)).toBe(0);
+    expect(driven.postMount).toBe("driven");
+  });
+
+  it("CL6+1 plate keeps barb pack on plate line-post count", () => {
+    const r = calculateBom({
+      fenceType: "CL6+1",
+      qtyLf: 100,
+      terminalsManual: 2,
+      postMount: "plate",
+    });
+    expect(qty(r, BOM_NAMES.cl6LinePostPlate)).toBe(10);
+    expect(qty(r, BOM_NAMES.cl6LinePost)).toBe(0);
+    expect(qty(r, BOM_NAMES.barbArm)).toBe(10);
+    expect(qty(r, BOM_NAMES.barbWire)).toBe(1);
+    expect(qty(r, BOM_NAMES.screwBolt38x3)).toBe(10 * 2 + 2 * 4);
+  });
+
+  it("panel and barricade ignore postMount plate", () => {
+    const panel = calculateBom({ fenceType: "6x10", qtyLf: 100, postMount: "plate" });
+    expect(qty(panel, "6x10")).toBe(10);
+    expect(qty(panel, BOM_NAMES.cl6LinePostPlate)).toBe(0);
+    expect(qty(panel, BOM_NAMES.screwBolt38x3)).toBe(0);
+    expect(panel.notes.some((n) => /ignored for panels/i.test(n))).toBe(true);
+
+    const barb = calculateBom({ fenceType: "BARRICADE", qtyLf: 70, postMount: "plate" });
+    expect(qty(barb, BOM_NAMES.barricade)).toBe(10);
+    expect(qty(barb, BOM_NAMES.screwBolt38x3)).toBe(0);
+  });
+});
+
+describe("multi-section BOM", () => {
+  it("pure driven via sections[] matches top-level driven", () => {
+    const legacy = calculateBom({ fenceType: "CL6", qtyLf: 100, topRail: false, terminalsManual: 2 });
+    const sections = calculateBom({
+      sections: [{ fenceType: "CL6", qtyLf: 100, topRail: false, terminalsManual: 2, postMount: "driven" }],
+    });
+    expect(sections.lines).toEqual(legacy.lines);
+    expect(qty(sections, BOM_NAMES.cl6LinePost)).toBe(10);
+    expect(qty(sections, BOM_NAMES.screwBolt38x3)).toBe(0);
+    expect(sections.sections).toHaveLength(1);
+  });
+
+  it("pure plate via sections[]", () => {
+    const r = calculateBom({
+      sections: [{ fenceType: "CL6", qtyLf: 100, topRail: false, terminalsManual: 2, postMount: "plate" }],
+    });
+    expect(qty(r, BOM_NAMES.cl6LinePostPlate)).toBe(10);
+    expect(qty(r, BOM_NAMES.cl6TerminalPlate)).toBe(2);
+    expect(qty(r, BOM_NAMES.screwBolt38x3)).toBe(28);
+    expect(qty(r, BOM_NAMES.cl6LinePost)).toBe(0);
+  });
+
+  it("mixed driven + plate LF split (Option A)", () => {
+    const r = calculateBom({
+      sections: [
+        { fenceType: "CL6", qtyLf: 100, topRail: false, terminalsManual: 2, postMount: "driven" },
+        { fenceType: "CL6", qtyLf: 50, topRail: false, terminalsManual: 2, postMount: "plate" },
+      ],
+    });
+    expect(r.qtyLf).toBe(150);
+    expect(r.terminalsTotal).toBe(4);
+    expect(qty(r, BOM_NAMES.cl6LinePost)).toBe(10);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(2);
+    expect(qty(r, BOM_NAMES.cl6LinePostPlate)).toBe(5);
+    expect(qty(r, BOM_NAMES.cl6TerminalPlate)).toBe(2);
+    expect(qty(r, BOM_NAMES.screwBolt38x3)).toBe(5 * 2 + 2 * 4);
+    expect(qty(r, BOM_NAMES.cl6Wire)).toBe(2 + 1);
+    expect(r.postMount).toBeNull();
+    expect(r.sections).toHaveLength(2);
+    expect(r.notes.some((n) => /merged 2 fence sections/i.test(n))).toBe(true);
+  });
+
+  it("panel + chainlink on one job", () => {
+    const r = calculateBom({
+      sections: [
+        { fenceType: "6x10", qtyLf: 100, weightMode: "BFOOT" },
+        { fenceType: "CL6", qtyLf: 100, topRail: false, terminalsManual: 2, postMount: "driven" },
+      ],
+    });
+    expect(qty(r, "6x10")).toBe(10);
+    expect(qty(r, BOM_NAMES.tStands)).toBe(11);
+    expect(qty(r, BOM_NAMES.bigFeet)).toBe(22);
+    expect(qty(r, BOM_NAMES.cl6LinePost)).toBe(10);
+    expect(qty(r, BOM_NAMES.cl6Wire)).toBe(2);
+    expect(qty(r, BOM_NAMES.cl6LinePostPlate)).toBe(0);
+  });
+
+  it("gates on panel section AND chainlink section", () => {
+    const r = calculateBom({
+      sections: [
+        {
+          fenceType: "6x10",
+          qtyLf: 40,
+          gate: { type: "5x6", qty: 1 },
+        },
+        {
+          fenceType: "CL6",
+          qtyLf: 100,
+          topRail: false,
+          postMount: "plate",
+          gate: { type: "6x6", qty: 1 },
+          terminalsManual: 1,
+        },
+      ],
+    });
+    expect(qty(r, "5x6")).toBe(1);
+    expect(qty(r, "6x6")).toBe(1);
+    expect(qty(r, BOM_NAMES.swingRoller)).toBe(2);
+    expect(r.terminalsTotal).toBe(2 + 3);
+    expect(qty(r, BOM_NAMES.cl6TerminalPlate)).toBe(3);
+    expect(qty(r, BOM_NAMES.cl6LinePostPlate)).toBe(10);
+    expect(qty(r, BOM_NAMES.screwBolt38x3)).toBe(10 * 2 + 3 * 4);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(0);
+    expect(qty(r, "6x10")).toBe(4);
+  });
+
+  it("panel section with plate mount still ignores plate posts", () => {
+    const r = calculateBom({
+      sections: [{ fenceType: "6x12", qtyLf: 48, postMount: "plate", weightMode: "SBAG" }],
+    });
+    expect(qty(r, "6x12")).toBe(4);
+    expect(qty(r, BOM_NAMES.sandBag)).toBe(10);
+    expect(qty(r, BOM_NAMES.screwBolt38x3)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl6LinePostPlate)).toBe(0);
+  });
+});
+
 describe("barb CL6+1 / CL8+1", () => {
   it("CL6+1: arms=line posts, rolls=CEIL((LF*3)/1320), +3 bands per terminal, top rail defaults on", () => {
     const r = calculateBom({
@@ -457,5 +675,31 @@ describe("catalog matching", () => {
       expect(names.has(gap)).toBe(false);
     }
     expect((GATE_TYPES as readonly string[]).includes("4x8")).toBe(false);
+  });
+
+  it("demo seed includes plate posts (reusable) and SCREW-BOLT+ (consumable)", () => {
+    const byName = new Map(BOM_SEED_ITEMS.map((i) => [i.name, i]));
+    for (const name of [
+      BOM_NAMES.cl6LinePostPlate,
+      BOM_NAMES.cl8LinePostPlate,
+      BOM_NAMES.cl6TerminalPlate,
+      BOM_NAMES.cl8TerminalPlate,
+    ]) {
+      expect(byName.get(name)?.reusable).toBe(true);
+    }
+    expect(byName.get(BOM_NAMES.screwBolt38x3)?.reusable).toBe(false);
+    expect(byName.get(BOM_NAMES.screwBolt38x3)?.sku).toBe("SCREW-BOLT-3-8x3");
+  });
+
+  it("matches SCREW-BOLT+ aliases (DeWalt / PFM1411240)", () => {
+    const catalog = BOM_SEED_ITEMS.map((item, idx) => ({
+      id: String(idx),
+      sku: item.sku,
+      name: item.name,
+    }));
+    const id = catalog.find((i) => i.name === BOM_NAMES.screwBolt38x3)?.id;
+    expect(matchCatalogItem("SCREW-BOLT+ 3/8x3", catalog)?.id).toBe(id);
+    expect(matchCatalogItem("PFM1411240", catalog)?.id).toBe(id);
+    expect(matchCatalogItem("DeWalt SCREW-BOLT+", catalog)?.id).toBe(id);
   });
 });

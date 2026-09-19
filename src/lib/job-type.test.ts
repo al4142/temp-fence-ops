@@ -187,4 +187,58 @@ describe("validateAndNormalize job type", () => {
     expect(validateAndNormalize({ ...base(), jobType: "DELIVERY" }).ok).toBe(false);
     expect(validateAndNormalize({ ...base(), jobType: "SWLK" }).ok).toBe(false);
   });
+
+  it("normalizes post mount plate / driven / blank", () => {
+    const plate = validateAndNormalize({ ...base(), postMount: "plate" });
+    expect(plate.ok).toBe(true);
+    if (plate.ok) expect(plate.data.postMount).toBe("plate");
+    const driven = validateAndNormalize({ ...base(), postMount: "driven" });
+    expect(driven.ok).toBe(true);
+    if (driven.ok) expect(driven.data.postMount).toBe("driven");
+    const blank = validateAndNormalize({ ...base(), postMount: "" });
+    expect(blank.ok).toBe(true);
+    if (blank.ok) expect(blank.data.postMount).toBe("driven");
+    expect(validateAndNormalize({ ...base(), postMount: "welded" }).ok).toBe(false);
+  });
+
+  it("accepts multiple fence sections and denormalizes totals", () => {
+    const result = validateAndNormalize({
+      ...base(),
+      sections: [
+        {
+          fenceType: "CL6",
+          qtyLf: "100",
+          topRail: false,
+          bottomRail: false,
+          weightMode: "",
+          postMount: "driven",
+          gateType: "5x6",
+          gateQty: "1",
+          gateType2: "",
+          gateQty2: "0",
+          terminalsManual: "2",
+        },
+        {
+          fenceType: "6x10",
+          qtyLf: "40",
+          topRail: false,
+          bottomRail: false,
+          weightMode: "BFOOT",
+          postMount: "driven",
+          gateType: "6x6",
+          gateQty: "1",
+          gateType2: "",
+          gateQty2: "0",
+          terminalsManual: "0",
+        },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.fenceSections).toHaveLength(2);
+    expect(result.data.qtyLf).toBe(140);
+    expect(result.data.gates).toBe(2);
+    expect(result.data.terminalsManual).toBe(2);
+    expect(result.data.weightMode).toBe("BFOOT");
+  });
 });

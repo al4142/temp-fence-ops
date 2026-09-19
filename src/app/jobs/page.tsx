@@ -34,51 +34,64 @@ export default async function JobsPage({
   const q = (sp.q ?? "").trim();
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
-  const branches = await prisma.branch.findMany({ orderBy: [{ active: "desc" }, { code: "asc" }] });
+  const loaded = await (async () => {
+    try {
+      const branches = await prisma.branch.findMany({
+        orderBy: [{ active: "desc" }, { code: "asc" }],
+      });
 
-  const where: Prisma.JobWhereInput = {};
+      const where: Prisma.JobWhereInput = {};
 
-  if (from || to) {
-    where.date = {};
-    if (from) where.date.gte = dateOnlyToUtc(from);
-    if (to) {
-      // inclusive end-of-day via next day exclusive would be better, but noon UTC dates work with lte same day
-      where.date.lte = dateOnlyToUtc(to);
+      if (from || to) {
+        where.date = {};
+        if (from) where.date.gte = dateOnlyToUtc(from);
+        if (to) {
+          // inclusive end-of-day via next day exclusive would be better, but noon UTC dates work with lte same day
+          where.date.lte = dateOnlyToUtc(to);
+        }
+      }
+
+      if (branchCode) {
+        const branch = branches.find((b) => b.code === branchCode);
+        if (branch) where.branchId = branch.id;
+        else where.branchId = "__none__";
+      }
+
+      if (jobType) {
+        where.jobType = jobType;
+      }
+
+      if (q) {
+        where.OR = [
+          { orderNumber: { contains: q } },
+          { customer: { contains: q } },
+          { city: { contains: q } },
+          { address: { contains: q } },
+        ];
+      }
+
+      const [total, jobs] = await Promise.all([
+        prisma.job.count({ where }),
+        prisma.job.findMany({
+          where,
+          orderBy: [{ date: "desc" }, { orderNumber: "asc" }],
+          skip: (page - 1) * PAGE_SIZE,
+          take: PAGE_SIZE,
+          include: {
+            branch: true,
+            _count: { select: { materials: true, labor: true } },
+          },
+        }),
+      ]);
+      return { branches, total, jobs };
+    } catch (e) {
+      console.error("Jobs list query failed; rendering empty list.", e);
+      return null;
     }
-  }
-
-  if (branchCode) {
-    const branch = branches.find((b) => b.code === branchCode);
-    if (branch) where.branchId = branch.id;
-    else where.branchId = "__none__";
-  }
-
-  if (jobType) {
-    where.jobType = jobType;
-  }
-
-  if (q) {
-    where.OR = [
-      { orderNumber: { contains: q } },
-      { customer: { contains: q } },
-      { city: { contains: q } },
-      { address: { contains: q } },
-    ];
-  }
-
-  const [total, jobs] = await Promise.all([
-    prisma.job.count({ where }),
-    prisma.job.findMany({
-      where,
-      orderBy: [{ date: "desc" }, { orderNumber: "asc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      include: {
-        branch: true,
-        _count: { select: { materials: true, labor: true } },
-      },
-    }),
-  ]);
+  })();
+  const branches = loaded?.branches ?? [];
+  const total = loaded?.total ?? 0;
+  const jobs = loaded?.jobs ?? [];
 
   return (
     <div className="space-y-4">
