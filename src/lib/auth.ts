@@ -80,9 +80,14 @@ export async function getSessionFromToken(
 }
 
 export async function getSession(): Promise<SessionUser | null> {
-  const jar = await cookies();
-  const token = jar.get(SESSION_COOKIE)?.value;
-  return getSessionFromToken(token);
+  try {
+    const jar = await cookies();
+    const token = jar.get(SESSION_COOKIE)?.value;
+    return getSessionFromToken(token);
+  } catch {
+    // Missing/short AUTH_SECRET must not 500 the layout (Nav reads the session on every page).
+    return null;
+  }
 }
 
 export async function requireSession(): Promise<SessionUser> {

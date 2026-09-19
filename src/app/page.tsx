@@ -13,47 +13,84 @@ import { ActionItemStatusBadge } from "@/components/ActionItemStatusBadge";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [
-    jobCount,
-    branchCount,
-    employeeCount,
-    recentJobs,
-    items,
-    materials,
-    adjustments,
-    transferLines,
-    writeOffs,
-    variances,
-    openActionItems,
-    completedActionItemCount,
-  ] = await Promise.all([
-      prisma.job.count(),
-      prisma.branch.count(),
-      prisma.employee.count(),
-      prisma.job.findMany({
-        take: 5,
-        orderBy: { date: "desc" },
-        include: { branch: true },
-      }),
-      prisma.inventoryItem.findMany({ include: { branch: true } }),
-      prisma.jobMaterial.findMany({
-        include: { job: { select: { jobType: true, branchId: true } } },
-      }),
-      prisma.inventoryAdjustment.findMany(),
-      prisma.transferLine.findMany({
-        select: { fromInventoryItemId: true, toInventoryItemId: true, quantity: true },
-      }),
-      prisma.writeOff.findMany({ select: { inventoryItemId: true, quantity: true } }),
-      prisma.jobMaterialVariance.findMany({
-        select: { inventoryItemId: true, quantity: true },
-      }),
-      prisma.actionItem.findMany({
-        where: { status: "Open" },
-        orderBy: [{ date: "asc" }, { createdAt: "asc" }],
-        take: 6,
-      }),
-      prisma.actionItem.count({ where: { status: "Done" } }),
-    ]);
+  const loaded = await (async () => {
+    try {
+      const [
+        jobCount,
+        branchCount,
+        employeeCount,
+        recentJobs,
+        items,
+        materials,
+        adjustments,
+        transferLines,
+        writeOffs,
+        variances,
+        openActionItems,
+        completedActionItemCount,
+        revenue,
+      ] = await Promise.all([
+        prisma.job.count(),
+        prisma.branch.count(),
+        prisma.employee.count(),
+        prisma.job.findMany({
+          take: 5,
+          orderBy: { date: "desc" },
+          include: { branch: true },
+        }),
+        prisma.inventoryItem.findMany({ include: { branch: true } }),
+        prisma.jobMaterial.findMany({
+          include: { job: { select: { jobType: true, branchId: true } } },
+        }),
+        prisma.inventoryAdjustment.findMany(),
+        prisma.transferLine.findMany({
+          select: { fromInventoryItemId: true, toInventoryItemId: true, quantity: true },
+        }),
+        prisma.writeOff.findMany({ select: { inventoryItemId: true, quantity: true } }),
+        prisma.jobMaterialVariance.findMany({
+          select: { inventoryItemId: true, quantity: true },
+        }),
+        prisma.actionItem.findMany({
+          where: { status: "Open" },
+          orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+          take: 6,
+        }),
+        prisma.actionItem.count({ where: { status: "Done" } }),
+        prisma.job.aggregate({ _sum: { revenue: true } }),
+      ]);
+      return {
+        jobCount,
+        branchCount,
+        employeeCount,
+        recentJobs,
+        items,
+        materials,
+        adjustments,
+        transferLines,
+        writeOffs,
+        variances,
+        openActionItems,
+        completedActionItemCount,
+        revenueSum: revenue._sum.revenue ?? 0,
+      };
+    } catch (e) {
+      console.error("Dashboard queries failed; rendering empty dashboard.", e);
+      return null;
+    }
+  })();
+  const jobCount = loaded?.jobCount ?? 0;
+  const branchCount = loaded?.branchCount ?? 0;
+  const employeeCount = loaded?.employeeCount ?? 0;
+  const recentJobs = loaded?.recentJobs ?? [];
+  const items = loaded?.items ?? [];
+  const materials = loaded?.materials ?? [];
+  const adjustments = loaded?.adjustments ?? [];
+  const transferLines = loaded?.transferLines ?? [];
+  const writeOffs = loaded?.writeOffs ?? [];
+  const variances = loaded?.variances ?? [];
+  const openActionItems = loaded?.openActionItems ?? [];
+  const completedActionItemCount = loaded?.completedActionItemCount ?? 0;
+  const revenueSum = loaded?.revenueSum ?? 0;
 
   const onHand = computeOnHand({
     items,
@@ -64,7 +101,6 @@ export default async function HomePage() {
     variances,
   });
   const lowStock = onHand.filter((r) => r.onHand < r.startingQty * 0.85).slice(0, 5);
-  const revenue = await prisma.job.aggregate({ _sum: { revenue: true } });
 
   return (
     <div className="space-y-8">
@@ -83,7 +119,7 @@ export default async function HomePage() {
           { label: "Employees", value: formatNumber(employeeCount, 0), href: "/jobs" },
           {
             label: "Booked revenue",
-            value: formatCurrency(revenue._sum.revenue ?? 0),
+            value: formatCurrency(revenueSum),
             href: "/pnl",
           },
         ].map((c) => (

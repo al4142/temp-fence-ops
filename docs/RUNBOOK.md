@@ -75,18 +75,20 @@ git push / merge to main  →  Vercel Git integration  →  build  →  temp-fen
 Build command (already `npm run build`):
 
 ```bash
-prisma generate && next build
+prisma generate && prisma migrate deploy && next build
 ```
 
 `postinstall` also runs `prisma generate`.
 
-**Schema changes are not applied by the Vercel build.** After a migration lands on `main`:
+**Preview and production builds run `prisma migrate deploy`** so Neon gets new columns (for example `Job.fenceSections`) before the new Prisma client serves traffic. `DATABASE_URL` on Vercel must be the **direct** (non-pooler) Neon URL — migrate fails on transaction-mode poolers ([§5](#5-migrate-on-neon)).
 
-1. Confirm the production deploy is green (or fix the build first).
+If a preview still boots against a DB that is missing `fenceSections` / `postMount`, Job reads fall back to the legacy one-section columns so the jobs list, New Job, and Edit Job pages do not 500.
+
+If you need to apply migrations off-Vercel (local, one-off, or a failed build):
+
+1. Confirm the deploy is green (or fix the build first).
 2. Run `npx prisma migrate deploy` against Neon using the **direct** URL ([§5](#5-migrate-on-neon)).
 3. Smoke-check the live app ([§7](#7-smoke-checks)).
-
-Hobby has no GitHub Actions release job. Migrations are a **manual** (or one-off) step against Neon.
 
 Rollback of the **app**: Vercel dashboard → Deployments → promote / rollback the previous successful deployment. Rollback of the **schema**: restore the Neon branch / backup; this repo ships a single Postgres baseline (`prisma/migrations/20260916220000_init_postgresql`) with no down-migration workflow.
 

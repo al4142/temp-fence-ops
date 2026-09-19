@@ -201,59 +201,73 @@ function parseStoredSection(raw: unknown): StoredFenceSection | null {
 }
 
 export function parseStoredSections(json: unknown): StoredFenceSection[] | null {
-  if (!Array.isArray(json) || json.length === 0) return null;
-  const rows: StoredFenceSection[] = [];
-  for (const item of json) {
-    const row = parseStoredSection(item);
-    if (row) rows.push(row);
+  try {
+    let value: unknown = json;
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      value = JSON.parse(trimmed);
+    }
+    if (!Array.isArray(value) || value.length === 0) return null;
+    const rows: StoredFenceSection[] = [];
+    for (const item of value) {
+      const row = parseStoredSection(item);
+      if (row) rows.push(row);
+    }
+    return rows.length > 0 ? rows : null;
+  } catch {
+    return null;
   }
-  return rows.length > 0 ? rows : null;
 }
 
 /** Existing jobs with no `fenceSections` JSON → one section from current columns. */
 export function jobColumnsToStoredSection(job: {
-  fenceType: string | null;
-  qtyLf: number | null;
-  topRail: boolean;
-  bottomRail: boolean;
-  weightMode: string | null;
+  fenceType?: string | null;
+  qtyLf?: number | null;
+  topRail?: boolean;
+  bottomRail?: boolean;
+  weightMode?: string | null;
   postMount?: string | null;
-  gateType: string | null;
-  gateQty: number;
-  gateType2: string | null;
-  gateQty2: number;
-  terminalsManual: number;
+  gateType?: string | null;
+  gateQty?: number;
+  gateType2?: string | null;
+  gateQty2?: number;
+  terminalsManual?: number;
 }): StoredFenceSection {
   return {
-    fenceType: job.fenceType,
-    qtyLf: job.qtyLf,
-    topRail: job.topRail,
-    bottomRail: job.bottomRail,
-    weightMode: job.weightMode,
+    fenceType: job.fenceType ?? null,
+    qtyLf: job.qtyLf ?? null,
+    topRail: Boolean(job.topRail),
+    bottomRail: Boolean(job.bottomRail),
+    weightMode: job.weightMode ?? null,
     postMount: job.postMount === "plate" ? "plate" : "driven",
-    gateType: job.gateType,
-    gateQty: job.gateQty,
-    gateType2: job.gateType2,
-    gateQty2: job.gateQty2,
-    terminalsManual: job.terminalsManual,
+    gateType: job.gateType ?? null,
+    gateQty: job.gateQty ?? 0,
+    gateType2: job.gateType2 ?? null,
+    gateQty2: job.gateQty2 ?? 0,
+    terminalsManual: job.terminalsManual ?? 0,
   };
 }
 
 export function sectionsForJob(job: {
-  fenceType: string | null;
-  qtyLf: number | null;
-  topRail: boolean;
-  bottomRail: boolean;
-  weightMode: string | null;
+  fenceType?: string | null;
+  qtyLf?: number | null;
+  topRail?: boolean;
+  bottomRail?: boolean;
+  weightMode?: string | null;
   postMount?: string | null;
-  gateType: string | null;
-  gateQty: number;
-  gateType2: string | null;
-  gateQty2: number;
-  terminalsManual: number;
+  gateType?: string | null;
+  gateQty?: number;
+  gateType2?: string | null;
+  gateQty2?: number;
+  terminalsManual?: number;
   fenceSections?: unknown;
-}): StoredFenceSection[] {
-  return parseStoredSections(job.fenceSections) ?? [jobColumnsToStoredSection(job)];
+} | null | undefined): StoredFenceSection[] {
+  try {
+    return parseStoredSections(job?.fenceSections) ?? [jobColumnsToStoredSection(job ?? {})];
+  } catch {
+    return [jobColumnsToStoredSection(job ?? {})];
+  }
 }
 
 export function summarizeSections(sections: StoredFenceSection[]): SectionSummary {

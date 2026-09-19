@@ -76,7 +76,7 @@ Hosting: Vercel Hobby team **Hardpoint** (`hardpoint1`) + Neon Postgres. No cust
 
 `NEXTAUTH_SECRET` / Auth.js is **not** used. Login is a server action (`src/app/login/actions.ts`) against Prisma `User`.
 
-Environment variable names: `DATABASE_URL`, `AUTH_SECRET`. Template: `.env.example`. One `DATABASE_URL` for runtime; `prisma migrate deploy` needs the **direct** (non-pooler) Neon URL. Details: [RUNBOOK.md](./RUNBOOK.md).
+Environment variable names: `DATABASE_URL`, `AUTH_SECRET`. Template: `.env.example`. One `DATABASE_URL` for runtime and for `prisma migrate deploy` on the Vercel build (`npm run build`). Use the **direct** (non-pooler) Neon URL. Details: [RUNBOOK.md](./RUNBOOK.md).
 
 ---
 

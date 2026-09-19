@@ -21,18 +21,23 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function JobDetailPage({ params }: Props) {
   const { id } = await params;
-  const job = await prisma.job.findUnique({
-    where: { id },
-    include: {
-      branch: true,
-      materials: { include: { inventoryItem: true } },
-      labor: { include: { employee: true } },
-      lodgingLines: true,
-      freightLines: true,
-      miscLines: true,
-      variances: { include: { inventoryItem: true } },
-    },
-  });
+  const job = await prisma.job
+    .findUnique({
+      where: { id },
+      include: {
+        branch: true,
+        materials: { include: { inventoryItem: true } },
+        labor: { include: { employee: true } },
+        lodgingLines: true,
+        freightLines: true,
+        miscLines: true,
+        variances: { include: { inventoryItem: true } },
+      },
+    })
+    .catch((e) => {
+      console.error("Job detail query failed.", e);
+      return null;
+    });
   if (!job) notFound();
 
   const fenceSections = sectionsForJob(job);
