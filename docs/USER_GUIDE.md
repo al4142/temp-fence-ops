@@ -185,11 +185,11 @@ starting qty + job movements + adjustments + transfers + write-offs + job materi
 
 | Job type | Effect on catalog lines |
 |----------|-------------------------|
-| Install, Drop | **Outbound (−)** — on-hand down |
-| Pickup | **Inbound (+)** — on-hand up |
+| Install, Drop | **Outbound (−)** — on-hand down (reusable and consumable) |
+| Pickup | **Inbound (+)** — on-hand up **only if reusable**. Consumables (`reusable: false`) stay consumed. |
 | Other | No inventory effect |
 
-BOM quantities are the same for Install and Pickup. Only the sign changes.
+BOM quantities are the same for Install and Pickup. The inventory sign is separate; consumables never restock.
 
 Free-text material lines do not move stock. Damage / missing on a pickup is **variance** or a **write-off**, not extra Pickup credit.
 

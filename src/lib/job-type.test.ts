@@ -86,6 +86,7 @@ describe("inventorySignForJobType", () => {
         sku: "PANEL-6",
         name: "6ft Panel",
         unit: "ea",
+        reusable: true,
         branchId: "mia",
         startingQty: 100,
         unitCost: 10,
