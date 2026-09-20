@@ -181,35 +181,6 @@ export function JobFormBomOptions(p: Props) {
                         posts + SCREW-BOLT+ 3/8×3).
                       </p>
                     </div>
-                    <div className="flex items-end pb-2">
-                      <label className="flex items-center gap-2 text-sm text-slate-800">
-                        <input
-                          type="checkbox"
-                          checked={s.topRail}
-                          onChange={(e) =>
-                            p.setSections(patch(p.sections, index, { topRail: e.target.checked }))
-                          }
-                          className="h-4 w-4 rounded border-slate-300"
-                        />
-                        Top rail
-                        {canonical && isPlusOneType(canonical) ? (
-                          <span className="text-xs text-slate-500">(recommended for +1)</span>
-                        ) : null}
-                      </label>
-                    </div>
-                    <div className="flex items-end pb-2">
-                      <label className="flex items-center gap-2 text-sm text-slate-800">
-                        <input
-                          type="checkbox"
-                          checked={s.bottomRail}
-                          onChange={(e) =>
-                            p.setSections(patch(p.sections, index, { bottomRail: e.target.checked }))
-                          }
-                          className="h-4 w-4 rounded border-slate-300"
-                        />
-                        Bottom rail
-                      </label>
-                    </div>
                     <div>
                       <label className={p.labelClass} htmlFor={id("terminalsManual")}>
                         Manual terminals
@@ -231,6 +202,37 @@ export function JobFormBomOptions(p: Props) {
                         This section only. Corners + start/stop + extras. Auto terminals = (this
                         section&apos;s gate qty × 2).
                       </p>
+                    </div>
+                    <div className="sm:col-span-2 lg:col-span-3">
+                      <div className="flex flex-wrap items-center justify-start gap-x-4 gap-y-2">
+                        <label className="flex items-center gap-2 text-sm text-slate-800">
+                          <input
+                            type="checkbox"
+                            checked={s.topRail}
+                            onChange={(e) =>
+                              p.setSections(patch(p.sections, index, { topRail: e.target.checked }))
+                            }
+                            className="h-4 w-4 rounded border-slate-300"
+                          />
+                          Top rail
+                          {canonical && isPlusOneType(canonical) ? (
+                            <span className="text-xs text-slate-500">(recommended for +1)</span>
+                          ) : null}
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-slate-800">
+                          <input
+                            type="checkbox"
+                            checked={s.bottomRail}
+                            onChange={(e) =>
+                              p.setSections(
+                                patch(p.sections, index, { bottomRail: e.target.checked })
+                              )
+                            }
+                            className="h-4 w-4 rounded border-slate-300"
+                          />
+                          Bottom rail
+                        </label>
+                      </div>
                     </div>
                   </>
                 ) : null}
