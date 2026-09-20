@@ -42,6 +42,15 @@ export type ChainlinkFenceType = (typeof CHAINLINK_BASE)[number];
 export const WEIGHT_MODES = ["BFOOT", "SBAG"] as const;
 export type WeightMode = (typeof WEIGHT_MODES)[number];
 
+/** Chainlink only. Driven = bury-length posts (default). Plate = fence-height posts on floor plates. */
+export const POST_MOUNTS = ["driven", "plate"] as const;
+export type PostMount = (typeof POST_MOUNTS)[number];
+
+export const POST_MOUNT_LABELS: Record<PostMount, string> = {
+  driven: "Driven",
+  plate: "Plate (concrete)",
+};
+
 export const SCREEN_SKUS = [
   "BLACK6",
   "BLACK8",
@@ -155,6 +164,11 @@ export const BOM_NAMES = {
   cl8LinePost: "10' LINE POST",
   cl6Terminal: "8' x 2-1/2",
   cl8Terminal: "10' TERMINAL POST",
+  cl6LinePostPlate: "6' LINE POST W/ PLATE",
+  cl8LinePostPlate: "8' LINE POST W/ PLATE",
+  cl6TerminalPlate: "6' TERMINAL POST W/ PLATE",
+  cl8TerminalPlate: "8' TERMINAL POST W/ PLATE",
+  screwBolt38x3: "SCREW-BOLT+ 3/8x3",
   ties: "ALUMINUM TIES",
   tube138: "TOP RAIL",
   loopCap: "LOOP CAP",
@@ -193,6 +207,13 @@ export const BOM_NAME_ALIASES: Record<string, string[]> = {
     "BOULEVARD CLAMP 1-5/8 X 1-3/8",
     "BOULEVARD CLAMPS 1-5/8x1-3/8",
   ],
+  "SCREW-BOLT+ 3/8x3": [
+    "DEWALT SCREW-BOLT+",
+    "DEWALT SCREW-BOLT+ 3/8x3",
+    "PFM1411240",
+    "SCREW-BOLT+ 3/8\"x3\"",
+    "SCREW BOLT+ 3/8x3",
+  ],
 };
 
 /** Demo catalog rows so Generate BOM can link inventory. Fake qtys/costs only. */
@@ -221,6 +242,51 @@ export const BOM_SEED_ITEMS: BomSeedItem[] = [
   { sku: "10FT-LINE-POST", name: "10' LINE POST", unit: "ea", reusable: true, startingQty: 220, unitCost: 22 },
   { sku: "8FT-2-1-2", name: "8' x 2-1/2", unit: "ea", reusable: true, startingQty: 80, unitCost: 28 },
   { sku: "10FT-TERMINAL", name: "10' TERMINAL POST", unit: "ea", reusable: true, startingQty: 60, unitCost: 32 },
+  {
+    sku: "6FT-LINE-POST-PLATE",
+    name: "6' LINE POST W/ PLATE",
+    unit: "ea",
+    reusable: true,
+    startingQty: 80,
+    unitCost: 36,
+    description: "1-5/8″ OD, fence height (no bury) — warehouse / concrete floor",
+  },
+  {
+    sku: "8FT-LINE-POST-PLATE",
+    name: "8' LINE POST W/ PLATE",
+    unit: "ea",
+    reusable: true,
+    startingQty: 60,
+    unitCost: 42,
+    description: "1-5/8″ OD, fence height (no bury) — warehouse / concrete floor",
+  },
+  {
+    sku: "6FT-TERMINAL-POST-PLATE",
+    name: "6' TERMINAL POST W/ PLATE",
+    unit: "ea",
+    reusable: true,
+    startingQty: 30,
+    unitCost: 52,
+    description: "2-1/2″ OD, fence height (no bury) — warehouse / concrete floor",
+  },
+  {
+    sku: "8FT-TERMINAL-POST-PLATE",
+    name: "8' TERMINAL POST W/ PLATE",
+    unit: "ea",
+    reusable: true,
+    startingQty: 24,
+    unitCost: 58,
+    description: "2-1/2″ OD, fence height (no bury) — warehouse / concrete floor",
+  },
+  {
+    sku: "SCREW-BOLT-3-8x3",
+    name: "SCREW-BOLT+ 3/8x3",
+    unit: "ea",
+    reusable: false,
+    startingQty: 800,
+    unitCost: 0.85,
+    description: "DeWalt SCREW-BOLT+ ⅜″×3″ PFM1411240 — consumable plate anchors",
+  },
   { sku: "AL-TIES", name: "ALUMINUM TIES", unit: "ea", reusable: false, startingQty: 8000, unitCost: 0.05 },
   {
     sku: "TOP-RAIL",
@@ -284,6 +350,12 @@ const FENCE_TYPE_LOOKUP = new Map(FENCE_TYPES.map((t) => [t.toUpperCase(), t]));
 const SCREEN_LOOKUP = new Map(SCREEN_SKUS.map((t) => [t.toUpperCase(), t]));
 const GATE_LOOKUP = new Map(GATE_TYPES.map((t) => [t.toUpperCase(), t]));
 const WEIGHT_LOOKUP = new Map(WEIGHT_MODES.map((t) => [t.toUpperCase(), t]));
+const POST_MOUNT_LOOKUP = new Map<string, PostMount>([
+  ["DRIVEN", "driven"],
+  ["PLATE", "plate"],
+  ["PLATE (CONCRETE)", "plate"],
+  ["CONCRETE", "plate"],
+]);
 const SLIDE_SET = new Set<string>(SLIDE_GATE_TYPES);
 const SHORT_SLIDE_SET = new Set<string>(SHORT_SLIDE_GATE_TYPES);
 const LONG_SLIDE_SET = new Set<string>(LONG_SLIDE_GATE_TYPES);
@@ -333,6 +405,14 @@ export function normalizeGateType(raw: string | null | undefined): GateType | nu
 export function normalizeWeightMode(raw: string | null | undefined): WeightMode | null {
   if (!raw) return null;
   return WEIGHT_LOOKUP.get(raw.trim().toUpperCase()) ?? null;
+}
+
+/** Blank / omitted → driven (default). Unknown string → null. */
+export function normalizePostMount(raw: string | null | undefined): PostMount | null {
+  if (raw == null) return "driven";
+  const key = raw.trim();
+  if (!key) return "driven";
+  return POST_MOUNT_LOOKUP.get(key.toUpperCase()) ?? null;
 }
 
 export function isSlideGate(type: string): boolean {

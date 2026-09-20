@@ -4,6 +4,8 @@ export {
   GATE_TYPES,
   SCREEN_SKUS,
   WEIGHT_MODES,
+  POST_MOUNTS,
+  POST_MOUNT_LABELS,
   BOM_NAMES,
   BOM_SEED_ITEMS,
   BOM_GATE_SEED_ITEMS,
@@ -14,10 +16,21 @@ export {
   normalizeGateType,
   normalizeScreenSku,
   normalizeWeightMode,
+  normalizePostMount,
   isPanelType,
   isChainlinkType,
   isPlusOneType,
 } from "./catalog";
 export { calculateBom } from "./calculate";
+export {
+  emptyJobFenceSectionForm,
+  resolveFormSections,
+  formSectionsToBom,
+  sectionsForJob,
+  summarizeSections,
+  formatSectionLabel,
+  resolveBomSections,
+} from "./sections";
 export { matchCatalogItem, bomLinesToMaterials, catalogMatchWarnings, normalizeCatalogKey } from "./match-catalog";
-export type { BomInput, BomLine, BomResult, BomGateInput, MatchedBomMaterial } from "./types";
+export type { BomInput, BomLine, BomResult, BomGateInput, BomSectionInput, BomSectionResult, MatchedBomMaterial } from "./types";
+export type { JobFenceSectionForm, StoredFenceSection } from "./sections";

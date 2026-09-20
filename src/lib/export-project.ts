@@ -22,7 +22,9 @@ export type ExportJob = {
   topRail?: boolean;
   bottomRail?: boolean;
   weightMode?: string | null;
+  postMount?: string | null;
   terminalsManual?: number;
+  fenceSections?: unknown;
   notes: string | null;
   accountExec: string | null;
   revenue: number;
@@ -90,6 +92,11 @@ export async function buildProjectWorkbook(job: ExportJob): Promise<Buffer> {
     ["Top rail", job.topRail ? "Yes" : "No"],
     ["Bottom rail", job.bottomRail ? "Yes" : "No"],
     ["Weights", job.weightMode ?? ""],
+    ["Post mount", job.postMount === "plate" ? "Plate (concrete)" : "Driven"],
+    [
+      "Fence sections",
+      Array.isArray(job.fenceSections) ? `${job.fenceSections.length} saved` : "legacy (1)",
+    ],
     ["Gates", formatExportGates(job)],
     ["Screen", job.screenSku || (job.screen ? "Yes" : "No")],
     ["Manual terminals", job.terminalsManual ?? 0],

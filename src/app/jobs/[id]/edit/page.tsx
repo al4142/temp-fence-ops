@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { toDateInputValue, type JobFormValues } from "@/lib/job-form";
+import { sectionsForJob, storedToFormSection } from "@/lib/bom/sections";
 import { normalizeJobType } from "@/lib/job-constants";
 import { JobForm } from "@/components/JobForm";
 import { deleteJob, updateJob } from "../../actions";
@@ -13,20 +14,25 @@ type Props = { params: Promise<{ id: string }> };
 export default async function EditJobPage({ params }: Props) {
   const { id } = await params;
 
-  const job = await prisma.job.findUnique({
-    where: { id },
-    include: {
-      materials: true,
-      labor: true,
-      lodgingLines: true,
-      freightLines: true,
-      miscLines: true,
-      variances: true,
-    },
-  });
+  const job = await prisma.job
+    .findUnique({
+      where: { id },
+      include: {
+        materials: true,
+        labor: true,
+        lodgingLines: true,
+        freightLines: true,
+        miscLines: true,
+        variances: true,
+      },
+    })
+    .catch((e) => {
+      console.error("Edit job query failed.", e);
+      return null;
+    });
   if (!job) notFound();
 
-  const [branches, employees, inventory] = await Promise.all([
+  const options = await Promise.all([
     prisma.branch.findMany({
       where: { OR: [{ active: true }, { id: job.branchId }] },
       orderBy: { code: "asc" },
@@ -39,7 +45,11 @@ export default async function EditJobPage({ params }: Props) {
       orderBy: [{ sku: "asc" }, { name: "asc" }],
       select: { id: true, sku: true, name: true, unit: true, branchId: true },
     }),
-  ]);
+  ]).catch((e) => {
+    console.error("Edit job option lookups failed; rendering form with empty options.", e);
+    return [[], [], []];
+  });
+  const [branches, employees, inventory] = options;
 
   const initial: JobFormValues = {
     date: toDateInputValue(job.date),
@@ -64,7 +74,9 @@ export default async function EditJobPage({ params }: Props) {
     topRail: job.topRail,
     bottomRail: job.bottomRail,
     weightMode: job.weightMode ?? "",
-    terminalsManual: String(job.terminalsManual),
+    postMount: job.postMount === "plate" ? "plate" : "driven",
+    terminalsManual: String(job.terminalsManual ?? 0),
+    sections: sectionsForJob(job).map(storedToFormSection),
     notes: job.notes ?? "",
     accountExec: job.accountExec ?? "",
     revenue: String(job.revenue),

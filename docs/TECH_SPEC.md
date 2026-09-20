@@ -76,7 +76,7 @@ Hosting: Vercel Hobby team **Hardpoint** (`hardpoint1`) + Neon Postgres. No cust
 
 `NEXTAUTH_SECRET` / Auth.js is **not** used. Login is a server action (`src/app/login/actions.ts`) against Prisma `User`.
 
-Environment variable names: `DATABASE_URL`, `AUTH_SECRET`. Template: `.env.example`. One `DATABASE_URL` for runtime; `prisma migrate deploy` needs the **direct** (non-pooler) Neon URL. Details: [RUNBOOK.md](./RUNBOOK.md).
+Environment variable names: `DATABASE_URL`, `AUTH_SECRET`. Template: `.env.example`. One `DATABASE_URL` for runtime and for `prisma migrate deploy` on the Vercel build (`npm run build`). Use the **direct** (non-pooler) Neon URL. Details: [RUNBOOK.md](./RUNBOOK.md).
 
 ---
 
@@ -168,12 +168,14 @@ Canonical fence types only (`src/lib/bom/catalog.ts` `FENCE_TYPES`):
 
 No free-text aliases. Legacy labels (seed jobs use `6ft Panel`) → Generate BOM warns and skips the fence recipe.
 
-Options on the job form (`Job.fenceType`, `qtyLf`, `topRail`, `bottomRail`, `weightMode`, `screenSku`, gates, `terminalsManual`):
+Options on the job form live on **`Job.fenceSections[]`** (plus job-level `screenSku`). Default new job = one driven chainlink section. Add section / Remove for mixed runs.
 
 | Option | Applies to | Behavior |
 |--------|------------|----------|
-| **Top rail** / **Bottom rail** | Chainlink | Same 1-3/8″ tube; independent toggles. Top rail defaults on for `+1` in the UI (overridable). |
-| **Weights** | Panels | `BFOOT` (big feet) or `SBAG` (sand bags) = 2 × T-stands. Blank = no weights. |
+| **Top rail** / **Bottom rail** | Chainlink section | Same 1-3/8″ tube; independent toggles. Top rail defaults on for `+1` in the UI (overridable). |
+| **Post mount** | Chainlink section | `Driven` (default, bury-length posts) or `Plate (concrete)` (fence-height posts + `SCREW-BOLT+ 3/8x3` = 2× line + 4× terminals). Not a job-wide toggle. |
+| **Weights** | Panel section | `BFOOT` (big feet) or `SBAG` (sand bags) = 2 × T-stands. Blank = no weights. |
+| **Gates / manual terminals** | Each section | Auto terminals = that section’s gate qty × 2. |
 | **Screen SKU** | Any | SKU pick (`BLACK6`, …), not Yes/No. `CUSTOM` is a known catalog gap. |
 | **Gates** | Any | Gate + Gate 2 type/qty. Auto terminals = (gate qty × 2). Known gaps `4x6`, `12x8` emit free-text. |
 | **Manual terminals** | Chainlink | Corners / start-stop / extras. |
