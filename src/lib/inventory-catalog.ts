@@ -24,6 +24,22 @@ export type CatalogAttachItem = {
 
 export type CatalogGuardResult = { ok: true } | { ok: false; error: string };
 
+export type CatalogNamedRef = {
+  kind: "material" | "variance" | "transfer" | "writeOff" | "adjustment";
+  label: string;
+};
+
+export type CatalogUsageSnapshot = {
+  counts: CatalogUsageCounts;
+  refs: CatalogNamedRef[];
+};
+
+export type CatalogHardDeleteStore = {
+  findItem: (id: string) => Promise<{ id: string; sku: string } | null>;
+  loadUsage: (id: string) => Promise<CatalogUsageSnapshot>;
+  deleteItem: (id: string) => Promise<void>;
+};
+
 export function emptyCatalogUsage(): CatalogUsageCounts {
   return {
     materials: 0,
@@ -64,12 +80,117 @@ export function describeCatalogUsage(counts: CatalogUsageCounts): string {
   return parts.join(", ");
 }
 
+const NAMED_REF_PREFIX: Record<CatalogNamedRef["kind"], string> = {
+  material: "job materials on",
+  variance: "job variances on",
+  transfer: "transfers",
+  writeOff: "write-offs",
+  adjustment: "adjustments",
+};
+
+const NAMED_REF_ORDER: CatalogNamedRef["kind"][] = [
+  "material",
+  "variance",
+  "transfer",
+  "writeOff",
+  "adjustment",
+];
+
+export function catalogUsageSnapshotFromRows(rows: {
+  materials: Array<{ orderNumber: string }>;
+  variances: Array<{ orderNumber: string }>;
+  transfers: Array<{ fromCode: string; toCode: string; date: string }>;
+  writeOffs: Array<{ date: string; reason: string }>;
+  adjustments: Array<{ date: string; reason: string | null }>;
+}): CatalogUsageSnapshot {
+  const refs: CatalogNamedRef[] = [];
+  for (const row of rows.materials) {
+    refs.push({ kind: "material", label: row.orderNumber.trim() || "(job)" });
+  }
+  for (const row of rows.variances) {
+    refs.push({ kind: "variance", label: row.orderNumber.trim() || "(job)" });
+  }
+  for (const row of rows.transfers) {
+    const date = row.date.trim();
+    refs.push({
+      kind: "transfer",
+      label: `${row.fromCode} to ${row.toCode}${date ? ` (${date})` : ""}`,
+    });
+  }
+  for (const row of rows.writeOffs) {
+    refs.push({
+      kind: "writeOff",
+      label: [row.date.trim(), row.reason.trim()].filter(Boolean).join(" ") || "write-off",
+    });
+  }
+  for (const row of rows.adjustments) {
+    refs.push({
+      kind: "adjustment",
+      label: [row.date.trim(), row.reason?.trim()].filter(Boolean).join(" ") || "adjustment",
+    });
+  }
+  return {
+    counts: {
+      materials: rows.materials.length,
+      variances: rows.variances.length,
+      transfersFrom: rows.transfers.length,
+      transfersTo: 0,
+      writeOffs: rows.writeOffs.length,
+      adjustments: rows.adjustments.length,
+    },
+    refs,
+  };
+}
+
+export function describeNamedCatalogRefs(refs: CatalogNamedRef[]): string {
+  const parts: string[] = [];
+  for (const kind of NAMED_REF_ORDER) {
+    const labels = [
+      ...new Set(refs.filter((r) => r.kind === kind).map((r) => r.label).filter(Boolean)),
+    ];
+    if (labels.length === 0) continue;
+    const shown = labels.slice(0, 8);
+    const extra = labels.length - shown.length;
+    const list = extra > 0 ? `${shown.join(", ")} (+${extra} more)` : shown.join(", ");
+    parts.push(`${NAMED_REF_PREFIX[kind]} ${list}`);
+  }
+  return parts.join("; ");
+}
+
 export function hardDeleteBlockedMessage(params: {
   sku: string;
-  counts: CatalogUsageCounts;
+  refs?: CatalogNamedRef[];
+  counts?: CatalogUsageCounts;
 }): string {
-  const usage = describeCatalogUsage(params.counts) || "existing history";
+  const named = params.refs?.length ? describeNamedCatalogRefs(params.refs) : "";
+  const usage =
+    named || (params.counts ? describeCatalogUsage(params.counts) : "") || "existing history";
   return `Cannot delete "${params.sku}": still referenced by ${usage}. Deactivate the SKU instead so job history stays linked.`;
+}
+
+/**
+ * Unused SKUs are hard-deleted. In-use SKUs are never deleted here —
+ * caller shows the blocked message and the admin Deactivate path.
+ */
+export async function performCatalogHardDelete(
+  store: CatalogHardDeleteStore,
+  id: string
+): Promise<{ ok: true; sku: string } | { ok: false; error: string }> {
+  const item = await store.findItem(id);
+  if (!item) return { ok: false, error: "Inventory item not found." };
+  const usage = await store.loadUsage(id);
+  if (catalogIsInUse(usage.counts) || usage.refs.length > 0) {
+    return {
+      ok: false,
+      error: hardDeleteBlockedMessage({
+        sku: item.sku,
+        refs: usage.refs,
+        counts: usage.counts,
+      }),
+    };
+  }
+  await store.deleteItem(id);
+  return { ok: true, sku: item.sku };
 }
 
 function labelItem(item: CatalogAttachItem): string {

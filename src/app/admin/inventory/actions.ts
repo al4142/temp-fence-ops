@@ -4,13 +4,18 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { dateOnlyToUtc } from "@/lib/job-form";
-import { catalogIsInUse, hardDeleteBlockedMessage } from "@/lib/inventory-catalog";
+import { catalogUsageSnapshotFromRows, performCatalogHardDelete } from "@/lib/inventory-catalog";
+
+function ymd(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
 
 export type AdminActionResult = { ok: true } | { ok: false; error: string };
 
 function revalidateCatalogPaths() {
+  revalidatePath("/admin/inventory", "page");
   revalidatePath("/admin/inventory");
-  revalidatePath("/inventory");
+  revalidatePath("/inventory", "page");
   revalidatePath("/jobs");
   revalidatePath("/jobs/new");
 }
@@ -117,33 +122,71 @@ export async function deleteInventoryItem(formData: FormData): Promise<AdminActi
   if (!id) return { ok: false, error: "Missing item id." };
   try {
     const outcome = await prisma.$transaction(async (tx) => {
-      const item = await tx.inventoryItem.findUnique({ where: { id } });
-      if (!item) return { ok: false as const, error: "Inventory item not found." };
-      const [materials, variances, transfersFrom, transfersTo, writeOffs, adjustments] =
-        await Promise.all([
-          tx.jobMaterial.count({ where: { inventoryItemId: id } }),
-          tx.jobMaterialVariance.count({ where: { inventoryItemId: id } }),
-          tx.transferLine.count({ where: { fromInventoryItemId: id } }),
-          tx.transferLine.count({ where: { toInventoryItemId: id } }),
-          tx.writeOff.count({ where: { inventoryItemId: id } }),
-          tx.inventoryAdjustment.count({ where: { inventoryItemId: id } }),
-        ]);
-      const usage = {
-        materials,
-        variances,
-        transfersFrom,
-        transfersTo,
-        writeOffs,
-        adjustments,
-      };
-      if (catalogIsInUse(usage)) {
-        return {
-          ok: false as const,
-          error: hardDeleteBlockedMessage({ sku: item.sku, counts: usage }),
-        };
-      }
-      await tx.inventoryItem.delete({ where: { id } });
-      return { ok: true as const };
+      return performCatalogHardDelete(
+        {
+          findItem: (itemId) =>
+            tx.inventoryItem.findUnique({
+              where: { id: itemId },
+              select: { id: true, sku: true },
+            }),
+          loadUsage: async (itemId) => {
+            const [materials, variances, transferLines, writeOffs, adjustments] =
+              await Promise.all([
+                tx.jobMaterial.findMany({
+                  where: { inventoryItemId: itemId },
+                  select: { job: { select: { orderNumber: true } } },
+                }),
+                tx.jobMaterialVariance.findMany({
+                  where: { inventoryItemId: itemId },
+                  select: { job: { select: { orderNumber: true } } },
+                }),
+                tx.transferLine.findMany({
+                  where: {
+                    OR: [{ fromInventoryItemId: itemId }, { toInventoryItemId: itemId }],
+                  },
+                  select: {
+                    transfer: {
+                      select: {
+                        date: true,
+                        fromBranch: { select: { code: true } },
+                        toBranch: { select: { code: true } },
+                      },
+                    },
+                  },
+                }),
+                tx.writeOff.findMany({
+                  where: { inventoryItemId: itemId },
+                  select: { date: true, reason: true },
+                }),
+                tx.inventoryAdjustment.findMany({
+                  where: { inventoryItemId: itemId },
+                  select: { adjustedAt: true, reason: true },
+                }),
+              ]);
+            return catalogUsageSnapshotFromRows({
+              materials: materials.map((row) => ({ orderNumber: row.job.orderNumber })),
+              variances: variances.map((row) => ({ orderNumber: row.job.orderNumber })),
+              transfers: transferLines.map((row) => ({
+                fromCode: row.transfer.fromBranch.code,
+                toCode: row.transfer.toBranch.code,
+                date: ymd(row.transfer.date),
+              })),
+              writeOffs: writeOffs.map((row) => ({
+                date: ymd(row.date),
+                reason: row.reason,
+              })),
+              adjustments: adjustments.map((row) => ({
+                date: ymd(row.adjustedAt),
+                reason: row.reason,
+              })),
+            });
+          },
+          deleteItem: async (itemId) => {
+            await tx.inventoryItem.delete({ where: { id: itemId } });
+          },
+        },
+        id
+      );
     });
     if (!outcome.ok) return outcome;
     revalidateCatalogPaths();

@@ -5,10 +5,12 @@ import {
   catalogIsInUse,
   catalogLineDisplayName,
   catalogItemsForJobPicker,
+  catalogUsageSnapshotFromRows,
   catalogUsageTotal,
   describeCatalogUsage,
   emptyCatalogUsage,
   hardDeleteBlockedMessage,
+  performCatalogHardDelete,
   validateCatalogItemsForJobAttach,
 } from "./inventory-catalog";
 
@@ -91,6 +93,73 @@ describe("catalog usage / hard-delete gate", () => {
     };
     expect(catalogIsInUse(mixed)).toBe(true);
     expect(describeCatalogUsage(mixed)).toBe("1 job variance(s), 4 write-off(s)");
+  });
+
+  it("lists named job/history refs and tells the user to Deactivate", () => {
+    const usage = catalogUsageSnapshotFromRows({
+      materials: [{ orderNumber: "ORD-1001" }, { orderNumber: "ORD-2044" }],
+      variances: [{ orderNumber: "ORD-1001" }],
+      transfers: [{ fromCode: "MIA", toCode: "DAV", date: "2026-03-05" }],
+      writeOffs: [{ date: "2026-03-12", reason: "damaged" }],
+      adjustments: [{ date: "2026-03-01", reason: "cycle count" }],
+    });
+    const message = hardDeleteBlockedMessage({
+      sku: "PANEL-6",
+      refs: usage.refs,
+      counts: usage.counts,
+    });
+    expect(message).toContain("PANEL-6");
+    expect(message).toContain("ORD-1001");
+    expect(message).toContain("ORD-2044");
+    expect(message).toContain("MIA to DAV (2026-03-05)");
+    expect(message).toContain("damaged");
+    expect(message).toContain("cycle count");
+    expect(message).toMatch(/Deactivate/);
+    expect(message).not.toMatch(/In-use SKUs cannot be deleted/i);
+  });
+});
+
+describe("performCatalogHardDelete", () => {
+  it("hard-deletes an unused SKU (deleteItem is called)", async () => {
+    const deleted: string[] = [];
+    const result = await performCatalogHardDelete(
+      {
+        findItem: async () => ({ id: "item-zz", sku: "ZZ-TEMP" }),
+        loadUsage: async () => ({ counts: emptyCatalogUsage(), refs: [] }),
+        deleteItem: async (id) => {
+          deleted.push(id);
+        },
+      },
+      "item-zz"
+    );
+    expect(result).toEqual({ ok: true, sku: "ZZ-TEMP" });
+    expect(deleted).toEqual(["item-zz"]);
+  });
+
+  it("does not delete an in-use SKU and names the blocking jobs", async () => {
+    const deleted: string[] = [];
+    const usage = catalogUsageSnapshotFromRows({
+      materials: [{ orderNumber: "ORD-1001" }],
+      variances: [],
+      transfers: [],
+      writeOffs: [],
+      adjustments: [],
+    });
+    const result = await performCatalogHardDelete(
+      {
+        findItem: async () => ({ id: "item-panel", sku: "PANEL-6" }),
+        loadUsage: async () => usage,
+        deleteItem: async (id) => {
+          deleted.push(id);
+        },
+      },
+      "item-panel"
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("ORD-1001");
+    expect(result.error).toMatch(/Deactivate/);
+    expect(deleted).toEqual([]);
   });
 });
 

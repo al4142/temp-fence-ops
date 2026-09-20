@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   deactivateInventoryItem,
   deleteInventoryItem,
@@ -45,7 +46,10 @@ export function InventoryAdminClient({
   onHandById,
   recentAdjustments,
 }: Props) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [editing, setEditing] = useState<Item | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [pending, startTransition] = useTransition();
@@ -55,9 +59,11 @@ export function InventoryAdminClient({
     () =>
       items.filter(
         (i) =>
-          (showInactive || i.active) && (!branchFilter || i.branchId === branchFilter)
+          !removedIds.includes(i.id) &&
+          (showInactive || i.active) &&
+          (!branchFilter || i.branchId === branchFilter)
       ),
-    [items, branchFilter, showInactive]
+    [items, branchFilter, showInactive, removedIds]
   );
 
   function cancelEdit() {
@@ -76,7 +82,14 @@ export function InventoryAdminClient({
       <AdjustmentForm items={items} />
 
       {error ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {error}
+        </p>
+      ) : null}
+      {info ? (
+        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          {info}
+        </p>
       ) : null}
 
       <div className="space-y-3">
@@ -171,8 +184,14 @@ export function InventoryAdminClient({
                               const r = i.active
                                 ? await deactivateInventoryItem(fd)
                                 : await reactivateInventoryItem(fd);
-                              if (!r.ok) setError(r.error);
-                              else setError(null);
+                              if (!r.ok) {
+                                setError(r.error);
+                                setInfo(null);
+                                return;
+                              }
+                              setError(null);
+                              setInfo(i.active ? `Deactivated ${i.sku}.` : `Reactivated ${i.sku}.`);
+                              router.refresh();
                             });
                           }}
                           className={
@@ -187,13 +206,26 @@ export function InventoryAdminClient({
                           type="button"
                           disabled={pending}
                           onClick={() => {
-                            if (!confirm(`Delete ${i.sku}? In-use SKUs cannot be deleted.`)) return;
+                            if (
+                              !confirm(
+                                `Permanently delete ${i.sku} from the catalog? Unused SKUs are removed. If this SKU is on jobs or inventory history, delete is blocked and you should Deactivate instead.`
+                              )
+                            ) {
+                              return;
+                            }
                             const fd = new FormData();
                             fd.set("id", i.id);
                             startTransition(async () => {
                               const r = await deleteInventoryItem(fd);
-                              if (!r.ok) setError(r.error);
-                              else setError(null);
+                              if (!r.ok) {
+                                setError(r.error);
+                                setInfo(null);
+                                return;
+                              }
+                              setError(null);
+                              setInfo(`Deleted ${i.sku}.`);
+                              setRemovedIds((ids) => [...ids, i.id]);
+                              router.refresh();
                             });
                           }}
                           className="text-red-700 hover:underline"
