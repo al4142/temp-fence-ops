@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { toDateInputValue, type JobFormValues } from "@/lib/job-form";
 import { sectionsForJob, storedToFormSection } from "@/lib/bom/sections";
 import { normalizeJobType } from "@/lib/job-constants";
+import { collectJobInventoryItemIds } from "@/lib/inventory-yard";
 import { JobForm } from "@/components/JobForm";
 import { deleteJob, updateJob } from "../../actions";
 
@@ -32,6 +33,7 @@ export default async function EditJobPage({ params }: Props) {
     });
   if (!job) notFound();
 
+  const attachedIds = collectJobInventoryItemIds(job);
   const options = await Promise.all([
     prisma.branch.findMany({
       where: { OR: [{ active: true }, { id: job.branchId }] },
@@ -42,8 +44,12 @@ export default async function EditJobPage({ params }: Props) {
       select: { id: true, name: true, position: true, branchId: true, active: true },
     }),
     prisma.inventoryItem.findMany({
+      where:
+        attachedIds.length > 0
+          ? { OR: [{ active: true }, { id: { in: attachedIds } }] }
+          : { active: true },
       orderBy: [{ sku: "asc" }, { name: "asc" }],
-      select: { id: true, sku: true, name: true, unit: true, branchId: true },
+      select: { id: true, sku: true, name: true, unit: true, branchId: true, active: true },
     }),
   ]).catch((e) => {
     console.error("Edit job option lookups failed; rendering form with empty options.", e);

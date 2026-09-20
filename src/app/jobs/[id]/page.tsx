@@ -10,6 +10,7 @@ import {
 import { laborCostForLine, materialCostForLine } from "@/lib/pnl";
 import { isChainlinkType, normalizeFenceType, POST_MOUNT_LABELS } from "@/lib/bom/catalog";
 import { formatSectionLabel, sectionsForJob, type StoredFenceSection } from "@/lib/bom/sections";
+import { catalogLineDisplayName } from "@/lib/inventory-catalog";
 
 function formatSectionGates(s: StoredFenceSection): string {
   const parts: string[] = [];
@@ -183,7 +184,7 @@ export default async function JobDetailPage({ params }: Props) {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {job.materials.map((m) => {
-              const name = m.inventoryItem?.name ?? m.itemName ?? "(unnamed)";
+              const name = catalogLineDisplayName(m);
               const sku = m.inventoryItem?.sku;
               const lineSign = inventorySignForMaterial(
                 job.jobType,
@@ -232,7 +233,7 @@ export default async function JobDetailPage({ params }: Props) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {job.variances.map((v) => {
-                const name = v.inventoryItem?.name ?? v.itemName ?? "(unnamed)";
+                const name = catalogLineDisplayName(v);
                 return (
                   <tr key={v.id}>
                     <td className="py-2 pr-2">{name}</td>

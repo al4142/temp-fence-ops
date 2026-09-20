@@ -39,6 +39,7 @@ Catalog row **per branch** (`@@unique([branchId, sku])`).
 - `startingQty` - opening balance for the demo / period
 - `unitCost` - used for P&L material cost (not sell price); Wave 3 will refine avg / landed cost
 - `reusable` - fence panels/bases typically true; consumables may be false
+- `active` - soft-deactivate in-use SKUs; hard-delete only when nothing references the row. Inactive SKUs stay on historical jobs but cannot be newly attached.
 
 ### Job
 One daily ticket. Multiple jobs can share an `orderNumber` (install then pickup).

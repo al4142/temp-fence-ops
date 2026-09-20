@@ -1,0 +1,341 @@
+import { describe, expect, it } from "vitest";
+import { emptyJobFormValues, validateAndNormalize } from "./job-form";
+import { collectJobInventoryItemIds } from "./inventory-yard";
+import {
+  catalogIsInUse,
+  catalogItemCountIsInUse,
+  catalogLineDisplayName,
+  catalogItemsForJobPicker,
+  catalogUsageSnapshotFromRows,
+  catalogUsageTotal,
+  describeCatalogUsage,
+  emptyCatalogUsage,
+  hardDeleteBlockedMessage,
+  inUseDeleteDialog,
+  performCatalogHardDelete,
+  planCatalogDelete,
+  unusedDeleteConfirmMessage,
+  validateCatalogItemsForJobAttach,
+} from "./inventory-catalog";
+
+const MIA = "branch-mia";
+
+const activePanel = {
+  id: "item-mia-panel-6",
+  sku: "PANEL-6",
+  name: "6ft Temp Fence Panel",
+  active: true,
+};
+
+const inactivePanel = {
+  ...activePanel,
+  active: false,
+};
+
+const inactiveClamp = {
+  id: "item-mia-clamp",
+  sku: "CLAMP-SET",
+  name: "Clamp Set",
+  active: false,
+};
+
+const unused: ReturnType<typeof emptyCatalogUsage> = emptyCatalogUsage();
+
+const jobMaterialUsage = {
+  ...emptyCatalogUsage(),
+  materials: 2,
+};
+
+const adjustmentUsage = {
+  ...emptyCatalogUsage(),
+  adjustments: 3,
+};
+
+const transferUsage = {
+  ...emptyCatalogUsage(),
+  transfersFrom: 1,
+  transfersTo: 1,
+};
+
+function formBase() {
+  return {
+    ...emptyJobFormValues({ branchId: MIA, date: "2026-03-05" }),
+    orderNumber: "ORD-CAT-1",
+  };
+}
+
+describe("catalog usage / hard-delete gate", () => {
+  it("allows hard-delete only when unused (no job/transfer/write-off/adjustment refs)", () => {
+    expect(catalogIsInUse(unused)).toBe(false);
+    expect(catalogUsageTotal(unused)).toBe(0);
+  });
+
+  it("treats job materials as in-use and blocks hard-delete with a deactivate hint", () => {
+    expect(catalogIsInUse(jobMaterialUsage)).toBe(true);
+    const message = hardDeleteBlockedMessage({ sku: "PANEL-6", counts: jobMaterialUsage });
+    expect(message).toContain("PANEL-6");
+    expect(message).toContain("2 job material(s)");
+    expect(message).toMatch(/deactivate/i);
+    expect(message).toMatch(/history/i);
+  });
+
+  it("treats adjustments as in-use so delete cannot wipe on-hand history", () => {
+    expect(catalogIsInUse(adjustmentUsage)).toBe(true);
+    expect(hardDeleteBlockedMessage({ sku: "PANEL-6", counts: adjustmentUsage })).toContain(
+      "3 adjustment(s)"
+    );
+  });
+
+  it("counts transfer from+to, variances, and write-offs", () => {
+    expect(catalogIsInUse(transferUsage)).toBe(true);
+    expect(describeCatalogUsage(transferUsage)).toBe("2 transfer line(s)");
+
+    const mixed = {
+      ...emptyCatalogUsage(),
+      variances: 1,
+      writeOffs: 4,
+    };
+    expect(catalogIsInUse(mixed)).toBe(true);
+    expect(describeCatalogUsage(mixed)).toBe("1 job variance(s), 4 write-off(s)");
+  });
+
+  it("lists named job/history refs and tells the user to Deactivate", () => {
+    const usage = catalogUsageSnapshotFromRows({
+      materials: [{ orderNumber: "ORD-1001" }, { orderNumber: "ORD-2044" }],
+      variances: [{ orderNumber: "ORD-1001" }],
+      transfers: [{ fromCode: "MIA", toCode: "DAV", date: "2026-03-05" }],
+      writeOffs: [{ date: "2026-03-12", reason: "damaged" }],
+      adjustments: [{ date: "2026-03-01", reason: "cycle count" }],
+    });
+    const message = hardDeleteBlockedMessage({
+      sku: "PANEL-6",
+      refs: usage.refs,
+      counts: usage.counts,
+    });
+    expect(message).toContain("PANEL-6");
+    expect(message).toContain("ORD-1001");
+    expect(message).toContain("ORD-2044");
+    expect(message).toContain("MIA to DAV (2026-03-05)");
+    expect(message).toContain("damaged");
+    expect(message).toContain("cycle count");
+    expect(message).toMatch(/Deactivate/);
+    expect(message).not.toMatch(/In-use SKUs cannot be deleted/i);
+  });
+});
+
+describe("performCatalogHardDelete", () => {
+  it("hard-deletes an unused SKU (deleteItem is called)", async () => {
+    const deleted: string[] = [];
+    const result = await performCatalogHardDelete(
+      {
+        findItem: async () => ({ id: "item-zz", sku: "ZZ-TEMP" }),
+        loadUsage: async () => ({ counts: emptyCatalogUsage(), refs: [] }),
+        deleteItem: async (id) => {
+          deleted.push(id);
+        },
+      },
+      "item-zz"
+    );
+    expect(result).toEqual({ ok: true, sku: "ZZ-TEMP" });
+    expect(deleted).toEqual(["item-zz"]);
+  });
+
+  it("plans two distinct dialogs: unused confirm vs in-use Deactivate/Cancel", () => {
+    const unusedPlan = planCatalogDelete("ZZ-TEMP", {
+      counts: emptyCatalogUsage(),
+      refs: [],
+    });
+    expect(unusedPlan).toEqual({
+      path: "unused",
+      sku: "ZZ-TEMP",
+      confirm: "Delete ZZ-TEMP permanently?",
+    });
+    expect(unusedPlan.path === "unused" && unusedPlan.confirm).toBe(
+      unusedDeleteConfirmMessage("ZZ-TEMP")
+    );
+    expect(unusedPlan.path === "unused" ? unusedPlan.confirm : "").not.toMatch(
+      /in use|cannot be deleted|Deactivate/i
+    );
+
+    const inUsePlan = planCatalogDelete(
+      "PANEL-6",
+      catalogUsageSnapshotFromRows({
+        materials: [{ orderNumber: "ORD-1001" }],
+        variances: [],
+        transfers: [],
+        writeOffs: [],
+        adjustments: [],
+      })
+    );
+    expect(inUsePlan.path).toBe("in-use");
+    if (inUsePlan.path !== "in-use") return;
+    expect(inUsePlan.dialog.primaryAction).toBe("Deactivate");
+    expect(inUsePlan.dialog.secondaryAction).toBe("Cancel");
+    expect(inUsePlan.dialog.body).toContain("ORD-1001");
+    expect(inUsePlan.dialog.body).toMatch(/Deactivate/);
+    expect(inUsePlan.dialog.body).not.toBe(unusedDeleteConfirmMessage("PANEL-6"));
+    expect(inUsePlan.dialog.title).toBe("PANEL-6 is in use");
+    expect(inUsePlan.dialog.title).not.toBe(unusedDeleteConfirmMessage("PANEL-6"));
+  });
+
+  it("treats item _count as in-use so unused confirm is never shown", () => {
+    expect(
+      catalogItemCountIsInUse({
+        materials: 2,
+        variances: 0,
+        writeOffs: 0,
+        adjustments: 0,
+        transferLinesFrom: 0,
+        transferLinesTo: 0,
+      })
+    ).toBe(true);
+    expect(
+      catalogItemCountIsInUse({
+        materials: 0,
+        variances: 0,
+        writeOffs: 0,
+        adjustments: 0,
+        transferLinesFrom: 0,
+        transferLinesTo: 0,
+      })
+    ).toBe(false);
+    expect(catalogItemCountIsInUse(null)).toBe(true);
+    const dialog = inUseDeleteDialog({
+      sku: "PANEL-6",
+      counts: { ...emptyCatalogUsage(), materials: 2 },
+    });
+    expect(dialog.title).toBe("PANEL-6 is in use");
+    expect(dialog.primaryAction).toBe("Deactivate");
+    expect(dialog.secondaryAction).toBe("Cancel");
+    expect(unusedDeleteConfirmMessage("PANEL-6")).toBe("Delete PANEL-6 permanently?");
+    expect(unusedDeleteConfirmMessage("PANEL-6")).not.toMatch(/in use|cannot be deleted/i);
+  });
+
+  it("does not delete an in-use SKU and names the blocking jobs", async () => {
+    const deleted: string[] = [];
+    const usage = catalogUsageSnapshotFromRows({
+      materials: [{ orderNumber: "ORD-1001" }],
+      variances: [],
+      transfers: [],
+      writeOffs: [],
+      adjustments: [],
+    });
+    const result = await performCatalogHardDelete(
+      {
+        findItem: async () => ({ id: "item-panel", sku: "PANEL-6" }),
+        loadUsage: async () => usage,
+        deleteItem: async (id) => {
+          deleted.push(id);
+        },
+      },
+      "item-panel"
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("ORD-1001");
+    expect(result.error).toMatch(/Deactivate/);
+    expect(deleted).toEqual([]);
+  });
+});
+
+describe("validateCatalogItemsForJobAttach", () => {
+  it("rejects attaching an inactive SKU to a new job", () => {
+    const parsed = validateAndNormalize({
+      ...formBase(),
+      materials: [
+        {
+          inventoryItemId: inactivePanel.id,
+          itemName: null,
+          quantity: 10,
+          notes: null,
+        },
+      ],
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const requestedIds = collectJobInventoryItemIds(parsed.data);
+    const result = validateCatalogItemsForJobAttach({
+      requestedIds,
+      foundItems: [inactivePanel],
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("PANEL-6");
+    expect(result.error).toMatch(/cannot be attached/i);
+  });
+
+  it("rejects newly attaching an inactive SKU that was not already on the job", () => {
+    const result = validateCatalogItemsForJobAttach({
+      requestedIds: [inactiveClamp.id],
+      foundItems: [inactiveClamp],
+      alreadyAttachedIds: [inactivePanel.id],
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("CLAMP-SET");
+    expect(result.error).not.toContain("PANEL-6");
+  });
+
+  it("allows historical jobs to keep an already-attached inactive SKU", () => {
+    const result = validateCatalogItemsForJobAttach({
+      requestedIds: [inactivePanel.id],
+      foundItems: [inactivePanel],
+      alreadyAttachedIds: [inactivePanel.id],
+    });
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("allows active SKUs on new jobs", () => {
+    const result = validateCatalogItemsForJobAttach({
+      requestedIds: [activePanel.id],
+      foundItems: [activePanel],
+    });
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("fails closed when a requested ID is missing", () => {
+    const result = validateCatalogItemsForJobAttach({
+      requestedIds: [activePanel.id, "item-ghost"],
+      foundItems: [activePanel],
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: "One or more inventory items were not found.",
+    });
+  });
+});
+
+describe("historical job name after deactivate", () => {
+  it("resolves the catalog name while the deactivated row remains", () => {
+    expect(
+      catalogLineDisplayName({
+        itemName: null,
+        inventoryItem: { name: inactivePanel.name },
+      })
+    ).toBe("6ft Temp Fence Panel");
+  });
+
+  it("falls back to free-text only when there is no catalog row", () => {
+    expect(
+      catalogLineDisplayName({
+        itemName: "Custom panel",
+        inventoryItem: null,
+      })
+    ).toBe("Custom panel");
+  });
+});
+
+describe("catalogItemsForJobPicker", () => {
+  it("hides inactive SKUs unless they are already attached", () => {
+    const items = [
+      { ...activePanel, branchId: MIA },
+      { ...inactivePanel, id: "item-old", branchId: MIA },
+    ];
+    expect(catalogItemsForJobPicker(items).map((i) => i.id)).toEqual([activePanel.id]);
+    expect(catalogItemsForJobPicker(items, ["item-old"]).map((i) => i.id)).toEqual([
+      activePanel.id,
+      "item-old",
+    ]);
+  });
+});

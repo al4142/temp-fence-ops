@@ -1,8 +1,23 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { deleteInventoryItem } from "@/app/admin/inventory/actions";
+import { useRouter } from "next/navigation";
+import {
+  deactivateInventoryItem,
+  deleteInventoryItem,
+  previewCatalogDelete,
+  reactivateInventoryItem,
+} from "@/app/admin/inventory/actions";
+import { CatalogInUseDialog } from "@/components/CatalogInUseDialog";
 import { InventoryItemForm, AdjustmentForm } from "@/components/InventoryAdminForms";
+import {
+  catalogItemCountIsInUse,
+  countsFromItemUsage,
+  inUseDeleteDialog,
+  unusedDeleteConfirmMessage,
+  type CatalogItemUsageCount,
+  type CatalogNamedRef,
+} from "@/lib/inventory-catalog";
 
 type Branch = { id: string; code: string; name: string };
 type Item = {
@@ -12,10 +27,12 @@ type Item = {
   description: string | null;
   unit: string;
   reusable: boolean;
+  active: boolean;
   branchId: string;
   startingQty: number;
   unitCost: number;
   branch: Branch;
+  _count: CatalogItemUsageCount;
 };
 type OnHand = { itemId: string; onHand: number; movementQty: number; adjustmentQty: number };
 type Adjustment = {
@@ -40,19 +57,121 @@ export function InventoryAdminClient({
   onHandById,
   recentAdjustments,
 }: Props) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [editing, setEditing] = useState<Item | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [pending, startTransition] = useTransition();
   const [branchFilter, setBranchFilter] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
+  const [inUseDialog, setInUseDialog] = useState<{
+    id: string;
+    sku: string;
+    title: string;
+    body: string;
+    refs: CatalogNamedRef[];
+  } | null>(null);
   const filtered = useMemo(
-    () => (branchFilter ? items.filter((i) => i.branchId === branchFilter) : items),
-    [items, branchFilter]
+    () =>
+      items.filter(
+        (i) =>
+          !removedIds.includes(i.id) &&
+          (showInactive || i.active) &&
+          (!branchFilter || i.branchId === branchFilter)
+      ),
+    [items, branchFilter, showInactive, removedIds]
   );
 
   function cancelEdit() {
     setEditing(null);
     setFormKey((k) => k + 1);
+  }
+
+  function afterSaved() {
+    cancelEdit();
+    router.refresh();
+  }
+
+  function openInUseDialog(item: Item, refs: CatalogNamedRef[] = []) {
+    const dialog = inUseDeleteDialog({
+      sku: item.sku,
+      refs,
+      counts: item._count ? countsFromItemUsage(item._count) : undefined,
+    });
+    setInUseDialog({
+      id: item.id,
+      sku: item.sku,
+      title: dialog.title,
+      body: dialog.body,
+      refs,
+    });
+  }
+
+  function onDeleteClick(item: Item) {
+    setError(null);
+    setInfo(null);
+    // In-use is decided from server-rendered _count — never window.confirm.
+    if (catalogItemCountIsInUse(item._count)) {
+      openInUseDialog(item);
+      startTransition(async () => {
+        const preview = await previewCatalogDelete(item.id);
+        if (preview.ok && preview.path === "in-use") {
+          setInUseDialog({
+            id: preview.id,
+            sku: preview.sku,
+            title: preview.title,
+            body: preview.body,
+            refs: preview.refs,
+          });
+        }
+      });
+      return;
+    }
+    if (!window.confirm(unusedDeleteConfirmMessage(item.sku))) return;
+    const fd = new FormData();
+    fd.set("id", item.id);
+    startTransition(async () => {
+      const r = await deleteInventoryItem(fd);
+      if (!r.ok) {
+        const preview = await previewCatalogDelete(item.id);
+        if (preview.ok && preview.path === "in-use") {
+          setInUseDialog({
+            id: preview.id,
+            sku: preview.sku,
+            title: preview.title,
+            body: preview.body,
+            refs: preview.refs,
+          });
+          return;
+        }
+        setError(r.error);
+        return;
+      }
+      setRemovedIds((ids) => [...ids, r.deletedId ?? item.id]);
+      setInfo(`Deleted ${item.sku}.`);
+      router.refresh();
+    });
+  }
+
+  function onDeactivateFromDialog() {
+    if (!inUseDialog) return;
+    const fd = new FormData();
+    fd.set("id", inUseDialog.id);
+    const sku = inUseDialog.sku;
+    startTransition(async () => {
+      const r = await deactivateInventoryItem(fd);
+      if (!r.ok) {
+        setError(r.error);
+        setInfo(null);
+        return;
+      }
+      setInUseDialog(null);
+      setError(null);
+      setInfo(`Deactivated ${sku}.`);
+      router.refresh();
+    });
   }
 
   return (
@@ -62,26 +181,44 @@ export function InventoryAdminClient({
         branches={branches}
         editing={editing}
         onCancel={cancelEdit}
+        onSaved={afterSaved}
       />
       <AdjustmentForm items={items} />
 
       {error ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {error}
+        </p>
+      ) : null}
+      {info ? (
+        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          {info}
+        </p>
       ) : null}
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-medium text-slate-900">Catalog &amp; on-hand</h2>
-          <select
-            value={branchFilter}
-            onChange={(ev) => setBranchFilter(ev.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-          >
-            <option value="">All branches</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>{b.code}</option>
-            ))}
-          </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(ev) => setShowInactive(ev.target.checked)}
+              />
+              Show inactive
+            </label>
+            <select
+              value={branchFilter}
+              onChange={(ev) => setBranchFilter(ev.target.value)}
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+            >
+              <option value="">All branches</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.code}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
           <table className="min-w-full text-left text-sm">
@@ -96,6 +233,7 @@ export function InventoryAdminClient({
                 <th className="px-3 py-2 font-medium text-right">Adj</th>
                 <th className="px-3 py-2 font-medium text-right">On hand</th>
                 <th className="px-3 py-2 font-medium text-right">Cost</th>
+                <th className="px-3 py-2 font-medium">Status</th>
                 <th className="px-3 py-2 font-medium"></th>
               </tr>
             </thead>
@@ -120,6 +258,17 @@ export function InventoryAdminClient({
                       {oh?.onHand ?? i.startingQty}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">${i.unitCost.toFixed(2)}</td>
+                    <td className="px-3 py-2">
+                      {i.active ? (
+                        <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-xs text-emerald-800">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
+                          Inactive
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right">
                       <div className="flex justify-end gap-2">
                         <button
@@ -133,14 +282,37 @@ export function InventoryAdminClient({
                           type="button"
                           disabled={pending}
                           onClick={() => {
-                            if (!confirm(`Delete ${i.sku}?`)) return;
                             const fd = new FormData();
                             fd.set("id", i.id);
                             startTransition(async () => {
-                              const r = await deleteInventoryItem(fd);
-                              if (!r.ok) setError(r.error);
+                              const r = i.active
+                                ? await deactivateInventoryItem(fd)
+                                : await reactivateInventoryItem(fd);
+                              if (!r.ok) {
+                                setError(r.error);
+                                setInfo(null);
+                                return;
+                              }
+                              setError(null);
+                              setInfo(i.active ? `Deactivated ${i.sku}.` : `Reactivated ${i.sku}.`);
+                              router.refresh();
                             });
                           }}
+                          className={
+                            i.active
+                              ? "text-amber-700 hover:underline"
+                              : "text-emerald-700 hover:underline"
+                          }
+                        >
+                          {i.active ? "Deactivate" : "Reactivate"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          data-catalog-delete={
+                            catalogItemCountIsInUse(i._count) ? "in-use" : "unused"
+                          }
+                          onClick={() => onDeleteClick(i)}
                           className="text-red-700 hover:underline"
                         >
                           Delete
@@ -195,6 +367,18 @@ export function InventoryAdminClient({
           </table>
         </div>
       </div>
+
+      {inUseDialog ? (
+        <CatalogInUseDialog
+          sku={inUseDialog.sku}
+          title={inUseDialog.title}
+          body={inUseDialog.body}
+          refs={inUseDialog.refs}
+          pending={pending}
+          onCancel={() => setInUseDialog(null)}
+          onDeactivate={onDeactivateFromDialog}
+        />
+      ) : null}
     </div>
   );
 }

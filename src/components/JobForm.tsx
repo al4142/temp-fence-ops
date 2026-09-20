@@ -6,6 +6,7 @@ import type { ActionResult, JobFormValues } from "@/lib/job-form";
 import { emptyJobFenceSectionForm, formSectionsToBom, resolveFormSections } from "@/lib/bom/sections";
 import { VARIANCE_REASONS } from "@/lib/ops-constants";
 import { bomLinesToMaterials, calculateBom, catalogMatchWarnings, type BomResult, type MatchedBomMaterial } from "@/lib/bom";
+import { catalogItemsForJobPicker } from "@/lib/inventory-catalog";
 import { JobFormDetails } from "@/components/JobFormDetails";
 import { JobFormBomOptions } from "@/components/JobFormBomOptions";
 import { JobFormMaterials } from "@/components/JobFormMaterials";
@@ -32,6 +33,7 @@ export type InventoryOption = {
   name: string;
   unit: string;
   branchId: string;
+  active?: boolean;
 };
 
 type Props = {
@@ -161,10 +163,15 @@ export function JobForm({
   } | null>(null);
 
   const filteredInventory = useMemo(() => {
-    if (!branchId) return inventory;
-    const forBranch = inventory.filter((i) => i.branchId === branchId);
-    return forBranch.length > 0 ? forBranch : inventory;
-  }, [branchId, inventory]);
+    const attachedIds = [
+      ...materials.map((m) => m.inventoryItemId),
+      ...variances.map((v) => v.inventoryItemId),
+    ].filter(Boolean);
+    const selectable = catalogItemsForJobPicker(inventory, attachedIds);
+    if (!branchId) return selectable;
+    const forBranch = selectable.filter((i) => i.branchId === branchId);
+    return forBranch.length > 0 ? forBranch : selectable;
+  }, [branchId, inventory, materials, variances]);
 
   const filteredEmployees = useMemo(() => {
     const active = employees.filter((e) => e.active);
