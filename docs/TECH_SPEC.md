@@ -112,7 +112,7 @@ P&L is derived by order number (`src/lib/pnl.ts`): revenue, labor (OT @ 1.5×), 
 
 Required ticket fields: order #, date, branch, job type. **Generate BOM** lives on the job form under Materials — there is no standalone BOM page. Generate BOM previews in the browser; **Apply to materials** then **Create job** / **Save changes** writes the ticket.
 
-Job types that move inventory: outbound `Install` / `Drop`; inbound `Pickup`. `Other` (and any unrecognized string) has no inventory effect. The four Title Case labels are the only recognized values.
+Job types that move inventory: outbound `Install` / `Drop`; inbound `Pickup`. `Other` (and any unrecognized string) has no inventory effect. The job form accepts only the four Title Case labels. **CSV import** (`src/lib/csv-import.ts`, `/admin/import`) maps known Daily Tracker aliases (`INST` → Install, `PU` → Pickup, `DELIVERY` → Drop, …), rejects unknown codes (never silent Other), runs the same `validateAndNormalize` as the form, and commits accepted rows in one transaction. Preview shape: [IMPORT.md](./IMPORT.md).
 
 ### Inventory
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   JOB_TYPES,
-  canonicalJobType,
   isJobType,
+  mapImportJobType,
   normalizeJobType,
 } from "./job-constants";
 import { computeOnHand, inventorySignForJobType } from "./inventory";
@@ -47,14 +47,50 @@ describe("normalizeJobType", () => {
     expect(normalizeJobType(" RELOCATE ")).toBe("RELOCATE");
     expect(isJobType("RELOCATE")).toBe(false);
   });
+});
 
-  it("canonicalJobType coerces unknown to Other", () => {
-    expect(canonicalJobType("")).toBe("Other");
-    expect(canonicalJobType("SWLK")).toBe("Other");
-    expect(canonicalJobType("INST")).toBe("Other");
-    expect(canonicalJobType("PU")).toBe("Other");
-    expect(canonicalJobType("install")).toBe("Install");
-    expect(canonicalJobType("Drop")).toBe("Drop");
+describe("mapImportJobType", () => {
+  it("maps canonical labels case-insensitively", () => {
+    expect(mapImportJobType("Install")).toEqual({
+      ok: true,
+      original: "Install",
+      mapped: "Install",
+    });
+    expect(mapImportJobType(" pickup ")).toEqual({
+      ok: true,
+      original: "pickup",
+      mapped: "Pickup",
+    });
+    expect(mapImportJobType("DROP")).toEqual({ ok: true, original: "DROP", mapped: "Drop" });
+    expect(mapImportJobType("other")).toEqual({ ok: true, original: "other", mapped: "Other" });
+  });
+
+  it("maps known Daily Tracker aliases", () => {
+    expect(mapImportJobType("INST").mapped).toBe("Install");
+    expect(mapImportJobType("INSTALL").mapped).toBe("Install");
+    expect(mapImportJobType("PU").mapped).toBe("Pickup");
+    expect(mapImportJobType("PICK-UP").mapped).toBe("Pickup");
+    expect(mapImportJobType("pick up").mapped).toBe("Pickup");
+    expect(mapImportJobType("RETURN").mapped).toBe("Pickup");
+    expect(mapImportJobType("RET").mapped).toBe("Pickup");
+    expect(mapImportJobType("DELIVERY").mapped).toBe("Drop");
+    expect(mapImportJobType("DEL").mapped).toBe("Drop");
+    expect(mapImportJobType("OTHER").mapped).toBe("Other");
+  });
+
+  it("rejects unknown codes instead of coercing to Other", () => {
+    for (const code of ["SWLK", "RELOCATE", "REP", "MOVE", "MISC", ""]) {
+      const result = mapImportJobType(code);
+      expect(result.ok).toBe(false);
+      expect(result.mapped).toBeNull();
+      expect(result.mapped).not.toBe("Other");
+    }
+    const blank = mapImportJobType("");
+    expect(blank.ok).toBe(false);
+    if (!blank.ok) expect(blank.reason).toMatch(/required/i);
+    const unknown = mapImportJobType("SWLK");
+    expect(unknown.ok).toBe(false);
+    if (!unknown.ok) expect(unknown.reason).toMatch(/not coerced to Other/);
   });
 });
 
