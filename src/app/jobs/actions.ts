@@ -11,6 +11,7 @@ import {
   dateOnlyToUtc,
   validateAndNormalize,
 } from "@/lib/job-form";
+import { validateCatalogItemsForJobAttach } from "@/lib/inventory-catalog";
 import {
   collectJobInventoryItemIds,
   validateInventoryItemsForJobYard,
@@ -27,19 +28,29 @@ async function assertEmployeesExist(ids: string[]) {
   if (count !== new Set(ids).size) throw new Error("One or more employees were not found.");
 }
 
-async function assertInventoryItemsForJobYard(ids: string[], jobBranchId: string) {
+async function assertInventoryItemsForJobYard(
+  ids: string[],
+  jobBranchId: string,
+  alreadyAttachedIds: string[] = []
+) {
   if (ids.length === 0) return;
   const unique = [...new Set(ids)];
   const foundItems = await prisma.inventoryItem.findMany({
     where: { id: { in: unique } },
-    select: { id: true, branchId: true, sku: true, name: true },
+    select: { id: true, branchId: true, sku: true, name: true, active: true },
   });
-  const result = validateInventoryItemsForJobYard({
+  const yard = validateInventoryItemsForJobYard({
     requestedIds: unique,
     foundItems,
     jobBranchId,
   });
-  if (!result.ok) throw new Error(result.error);
+  if (!yard.ok) throw new Error(yard.error);
+  const attach = validateCatalogItemsForJobAttach({
+    requestedIds: unique,
+    foundItems,
+    alreadyAttachedIds,
+  });
+  if (!attach.ok) throw new Error(attach.error);
 }
 
 function isNextRedirect(e: unknown): boolean {
@@ -192,12 +203,22 @@ export async function updateJob(
   const data = parsed.data;
 
   try {
-    const existing = await prisma.job.findUnique({ where: { id: jobId } });
+    const existing = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        materials: { select: { inventoryItemId: true } },
+        variances: { select: { inventoryItemId: true } },
+      },
+    });
     if (!existing) return { ok: false, error: "Job not found." };
 
     await assertBranchExists(data.branchId);
     await assertEmployeesExist(data.labor.map((l) => l.employeeId));
-    await assertInventoryItemsForJobYard(collectJobInventoryItemIds(data), data.branchId);
+    await assertInventoryItemsForJobYard(
+      collectJobInventoryItemIds(data),
+      data.branchId,
+      collectJobInventoryItemIds(existing)
+    );
 
     await prisma.$transaction(async (tx) => {
       await tx.job.update({

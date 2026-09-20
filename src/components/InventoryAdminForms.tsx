@@ -15,6 +15,7 @@ type Item = {
   description: string | null;
   unit: string;
   reusable: boolean;
+  active?: boolean;
   branchId: string;
   startingQty: number;
   unitCost: number;
@@ -126,7 +127,7 @@ export function InventoryItemForm({
 export function AdjustmentForm({ items }: { items: Item[] }) {
   const [adjError, setAdjError] = useState<string | null>(null);
   const [adj, setAdj] = useState({
-    inventoryItemId: items[0]?.id ?? "",
+    inventoryItemId: items.find((i) => i.active !== false)?.id ?? "",
     quantityDelta: "",
     reason: "",
     adjustedAt: new Date().toISOString().slice(0, 10),
@@ -159,7 +160,9 @@ export function AdjustmentForm({ items }: { items: Item[] }) {
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block text-sm"><span className="text-xs font-medium text-slate-600">Item *</span>
           <select required value={adj.inventoryItemId} onChange={(ev) => setA("inventoryItemId", ev.target.value)} className={"mt-1 " + inputCls}>
-            {items.map((i) => <option key={i.id} value={i.id}>{i.branch.code} / {i.sku} - {i.name}</option>)}
+            {items.filter((i) => i.active !== false).map((i) => (
+              <option key={i.id} value={i.id}>{i.branch.code} / {i.sku} - {i.name}</option>
+            ))}
           </select></label>
         <label className="block text-sm"><span className="text-xs font-medium text-slate-600">Qty delta *</span>
           <input required type="number" step="any" value={adj.quantityDelta} onChange={(ev) => setA("quantityDelta", ev.target.value)} className={"mt-1 " + inputCls} placeholder="e.g. -5 or 12" /></label>

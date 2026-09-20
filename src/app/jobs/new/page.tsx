@@ -14,8 +14,9 @@ export default async function NewJobPage() {
       select: { id: true, name: true, position: true, branchId: true, active: true },
     }),
     prisma.inventoryItem.findMany({
+      where: { active: true },
       orderBy: [{ sku: "asc" }, { name: "asc" }],
-      select: { id: true, sku: true, name: true, unit: true, branchId: true },
+      select: { id: true, sku: true, name: true, unit: true, branchId: true, active: true },
     }),
   ]).catch((e) => {
     console.error("New job lookups failed; rendering form with empty options.", e);

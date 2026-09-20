@@ -87,7 +87,7 @@ Full ER, inventory signs, and P&L formulas: **[DATA_MODEL.md](./DATA_MODEL.md)**
 Core idea:
 
 - **Branch** = yard (`MIA`, `DAV` in seed).
-- **InventoryItem** is catalog **per branch** (`@@unique([branchId, sku])`).
+- **InventoryItem** is catalog **per branch** (`@@unique([branchId, sku])`). In-use SKUs are deactivated (`active: false`), not hard-deleted.
 - **Job** is one daily ticket. Several jobs can share an `orderNumber` (install then pickup).
 - Job children: materials, labor, lodging/freight/misc lines, material variance.
 - Yard ledger (not job P&L): transfers, write-offs, yard expenses, vendors.

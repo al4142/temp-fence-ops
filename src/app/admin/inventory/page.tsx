@@ -10,7 +10,7 @@ export default async function AdminInventoryPage() {
     prisma.branch.findMany({ orderBy: [{ active: "desc" }, { code: "asc" }] }),
     prisma.inventoryItem.findMany({
       include: { branch: true },
-      orderBy: [{ branch: { code: "asc" } }, { sku: "asc" }],
+      orderBy: [{ active: "desc" }, { branch: { code: "asc" } }, { sku: "asc" }],
     }),
     prisma.jobMaterial.findMany({
       include: { job: { select: { jobType: true, branchId: true } } },
@@ -50,7 +50,7 @@ export default async function AdminInventoryPage() {
             <Link href="/inventory" className="text-blue-700 hover:underline">
               /inventory
             </Link>
-            .
+            . Prefer Deactivate for in-use SKUs so job history keeps the item name.
           </p>
         </div>
       </div>

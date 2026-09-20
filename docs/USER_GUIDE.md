@@ -175,7 +175,7 @@ Catalog lives **per yard** (SKU unique per branch). Seed loads both a few demo i
 
 On the job form, the inventory dropdown prefers items for the selected branch. You can still type a free-text name if you leave the catalog pick blank.
 
-Maintain the catalog on **Inv. admin** (`/admin/inventory`): add/edit/delete items, starting qty, unit cost, reusable flag, and **manual adjustments**. On-hand uses the same math as `/inventory`.
+Maintain the catalog on **Inv. admin** (`/admin/inventory`): add/edit items, starting qty, unit cost, reusable flag, and **manual adjustments**. Prefer **Deactivate** for SKUs that appear on jobs, transfers, write-offs, or adjustments — hard-delete is blocked when anything still references the item so job history keeps the name. Inactive SKUs stay on past jobs and are hidden from the new-job picker. On-hand uses the same math as `/inventory`.
 
 ### Inventory (Install vs Pickup)
 

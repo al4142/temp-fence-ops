@@ -1,7 +1,11 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { deleteInventoryItem } from "@/app/admin/inventory/actions";
+import {
+  deactivateInventoryItem,
+  deleteInventoryItem,
+  reactivateInventoryItem,
+} from "@/app/admin/inventory/actions";
 import { InventoryItemForm, AdjustmentForm } from "@/components/InventoryAdminForms";
 
 type Branch = { id: string; code: string; name: string };
@@ -12,6 +16,7 @@ type Item = {
   description: string | null;
   unit: string;
   reusable: boolean;
+  active: boolean;
   branchId: string;
   startingQty: number;
   unitCost: number;
@@ -45,9 +50,14 @@ export function InventoryAdminClient({
   const [formKey, setFormKey] = useState(0);
   const [pending, startTransition] = useTransition();
   const [branchFilter, setBranchFilter] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
   const filtered = useMemo(
-    () => (branchFilter ? items.filter((i) => i.branchId === branchFilter) : items),
-    [items, branchFilter]
+    () =>
+      items.filter(
+        (i) =>
+          (showInactive || i.active) && (!branchFilter || i.branchId === branchFilter)
+      ),
+    [items, branchFilter, showInactive]
   );
 
   function cancelEdit() {
@@ -72,16 +82,26 @@ export function InventoryAdminClient({
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-medium text-slate-900">Catalog &amp; on-hand</h2>
-          <select
-            value={branchFilter}
-            onChange={(ev) => setBranchFilter(ev.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-          >
-            <option value="">All branches</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>{b.code}</option>
-            ))}
-          </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(ev) => setShowInactive(ev.target.checked)}
+              />
+              Show inactive
+            </label>
+            <select
+              value={branchFilter}
+              onChange={(ev) => setBranchFilter(ev.target.value)}
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+            >
+              <option value="">All branches</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.code}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
           <table className="min-w-full text-left text-sm">
@@ -96,6 +116,7 @@ export function InventoryAdminClient({
                 <th className="px-3 py-2 font-medium text-right">Adj</th>
                 <th className="px-3 py-2 font-medium text-right">On hand</th>
                 <th className="px-3 py-2 font-medium text-right">Cost</th>
+                <th className="px-3 py-2 font-medium">Status</th>
                 <th className="px-3 py-2 font-medium"></th>
               </tr>
             </thead>
@@ -120,6 +141,17 @@ export function InventoryAdminClient({
                       {oh?.onHand ?? i.startingQty}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">${i.unitCost.toFixed(2)}</td>
+                    <td className="px-3 py-2">
+                      {i.active ? (
+                        <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-xs text-emerald-800">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
+                          Inactive
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right">
                       <div className="flex justify-end gap-2">
                         <button
@@ -133,12 +165,35 @@ export function InventoryAdminClient({
                           type="button"
                           disabled={pending}
                           onClick={() => {
-                            if (!confirm(`Delete ${i.sku}?`)) return;
+                            const fd = new FormData();
+                            fd.set("id", i.id);
+                            startTransition(async () => {
+                              const r = i.active
+                                ? await deactivateInventoryItem(fd)
+                                : await reactivateInventoryItem(fd);
+                              if (!r.ok) setError(r.error);
+                              else setError(null);
+                            });
+                          }}
+                          className={
+                            i.active
+                              ? "text-amber-700 hover:underline"
+                              : "text-emerald-700 hover:underline"
+                          }
+                        >
+                          {i.active ? "Deactivate" : "Reactivate"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => {
+                            if (!confirm(`Delete ${i.sku}? In-use SKUs cannot be deleted.`)) return;
                             const fd = new FormData();
                             fd.set("id", i.id);
                             startTransition(async () => {
                               const r = await deleteInventoryItem(fd);
                               if (!r.ok) setError(r.error);
+                              else setError(null);
                             });
                           }}
                           className="text-red-700 hover:underline"

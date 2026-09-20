@@ -4,8 +4,16 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { dateOnlyToUtc } from "@/lib/job-form";
+import { catalogIsInUse, hardDeleteBlockedMessage } from "@/lib/inventory-catalog";
 
 export type AdminActionResult = { ok: true } | { ok: false; error: string };
+
+function revalidateCatalogPaths() {
+  revalidatePath("/admin/inventory");
+  revalidatePath("/inventory");
+  revalidatePath("/jobs");
+  revalidatePath("/jobs/new");
+}
 
 function parseNonNeg(raw: FormDataEntryValue | null, label: string): number | { error: string } {
   const n = Number(String(raw ?? "").replace(/,/g, "").trim());
@@ -41,10 +49,10 @@ export async function createInventoryItem(formData: FormData): Promise<AdminActi
         reusable,
         startingQty,
         unitCost,
+        active: true,
       },
     });
-    revalidatePath("/admin/inventory");
-    revalidatePath("/inventory");
+    revalidateCatalogPaths();
     return { ok: true };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Failed to create item.";
@@ -88,8 +96,7 @@ export async function updateInventoryItem(formData: FormData): Promise<AdminActi
         unitCost,
       },
     });
-    revalidatePath("/admin/inventory");
-    revalidatePath("/inventory");
+    revalidateCatalogPaths();
     return { ok: true };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Failed to update item.";
@@ -100,25 +107,81 @@ export async function updateInventoryItem(formData: FormData): Promise<AdminActi
   }
 }
 
+/**
+ * Hard-delete only when unused. In-use SKUs keep history — deactivate instead.
+ * Adjustments are usage, not leftover rows to wipe.
+ */
 export async function deleteInventoryItem(formData: FormData): Promise<AdminActionResult> {
   await requireSession();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return { ok: false, error: "Missing item id." };
   try {
-    const used = await prisma.jobMaterial.count({ where: { inventoryItemId: id } });
-    if (used > 0) {
-      return {
-        ok: false,
-        error: "Item is used on job material lines. Remove those lines first, or leave the catalog entry.",
+    const outcome = await prisma.$transaction(async (tx) => {
+      const item = await tx.inventoryItem.findUnique({ where: { id } });
+      if (!item) return { ok: false as const, error: "Inventory item not found." };
+      const [materials, variances, transfersFrom, transfersTo, writeOffs, adjustments] =
+        await Promise.all([
+          tx.jobMaterial.count({ where: { inventoryItemId: id } }),
+          tx.jobMaterialVariance.count({ where: { inventoryItemId: id } }),
+          tx.transferLine.count({ where: { fromInventoryItemId: id } }),
+          tx.transferLine.count({ where: { toInventoryItemId: id } }),
+          tx.writeOff.count({ where: { inventoryItemId: id } }),
+          tx.inventoryAdjustment.count({ where: { inventoryItemId: id } }),
+        ]);
+      const usage = {
+        materials,
+        variances,
+        transfersFrom,
+        transfersTo,
+        writeOffs,
+        adjustments,
       };
-    }
-    await prisma.inventoryAdjustment.deleteMany({ where: { inventoryItemId: id } });
-    await prisma.inventoryItem.delete({ where: { id } });
-    revalidatePath("/admin/inventory");
-    revalidatePath("/inventory");
+      if (catalogIsInUse(usage)) {
+        return {
+          ok: false as const,
+          error: hardDeleteBlockedMessage({ sku: item.sku, counts: usage }),
+        };
+      }
+      await tx.inventoryItem.delete({ where: { id } });
+      return { ok: true as const };
+    });
+    if (!outcome.ok) return outcome;
+    revalidateCatalogPaths();
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Failed to delete item." };
+  }
+}
+
+export async function deactivateInventoryItem(formData: FormData): Promise<AdminActionResult> {
+  await requireSession();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { ok: false, error: "Missing item id." };
+  try {
+    const item = await prisma.inventoryItem.findUnique({ where: { id } });
+    if (!item) return { ok: false, error: "Inventory item not found." };
+    if (!item.active) return { ok: true };
+    await prisma.inventoryItem.update({ where: { id }, data: { active: false } });
+    revalidateCatalogPaths();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed to deactivate item." };
+  }
+}
+
+export async function reactivateInventoryItem(formData: FormData): Promise<AdminActionResult> {
+  await requireSession();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { ok: false, error: "Missing item id." };
+  try {
+    const item = await prisma.inventoryItem.findUnique({ where: { id } });
+    if (!item) return { ok: false, error: "Inventory item not found." };
+    if (item.active) return { ok: true };
+    await prisma.inventoryItem.update({ where: { id }, data: { active: true } });
+    revalidateCatalogPaths();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed to reactivate item." };
   }
 }
 
@@ -147,8 +210,7 @@ export async function createAdjustment(formData: FormData): Promise<AdminActionR
         adjustedAt: dateStr ? dateOnlyToUtc(dateStr) : new Date(),
       },
     });
-    revalidatePath("/admin/inventory");
-    revalidatePath("/inventory");
+    revalidateCatalogPaths();
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Failed to save adjustment." };
