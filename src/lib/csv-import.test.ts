@@ -128,6 +128,40 @@ describe("evaluateImportRows + validator parity", () => {
     }
   });
 
+  it("rejects negative qtyLf with the same LF error as the job form", () => {
+    const parsed = parseImportText(
+      csv(["2026-04-01,MIA,ORD-1,Acme,Install,6x10,-5,100,,,,"])
+    );
+    const formValues = importRowToFormValues(parsed.rows[0], { branchId: "branch-mia" });
+    const form = validateAndNormalize(formValues);
+    expect(form.ok).toBe(false);
+    if (!form.ok) expect(form.error).toMatch(/LF cannot be negative/i);
+
+    const [evaluated] = evaluateImportRows(parsed.rows, lookup());
+    expect(evaluated.row.status).toBe("reject");
+    expect(evaluated.row.rejectReason).toBe(!form.ok ? form.error : "");
+    expect(evaluated.row.message).toMatch(/LF cannot be negative/i);
+    expect(evaluated.payload).toBeNull();
+
+    const plan = planImportCommit(evaluateImportRows(parsed.rows, lookup()));
+    expect(plan.ok).toBe(false);
+    if (!plan.ok) expect(plan.error).toMatch(/rejected row/);
+  });
+
+  it("still accepts blank, zero, and positive qtyLf when the form does", () => {
+    const parsed = parseImportText(
+      csv([
+        "2026-04-01,MIA,ORD-BLANK,Acme,Other,,,0,,,,",
+        "2026-04-02,MIA,ORD-ZERO,Acme,Other,6x10,0,0,,,,",
+        "2026-04-03,MIA,ORD-POS,Acme,Install,6x10,100,10,,,,",
+      ])
+    );
+    const evaluated = evaluateImportRows(parsed.rows, lookup());
+    expect(evaluated.map((e) => e.row.status)).toEqual(["accept", "accept", "accept"]);
+    expect(evaluated.map((e) => e.payload?.qtyLf)).toEqual([null, 0, 100]);
+    expect(planImportCommit(evaluated).ok).toBe(true);
+  });
+
   it("rejects the same bad qty the job form rejects", () => {
     const parsed = parseImportText(
       csv(["2026-04-01,MIA,ORD-1,Acme,Install,6x10,100,0,,,," + "-12"])
