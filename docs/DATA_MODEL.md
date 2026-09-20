@@ -89,7 +89,7 @@ Manual corrections. `quantityDelta` positive adds to on-hand.
 
 ```
 onHand = startingQty
-       + sum (JobMaterial.quantity x sign(job.jobType))   // linked items only
+       + sum (JobMaterial.quantity x sign(job.jobType, item.reusable))   // linked items only
        + sum InventoryAdjustment.quantityDelta
        + sum TransferLine (-from / +to)
        + sum WriteOff (-quantity)
@@ -100,10 +100,15 @@ onHand = startingQty
 |----------------------|------|---------|
 | Install | -1 | Leave yard / install on site |
 | Drop | -1 | Outbound delivery / drop |
-| Pickup | +1 | Return to yard |
+| Pickup | +1 if `reusable`, else 0 | Return to yard (consumables stay consumed) |
 | Other (and unrecognized) | 0 | No inventory effect |
 
-Only these four Title Case labels are recognized. Implementation: `src/lib/inventory.ts`.
+Pickup inbound applies only when `InventoryItem.reusable` is true. Consumables
+(`reusable: false`, e.g. `SCREW-BOLT+ 3/8x3`, aluminum ties, zip ties) still
+decrement on Install/Drop and do **not** restock on Pickup.
+
+Only these four Title Case labels are recognized. Implementation: `src/lib/inventory.ts`
+(`inventorySignForMaterial`).
 
 ## P&L derivation (by order number)
 

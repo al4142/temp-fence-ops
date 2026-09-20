@@ -2,7 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
-import { describeInventoryEffect, inventorySignForJobType } from "@/lib/inventory";
+import {
+  describeInventoryEffect,
+  inventorySignForJobType,
+  inventorySignForMaterial,
+} from "@/lib/inventory";
 import { laborCostForLine, materialCostForLine } from "@/lib/pnl";
 import { isChainlinkType, normalizeFenceType, POST_MOUNT_LABELS } from "@/lib/bom/catalog";
 import { formatSectionLabel, sectionsForJob, type StoredFenceSection } from "@/lib/bom/sections";
@@ -164,8 +168,9 @@ export default async function JobDetailPage({ params }: Props) {
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="font-semibold text-slate-900">Materials (line items)</h2>
         <p className="mb-3 text-xs text-slate-500">
-          Inventory effect = quantity x sign({job.jobType}) = {sign}. Free-text lines do not
-          move on-hand.
+          Inventory effect = quantity x sign({job.jobType}
+          {sign > 0 ? ", reusable" : ""}). Consumables (reusable = false) do not restock on
+          Pickup. Free-text lines do not move on-hand.
         </p>
         <table className="min-w-full text-left text-sm">
           <thead className="border-b text-xs uppercase text-slate-500">
@@ -180,7 +185,11 @@ export default async function JobDetailPage({ params }: Props) {
             {job.materials.map((m) => {
               const name = m.inventoryItem?.name ?? m.itemName ?? "(unnamed)";
               const sku = m.inventoryItem?.sku;
-              const delta = m.inventoryItemId ? sign * m.quantity : 0;
+              const lineSign = inventorySignForMaterial(
+                job.jobType,
+                m.inventoryItem?.reusable !== false
+              );
+              const delta = m.inventoryItemId ? lineSign * m.quantity : 0;
               return (
                 <tr key={m.id}>
                   <td className="py-2 pr-2">

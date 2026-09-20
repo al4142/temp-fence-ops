@@ -1,10 +1,11 @@
 /**
- * Inventory movement rules derived from job.jobType.
+ * Inventory movement rules derived from job.jobType + InventoryItem.reusable.
  *
  * Canonical labels (Title Case) only:
- *   OUTBOUND (negative on-hand): Install, Drop
- *   INBOUND  (positive on-hand): Pickup
+ *   OUTBOUND (negative on-hand): Install, Drop — all linked catalog lines
+ *   INBOUND  (positive on-hand): Pickup — reusable items only
  *   No movement: Other (and any unrecognized string)
+ *   Consumables (`reusable === false`) never restock on inbound jobs
  *
  * Also applied (not job analytics):
  * - Transfers: from yard -qty, to yard +qty
@@ -21,6 +22,19 @@ export function inventorySignForJobType(jobType: string): InventoryDirection {
   if (key === "Install" || key === "Drop") return -1;
   if (key === "Pickup") return 1;
   return 0;
+}
+
+/**
+ * Per-line inventory sign. Missing `reusable` follows the Prisma default (true).
+ * Inbound jobs restock only when reusable is not explicitly false.
+ */
+export function inventorySignForMaterial(
+  jobType: string,
+  reusable: boolean = true
+): InventoryDirection {
+  const sign = inventorySignForJobType(jobType);
+  if (sign > 0 && reusable === false) return 0;
+  return sign;
 }
 
 export function describeInventoryEffect(jobType: string): string {
@@ -50,12 +64,13 @@ export type OnHandRow = {
 
 /**
  * onHand = startingQty
- *   + sum(job material qty * sign(jobType))
+ *   + sum(job material qty * sign(jobType, reusable))
  *   + sum(adjustments)
  *   + sum(transfer deltas)
  *   + sum(write-off deltas)   // always negative qty stored as -quantity
  *   + sum(job material variances)
  * Only materials/variances linked to an InventoryItem affect on-hand.
+ * Pickup restocks reusable items only; consumables stay consumed.
  * Transfers and write-offs are excluded from job analytics.
  */
 export function computeOnHand(params: {
@@ -67,6 +82,7 @@ export function computeOnHand(params: {
     branchId: string;
     startingQty: number;
     unitCost: number;
+    reusable?: boolean;
     branch: { code: string; name: string };
   }>;
   materials: Array<{
@@ -92,10 +108,15 @@ export function computeOnHand(params: {
     quantity: number;
   }>;
 }): OnHandRow[] {
+  const reusableById = new Map(
+    params.items.map((item) => [item.id, item.reusable !== false])
+  );
+
   const movement = new Map<string, number>();
   for (const m of params.materials) {
     if (!m.inventoryItemId) continue;
-    const sign = inventorySignForJobType(m.job.jobType);
+    const reusable = reusableById.get(m.inventoryItemId) ?? true;
+    const sign = inventorySignForMaterial(m.job.jobType, reusable);
     if (sign === 0) continue;
     const prev = movement.get(m.inventoryItemId) ?? 0;
     movement.set(m.inventoryItemId, prev + sign * m.quantity);
