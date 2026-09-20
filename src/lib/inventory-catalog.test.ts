@@ -11,6 +11,8 @@ import {
   emptyCatalogUsage,
   hardDeleteBlockedMessage,
   performCatalogHardDelete,
+  planCatalogDelete,
+  unusedDeleteConfirmMessage,
   validateCatalogItemsForJobAttach,
 } from "./inventory-catalog";
 
@@ -134,6 +136,43 @@ describe("performCatalogHardDelete", () => {
     );
     expect(result).toEqual({ ok: true, sku: "ZZ-TEMP" });
     expect(deleted).toEqual(["item-zz"]);
+  });
+
+  it("plans two distinct dialogs: unused confirm vs in-use Deactivate/Cancel", () => {
+    const unusedPlan = planCatalogDelete("ZZ-TEMP", {
+      counts: emptyCatalogUsage(),
+      refs: [],
+    });
+    expect(unusedPlan).toEqual({
+      path: "unused",
+      sku: "ZZ-TEMP",
+      confirm: "Delete ZZ-TEMP permanently?",
+    });
+    expect(unusedPlan.path === "unused" && unusedPlan.confirm).toBe(
+      unusedDeleteConfirmMessage("ZZ-TEMP")
+    );
+    expect(unusedPlan.path === "unused" ? unusedPlan.confirm : "").not.toMatch(
+      /in use|cannot be deleted|Deactivate/i
+    );
+
+    const inUsePlan = planCatalogDelete(
+      "PANEL-6",
+      catalogUsageSnapshotFromRows({
+        materials: [{ orderNumber: "ORD-1001" }],
+        variances: [],
+        transfers: [],
+        writeOffs: [],
+        adjustments: [],
+      })
+    );
+    expect(inUsePlan.path).toBe("in-use");
+    if (inUsePlan.path !== "in-use") return;
+    expect(inUsePlan.dialog.primaryAction).toBe("Deactivate");
+    expect(inUsePlan.dialog.secondaryAction).toBe("Cancel");
+    expect(inUsePlan.dialog.body).toContain("ORD-1001");
+    expect(inUsePlan.dialog.body).toMatch(/Deactivate/);
+    expect(inUsePlan.dialog.body).not.toBe(unusedDeleteConfirmMessage("PANEL-6"));
+    expect(inUsePlan.dialog.title).not.toBe(unusedDeleteConfirmMessage("PANEL-6"));
   });
 
   it("does not delete an in-use SKU and names the blocking jobs", async () => {

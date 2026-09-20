@@ -157,15 +157,58 @@ export function describeNamedCatalogRefs(refs: CatalogNamedRef[]): string {
   return parts.join("; ");
 }
 
+export function unusedDeleteConfirmMessage(sku: string): string {
+  return `Delete ${sku} permanently?`;
+}
+
+export type InUseDeleteDialog = {
+  title: string;
+  body: string;
+  primaryAction: "Deactivate";
+  secondaryAction: "Cancel";
+};
+
+export function inUseDeleteDialog(params: {
+  sku: string;
+  refs?: CatalogNamedRef[];
+  counts?: CatalogUsageCounts;
+}): InUseDeleteDialog {
+  const named = params.refs?.length ? describeNamedCatalogRefs(params.refs) : "";
+  const usage =
+    named || (params.counts ? describeCatalogUsage(params.counts) : "") || "existing history";
+  return {
+    title: `"${params.sku}" is in use`,
+    body: `Still referenced by ${usage}. Deactivate the SKU instead so job history stays linked.`,
+    primaryAction: "Deactivate",
+    secondaryAction: "Cancel",
+  };
+}
+
 export function hardDeleteBlockedMessage(params: {
   sku: string;
   refs?: CatalogNamedRef[];
   counts?: CatalogUsageCounts;
 }): string {
-  const named = params.refs?.length ? describeNamedCatalogRefs(params.refs) : "";
-  const usage =
-    named || (params.counts ? describeCatalogUsage(params.counts) : "") || "existing history";
-  return `Cannot delete "${params.sku}": still referenced by ${usage}. Deactivate the SKU instead so job history stays linked.`;
+  const dialog = inUseDeleteDialog(params);
+  return `${dialog.title}. ${dialog.body}`;
+}
+
+export type CatalogDeletePlan =
+  | { path: "unused"; sku: string; confirm: string }
+  | { path: "in-use"; sku: string; dialog: InUseDeleteDialog };
+
+export function planCatalogDelete(
+  sku: string,
+  usage: CatalogUsageSnapshot
+): CatalogDeletePlan {
+  if (!catalogIsInUse(usage.counts) && usage.refs.length === 0) {
+    return { path: "unused", sku, confirm: unusedDeleteConfirmMessage(sku) };
+  }
+  return {
+    path: "in-use",
+    sku,
+    dialog: inUseDeleteDialog({ sku, refs: usage.refs, counts: usage.counts }),
+  };
 }
 
 /**

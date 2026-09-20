@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import {
   deactivateInventoryItem,
   deleteInventoryItem,
+  previewCatalogDelete,
   reactivateInventoryItem,
 } from "@/app/admin/inventory/actions";
 import { InventoryItemForm, AdjustmentForm } from "@/components/InventoryAdminForms";
+import type { CatalogNamedRef } from "@/lib/inventory-catalog";
 
 type Branch = { id: string; code: string; name: string };
 type Item = {
@@ -55,6 +57,13 @@ export function InventoryAdminClient({
   const [pending, startTransition] = useTransition();
   const [branchFilter, setBranchFilter] = useState("");
   const [showInactive, setShowInactive] = useState(false);
+  const [inUseDialog, setInUseDialog] = useState<{
+    id: string;
+    sku: string;
+    title: string;
+    body: string;
+    refs: CatalogNamedRef[];
+  } | null>(null);
   const filtered = useMemo(
     () =>
       items.filter(
@@ -71,6 +80,63 @@ export function InventoryAdminClient({
     setFormKey((k) => k + 1);
   }
 
+  function afterSaved() {
+    cancelEdit();
+    router.refresh();
+  }
+
+  function onDeleteClick(item: Item) {
+    setError(null);
+    setInfo(null);
+    startTransition(async () => {
+      const preview = await previewCatalogDelete(item.id);
+      if (!preview.ok) {
+        setError(preview.error);
+        return;
+      }
+      if (preview.path === "unused") {
+        if (!window.confirm(preview.confirm)) return;
+        const fd = new FormData();
+        fd.set("id", preview.id);
+        const r = await deleteInventoryItem(fd);
+        if (!r.ok) {
+          setError(r.error);
+          return;
+        }
+        setRemovedIds((ids) => [...ids, r.deletedId ?? preview.id]);
+        setInfo(`Deleted ${preview.sku}.`);
+        router.refresh();
+        return;
+      }
+      setInUseDialog({
+        id: preview.id,
+        sku: preview.sku,
+        title: preview.title,
+        body: preview.body,
+        refs: preview.refs,
+      });
+    });
+  }
+
+  function onDeactivateFromDialog() {
+    if (!inUseDialog) return;
+    const fd = new FormData();
+    fd.set("id", inUseDialog.id);
+    const sku = inUseDialog.sku;
+    startTransition(async () => {
+      const r = await deactivateInventoryItem(fd);
+      if (!r.ok) {
+        setError(r.error);
+        setInfo(null);
+        return;
+      }
+      setInUseDialog(null);
+      setError(null);
+      setInfo(`Deactivated ${sku}.`);
+      router.refresh();
+    });
+  }
+
   return (
     <div className="space-y-8">
       <InventoryItemForm
@@ -78,6 +144,7 @@ export function InventoryAdminClient({
         branches={branches}
         editing={editing}
         onCancel={cancelEdit}
+        onSaved={afterSaved}
       />
       <AdjustmentForm items={items} />
 
@@ -205,29 +272,7 @@ export function InventoryAdminClient({
                         <button
                           type="button"
                           disabled={pending}
-                          onClick={() => {
-                            if (
-                              !confirm(
-                                `Permanently delete ${i.sku} from the catalog? Unused SKUs are removed. If this SKU is on jobs or inventory history, delete is blocked and you should Deactivate instead.`
-                              )
-                            ) {
-                              return;
-                            }
-                            const fd = new FormData();
-                            fd.set("id", i.id);
-                            startTransition(async () => {
-                              const r = await deleteInventoryItem(fd);
-                              if (!r.ok) {
-                                setError(r.error);
-                                setInfo(null);
-                                return;
-                              }
-                              setError(null);
-                              setInfo(`Deleted ${i.sku}.`);
-                              setRemovedIds((ids) => [...ids, i.id]);
-                              router.refresh();
-                            });
-                          }}
+                          onClick={() => onDeleteClick(i)}
                           className="text-red-700 hover:underline"
                         >
                           Delete
@@ -282,6 +327,52 @@ export function InventoryAdminClient({
           </table>
         </div>
       </div>
+
+      {inUseDialog ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          role="presentation"
+          onClick={() => setInUseDialog(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="catalog-in-use-title"
+            className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="catalog-in-use-title" className="text-lg font-semibold text-slate-900">
+              {inUseDialog.title}
+            </h3>
+            <p className="mt-2 text-sm text-slate-700">{inUseDialog.body}</p>
+            {inUseDialog.refs.length > 0 ? (
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                {inUseDialog.refs.slice(0, 12).map((ref, idx) => (
+                  <li key={`${ref.kind}-${ref.label}-${idx}`}>{ref.label}</li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setInUseDialog(null)}
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={onDeactivateFromDialog}
+                className="rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-60"
+              >
+                Deactivate
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

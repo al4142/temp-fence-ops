@@ -39,10 +39,12 @@ export function InventoryItemForm({
   branches,
   editing,
   onCancel,
+  onSaved,
 }: {
   branches: Branch[];
   editing: Item | null;
   onCancel: () => void;
+  onSaved?: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(
@@ -75,7 +77,7 @@ export function InventoryItemForm({
         setError(result.error);
         return;
       }
-      onCancel();
+      (onSaved ?? onCancel)();
     });
   }
 
