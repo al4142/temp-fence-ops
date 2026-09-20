@@ -278,4 +278,18 @@ describe("validateAndNormalize job type", () => {
     expect(result.data.terminalsManual).toBe(2);
     expect(result.data.weightMode).toBe("BFOOT");
   });
+
+  it("rejects negative LF and still allows blank / zero / positive", () => {
+    const negative = validateAndNormalize({ ...base(), qtyLf: "-5" });
+    expect(negative.ok).toBe(false);
+    if (!negative.ok) expect(negative.error).toMatch(/LF cannot be negative/i);
+
+    expect(validateAndNormalize({ ...base(), qtyLf: "" }).ok).toBe(true);
+    const zero = validateAndNormalize({ ...base(), qtyLf: "0" });
+    expect(zero.ok).toBe(true);
+    if (zero.ok) expect(zero.data.qtyLf).toBe(0);
+    const positive = validateAndNormalize({ ...base(), qtyLf: "100" });
+    expect(positive.ok).toBe(true);
+    if (positive.ok) expect(positive.data.qtyLf).toBe(100);
+  });
 });

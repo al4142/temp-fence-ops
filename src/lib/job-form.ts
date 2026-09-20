@@ -320,6 +320,9 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
     if (s.qtyLf.trim() && qtyLf === null) {
       return { ok: false, error: `Section ${i + 1}: LF is not a number.` };
     }
+    if (qtyLf !== null && qtyLf < 0) {
+      return { ok: false, error: `Section ${i + 1}: LF cannot be negative.` };
+    }
     fenceSections.push({
       fenceType: s.fenceType.trim() || null,
       qtyLf,
