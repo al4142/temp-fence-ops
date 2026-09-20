@@ -8,8 +8,16 @@ import {
   previewCatalogDelete,
   reactivateInventoryItem,
 } from "@/app/admin/inventory/actions";
+import { CatalogInUseDialog } from "@/components/CatalogInUseDialog";
 import { InventoryItemForm, AdjustmentForm } from "@/components/InventoryAdminForms";
-import type { CatalogNamedRef } from "@/lib/inventory-catalog";
+import {
+  catalogItemCountIsInUse,
+  countsFromItemUsage,
+  inUseDeleteDialog,
+  unusedDeleteConfirmMessage,
+  type CatalogItemUsageCount,
+  type CatalogNamedRef,
+} from "@/lib/inventory-catalog";
 
 type Branch = { id: string; code: string; name: string };
 type Item = {
@@ -24,6 +32,7 @@ type Item = {
   startingQty: number;
   unitCost: number;
   branch: Branch;
+  _count: CatalogItemUsageCount;
 };
 type OnHand = { itemId: string; onHand: number; movementQty: number; adjustmentQty: number };
 type Adjustment = {
@@ -85,36 +94,64 @@ export function InventoryAdminClient({
     router.refresh();
   }
 
+  function openInUseDialog(item: Item, refs: CatalogNamedRef[] = []) {
+    const dialog = inUseDeleteDialog({
+      sku: item.sku,
+      refs,
+      counts: item._count ? countsFromItemUsage(item._count) : undefined,
+    });
+    setInUseDialog({
+      id: item.id,
+      sku: item.sku,
+      title: dialog.title,
+      body: dialog.body,
+      refs,
+    });
+  }
+
   function onDeleteClick(item: Item) {
     setError(null);
     setInfo(null);
+    // In-use is decided from server-rendered _count — never window.confirm.
+    if (catalogItemCountIsInUse(item._count)) {
+      openInUseDialog(item);
+      startTransition(async () => {
+        const preview = await previewCatalogDelete(item.id);
+        if (preview.ok && preview.path === "in-use") {
+          setInUseDialog({
+            id: preview.id,
+            sku: preview.sku,
+            title: preview.title,
+            body: preview.body,
+            refs: preview.refs,
+          });
+        }
+      });
+      return;
+    }
+    if (!window.confirm(unusedDeleteConfirmMessage(item.sku))) return;
+    const fd = new FormData();
+    fd.set("id", item.id);
     startTransition(async () => {
-      const preview = await previewCatalogDelete(item.id);
-      if (!preview.ok) {
-        setError(preview.error);
-        return;
-      }
-      if (preview.path === "unused") {
-        if (!window.confirm(preview.confirm)) return;
-        const fd = new FormData();
-        fd.set("id", preview.id);
-        const r = await deleteInventoryItem(fd);
-        if (!r.ok) {
-          setError(r.error);
+      const r = await deleteInventoryItem(fd);
+      if (!r.ok) {
+        const preview = await previewCatalogDelete(item.id);
+        if (preview.ok && preview.path === "in-use") {
+          setInUseDialog({
+            id: preview.id,
+            sku: preview.sku,
+            title: preview.title,
+            body: preview.body,
+            refs: preview.refs,
+          });
           return;
         }
-        setRemovedIds((ids) => [...ids, r.deletedId ?? preview.id]);
-        setInfo(`Deleted ${preview.sku}.`);
-        router.refresh();
+        setError(r.error);
         return;
       }
-      setInUseDialog({
-        id: preview.id,
-        sku: preview.sku,
-        title: preview.title,
-        body: preview.body,
-        refs: preview.refs,
-      });
+      setRemovedIds((ids) => [...ids, r.deletedId ?? item.id]);
+      setInfo(`Deleted ${item.sku}.`);
+      router.refresh();
     });
   }
 
@@ -272,6 +309,9 @@ export function InventoryAdminClient({
                         <button
                           type="button"
                           disabled={pending}
+                          data-catalog-delete={
+                            catalogItemCountIsInUse(i._count) ? "in-use" : "unused"
+                          }
                           onClick={() => onDeleteClick(i)}
                           className="text-red-700 hover:underline"
                         >
@@ -329,49 +369,15 @@ export function InventoryAdminClient({
       </div>
 
       {inUseDialog ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
-          role="presentation"
-          onClick={() => setInUseDialog(null)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="catalog-in-use-title"
-            className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-4 shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 id="catalog-in-use-title" className="text-lg font-semibold text-slate-900">
-              {inUseDialog.title}
-            </h3>
-            <p className="mt-2 text-sm text-slate-700">{inUseDialog.body}</p>
-            {inUseDialog.refs.length > 0 ? (
-              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
-                {inUseDialog.refs.slice(0, 12).map((ref, idx) => (
-                  <li key={`${ref.kind}-${ref.label}-${idx}`}>{ref.label}</li>
-                ))}
-              </ul>
-            ) : null}
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => setInUseDialog(null)}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={onDeactivateFromDialog}
-                className="rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-60"
-              >
-                Deactivate
-              </button>
-            </div>
-          </div>
-        </div>
+        <CatalogInUseDialog
+          sku={inUseDialog.sku}
+          title={inUseDialog.title}
+          body={inUseDialog.body}
+          refs={inUseDialog.refs}
+          pending={pending}
+          onCancel={() => setInUseDialog(null)}
+          onDeactivate={onDeactivateFromDialog}
+        />
       ) : null}
     </div>
   );

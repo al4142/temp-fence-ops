@@ -168,6 +168,32 @@ export type InUseDeleteDialog = {
   secondaryAction: "Cancel";
 };
 
+export type CatalogItemUsageCount = {
+  materials: number;
+  variances: number;
+  writeOffs: number;
+  adjustments: number;
+  transferLinesFrom: number;
+  transferLinesTo: number;
+};
+
+export function countsFromItemUsage(c: CatalogItemUsageCount): CatalogUsageCounts {
+  return {
+    materials: c.materials,
+    variances: c.variances,
+    transfersFrom: c.transferLinesFrom,
+    transfersTo: c.transferLinesTo,
+    writeOffs: c.writeOffs,
+    adjustments: c.adjustments,
+  };
+}
+
+/** Missing counts fail closed (treat as in-use) so unused confirm never shows. */
+export function catalogItemCountIsInUse(c?: CatalogItemUsageCount | null): boolean {
+  if (!c) return true;
+  return catalogIsInUse(countsFromItemUsage(c));
+}
+
 export function inUseDeleteDialog(params: {
   sku: string;
   refs?: CatalogNamedRef[];
@@ -177,7 +203,7 @@ export function inUseDeleteDialog(params: {
   const usage =
     named || (params.counts ? describeCatalogUsage(params.counts) : "") || "existing history";
   return {
-    title: `"${params.sku}" is in use`,
+    title: `${params.sku} is in use`,
     body: `Still referenced by ${usage}. Deactivate the SKU instead so job history stays linked.`,
     primaryAction: "Deactivate",
     secondaryAction: "Cancel",

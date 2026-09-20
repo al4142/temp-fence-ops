@@ -3,6 +3,7 @@ import { emptyJobFormValues, validateAndNormalize } from "./job-form";
 import { collectJobInventoryItemIds } from "./inventory-yard";
 import {
   catalogIsInUse,
+  catalogItemCountIsInUse,
   catalogLineDisplayName,
   catalogItemsForJobPicker,
   catalogUsageSnapshotFromRows,
@@ -10,6 +11,7 @@ import {
   describeCatalogUsage,
   emptyCatalogUsage,
   hardDeleteBlockedMessage,
+  inUseDeleteDialog,
   performCatalogHardDelete,
   planCatalogDelete,
   unusedDeleteConfirmMessage,
@@ -172,7 +174,41 @@ describe("performCatalogHardDelete", () => {
     expect(inUsePlan.dialog.body).toContain("ORD-1001");
     expect(inUsePlan.dialog.body).toMatch(/Deactivate/);
     expect(inUsePlan.dialog.body).not.toBe(unusedDeleteConfirmMessage("PANEL-6"));
+    expect(inUsePlan.dialog.title).toBe("PANEL-6 is in use");
     expect(inUsePlan.dialog.title).not.toBe(unusedDeleteConfirmMessage("PANEL-6"));
+  });
+
+  it("treats item _count as in-use so unused confirm is never shown", () => {
+    expect(
+      catalogItemCountIsInUse({
+        materials: 2,
+        variances: 0,
+        writeOffs: 0,
+        adjustments: 0,
+        transferLinesFrom: 0,
+        transferLinesTo: 0,
+      })
+    ).toBe(true);
+    expect(
+      catalogItemCountIsInUse({
+        materials: 0,
+        variances: 0,
+        writeOffs: 0,
+        adjustments: 0,
+        transferLinesFrom: 0,
+        transferLinesTo: 0,
+      })
+    ).toBe(false);
+    expect(catalogItemCountIsInUse(null)).toBe(true);
+    const dialog = inUseDeleteDialog({
+      sku: "PANEL-6",
+      counts: { ...emptyCatalogUsage(), materials: 2 },
+    });
+    expect(dialog.title).toBe("PANEL-6 is in use");
+    expect(dialog.primaryAction).toBe("Deactivate");
+    expect(dialog.secondaryAction).toBe("Cancel");
+    expect(unusedDeleteConfirmMessage("PANEL-6")).toBe("Delete PANEL-6 permanently?");
+    expect(unusedDeleteConfirmMessage("PANEL-6")).not.toMatch(/in use|cannot be deleted/i);
   });
 
   it("does not delete an in-use SKU and names the blocking jobs", async () => {

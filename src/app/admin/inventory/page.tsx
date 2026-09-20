@@ -9,7 +9,19 @@ export default async function AdminInventoryPage() {
   const [branches, items, materials, adjustments, recentAdjustments] = await Promise.all([
     prisma.branch.findMany({ orderBy: [{ active: "desc" }, { code: "asc" }] }),
     prisma.inventoryItem.findMany({
-      include: { branch: true },
+      include: {
+        branch: true,
+        _count: {
+          select: {
+            materials: true,
+            variances: true,
+            writeOffs: true,
+            adjustments: true,
+            transferLinesFrom: true,
+            transferLinesTo: true,
+          },
+        },
+      },
       orderBy: [{ active: "desc" }, { branch: { code: "asc" } }, { sku: "asc" }],
     }),
     prisma.jobMaterial.findMany({
