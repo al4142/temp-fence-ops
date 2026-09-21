@@ -1,6 +1,6 @@
 # BOM rules — approved decisions
 
-**Status:** Locked through Alex updates 2026-09-15 → 2026-09-21 (ET). 6′ slide field recipe (ALE-30) locked 2026-09-21. Barb rolls, bottom rail, tension-wire defer confirmed AM Sep 16.  
+**Status:** Locked through Alex updates 2026-09-15 → 2026-09-21 (ET). 6′ slide field recipe (ALE-30) locked 2026-09-21. 6′ slide terminal SKU emit (gate ×2 + extras, including LF=0 / panel-host; no double-count when CL+LF>0) locked 2026-09-21 after [PR #22](https://github.com/al4142/temp-fence-ops/pull/22). Barb rolls, bottom rail, tension-wire defer confirmed AM Sep 16.  
 **App:** Temp Fence Ops  
 **Excel draft:** `BOM_FROM_EXCEL_DRAFT.md` = historical reverse-engineer; this file wins on conflicts.  
 **Implementation:** `src/lib/bom/` (calculator + job create/edit Generate BOM).
@@ -112,6 +112,8 @@ Manual = corners + start/stop + extras.
 
 Swing and 8′ slides add **0** extras. Those extras use the same terminal SKU / tension-band stack (driven vs plate still follows section `postMount`).
 
+**Emit (live, PR #22):** `terminals_total` for a 6′ slide is **not count-only**. Gate-rule ×2 + extras always materialize as the terminal SKU stack (posts + tension bar + brace/tension bands), including when chainlink **LF = 0** (no wire / no line posts) or the host section is **panel / barricade**. Panel / barricade / empty type → usual CL6 driven SKU (`8' x 2-1/2`). **Do not double-count** when chainlink LF > 0: one emission (the chainlink recipe already uses `terminals_total`). Qty 1 on CL6: `12x6` → **4**, `15x6` → **5**, `20x6` → **6**, `24x6` → **7** of `8' x 2-1/2` — same at LF=0 or LF>0 (`24x6` is **7, never 14**).
+
 From `terminals_total` (temp fence — **fewer bands than permanent/Hoover**):
 
 | Material | Qty (Excel / temp) |
@@ -178,7 +180,7 @@ A job has **one or more fence sections**. Generate BOM runs each section’s rec
 
 **Mixed driven + plate** = two (or more) chainlink sections with the LF split (Option A). Panels with T-stands can sit on the same job as chainlink.
 
-**Gates are per-section** (panel and/or chainlink), not job-global only. Auto terminals (2 per gate) and manual terminals apply to **that section’s** terminal count (chainlink posts/bands). **6′ slide track-support terminals** still emit as the usual CL6 terminal SKU stack when the chainlink body does not run (LF=0, panel, or barricade).
+**Gates are per-section** (panel and/or chainlink), not job-global only. Auto terminals (2 per gate) and manual terminals apply to **that section’s** terminal count (chainlink posts/bands). **6′ slide terminals** (gate ×2 + extras) still emit as the usual CL6 terminal SKU stack when the chainlink body does not run (LF=0, panel, or barricade). Chainlink + LF>0 must **not** double-count that stack — see §7.
 
 Screen SKU stays **job-level**: rolls = `CEILING(sum of section LF / 50)`.
 
@@ -252,7 +254,9 @@ brackets = TRACK BRACKET 2-1/2 × table qty
 
 **Horizontal gate pipe (locked):** 1-3/8″ **gate-frame** tube — top of the gate + bottom of the gate, each = opening. Table LF: `{12:24, 15:30, 20:40, 24:48}`. This is **not** fence-side overhead/cantilever track. Inventory emits existing `TOP RAIL` sticks as `CEILING(table_LF / 21)` (same 21′ stick as fence rail; storage conversion only). Open question for ops: dedicated SKU vs shared top-rail SKU.
 
-**Extra track posts:** explicit map `{12:2, 15:3, 20:4, 24:5}` — not a guessed `W/5` formula. Feed the same terminal stack as `terminals_total` (posts + tension bar + brace/tension bands). That stack still emits when the chainlink fence body does not run: **chainlink LF=0**, or a **panel / barricade** section hosting a 6′ slide, as the usual CL6 driven SKU (`8' x 2-1/2`). On a chainlink section, driven vs plate still follows `postMount`. Brackets `{12:6, 15:8, 20:10, 24:12}`. Rollers always 2; carrier always 1. Multiply table rows by qty.
+**Extra track posts:** explicit map `{12:2, 15:3, 20:4, 24:5}` — not a guessed `W/5` formula. Feed the same terminal stack as `terminals_total` (posts + tension bar + brace/tension bands).
+
+**Always emit (even without a chainlink body):** qty 1 on CL6 → **4 / 5 / 6 / 7** × `8' x 2-1/2` for `12x6` / `15x6` / `20x6` / `24x6 SLIDE` (gate ×2 + extras). Same counts when **LF = 0** or the host is **panel / barricade**. Chainlink **LF > 0** still **7 not 14** for `24x6` (no second stack on top of the fence recipe). On a chainlink section, driven vs plate still follows `postMount`. Panel / barricade / empty type → CL6 driven SKU. Brackets `{12:6, 15:8, 20:10, 24:12}`. Rollers always 2; carrier always 1. Multiply table rows by qty.
 
 ### 8′ slide hardware (Excel — thin math until takeoff)
 
@@ -292,6 +296,7 @@ TRACK BRACKET 2-1/2 =
 [x] Barb: arm per line post; 3 strands; terminal secure
 [x] Screens CEIL/50; zip 110/roll
 [x] Slide 6′ = ALE-30 field recipe; 8′ slides = Excel thin (takeoff pending)
+[x] 6′ slide terminals (×2 + extras) emit at LF=0 and on panel-host; CL+LF>0 does not double-count
 [x] Pickup inventory up
 [x] Barb terminal bands: 3 per terminal (one per strand)
 [x] Rail ends on terminals for top and/or bottom (Excel-style + tension band)
