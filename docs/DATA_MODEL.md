@@ -47,7 +47,7 @@ Key fields: `date`, `branchId`, `class`, `orderNumber`, `customer`, site fields,
 fence specs, `revenue`. `lodging` / `freight` / `misc` are **denormalized sums** of their line tables.
 
 - `jobType` — Title Case only: **Install**, **Pickup**, **Drop**, **Other**, **Site Walk** (`JOB_TYPES` in `src/lib/job-constants.ts`).
-- `status` — Title Case **Active** | **Cancelled** (`JOB_STATUSES`). Default **Active**. Create always inserts Active. Cancelled stays on Jobs / the day list; inventory sign is 0; P&L and analytics exclude the ticket. Materials / labor / cost lines are kept (not wiped).
+- `status` — Title Case **Active** | **Cancelled** (`JOB_STATUSES`), same pattern as `jobType`. Prisma `@default("Active")`. Blank / missing treated as Active. Create always inserts Active (no picker). Edit may set Cancelled. Cancelled stays on Jobs / the day list; inventory sign is 0 regardless of `jobType`; P&L and analytics exclude the ticket. Materials / labor / cost lines / variances are kept (not wiped). Setting status back to Active restores that type’s inventory sign and P&L inclusion.
 - `class` — optional string. Install / Pickup / Drop / Other: **EVENT**, **CONSTRUCTION**, **OTHER** (`JOB_CLASSES`). Site Walk: **Non Pay**, **Site Visit** (`SITE_WALK_CLASSES`). The form swaps the dropdown when type changes; class is **not** a Jobs-table column. Import stores the CSV cell as-is (no class alias map).
 - Site Walk may omit fence type, LF, and materials, and may keep a 0/0 hour labor row for attribution. Other types keep today’s required-line rules (unnamed material rows with a non-zero qty still error; 0/0 labor rows are dropped).
 
@@ -57,7 +57,7 @@ BOM generator inputs (optional; used by **Generate BOM** on create/edit):
 - `screenSku` is job-level (rolls from the sum of section LF). `screen` stays in sync as `Boolean(screenSku)`
 
 Live recipes: [BOM_APPROVED.md](./BOM_APPROVED.md). Calculator: `src/lib/bom/`.
-Install vs Pickup does **not** change BOM quantities (inventory sign is separate).
+Install vs Pickup does **not** change BOM quantities (inventory sign is separate; **Cancelled** still forces sign 0).
 
 ### Job cost lines
 - `JobLodgingLine` - amount, hotel/facility, notes
@@ -69,7 +69,7 @@ Prefer `inventoryItemId` for catalog items (drives inventory + P&L cost), or `it
 
 ### JobMaterialVariance
 Job-tied inventory delta (`quantity` signed): damaged on site / lost / extra used / returned unused.
-Moves on-hand; P&L treats `-qty * unitCost` as variance cost.
+Moves on-hand unless the job is **Cancelled**; P&L treats `-qty * unitCost` as variance cost (Cancelled tickets excluded from P&L).
 
 ### JobLabor
 `regularHours` + `overtimeHours` against an `Employee`. Cost = `reg * rate + ot * rate * 1.5`.
@@ -122,7 +122,7 @@ Canonical Title Case labels: Install, Pickup, Drop, Other, Site Walk. Implementa
 
 ## P&L derivation (by order number)
 
-Cancelled tickets are **excluded** from every component (revenue, labor, materials, lodging/freight/misc, variance). Order rollup `jobCount` is Active tickets only.
+Cancelled tickets are **excluded** from every component (revenue, labor, materials, lodging/freight/misc, variance). Order rollup `jobCount` is Active tickets only. An order whose tickets are all Cancelled has no P&L (`buildOrderPnL` returns null). Active Install / Pickup / Drop / Other / Site Walk formulas below are otherwise unchanged.
 
 | Component | Formula |
 |-----------|---------|
