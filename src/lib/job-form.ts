@@ -1,8 +1,12 @@
 import {
   allowsEmptyFenceAndMaterials,
   allowsZeroHourLabor,
+  isJobStatus,
   isJobType,
+  JOB_STATUS_ACTIVE,
+  jobStatusMustBeMessage,
   jobTypeMustBeMessage,
+  normalizeJobStatus,
   normalizeJobType,
 } from "./job-constants";
 import { VARIANCE_REASONS } from "./ops-constants";
@@ -63,6 +67,8 @@ export type JobFormValues = {
   address: string;
   city: string;
   jobType: string;
+  /** Active | Cancelled. Create always Active; edit may set Cancelled. */
+  status: string;
   fenceType: string;
   qtyLf: string;
   screen: boolean;
@@ -99,6 +105,7 @@ export type JobFormPayload = {
   address: string | null;
   city: string | null;
   jobType: string;
+  status: string;
   fenceType: string | null;
   qtyLf: number | null;
   screen: boolean;
@@ -168,6 +175,7 @@ export function emptyJobFormValues(defaults?: {
     address: "",
     city: "",
     jobType: "Install",
+    status: JOB_STATUS_ACTIVE,
     fenceType: "",
     qtyLf: "",
     screen: false,
@@ -200,6 +208,7 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
   const branchId = input.branchId.trim();
   const date = input.date.trim();
   const jobType = normalizeJobType(input.jobType);
+  const status = normalizeJobStatus(input.status);
   const customer = input.customer.trim() || "TBD";
 
   if (!orderNumber) return { ok: false, error: "Order number is required." };
@@ -208,6 +217,9 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
   if (!jobType) return { ok: false, error: "Job type is required." };
   if (!isJobType(jobType)) {
     return { ok: false, error: jobTypeMustBeMessage() };
+  }
+  if (!isJobStatus(status)) {
+    return { ok: false, error: jobStatusMustBeMessage() };
   }
 
   if (Number.isNaN(Date.parse(date))) {
@@ -364,6 +376,7 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
       address: input.address.trim() || null,
       city: input.city.trim() || null,
       jobType,
+      status,
       fenceType: summary.fenceType ?? canonicalFirst,
       qtyLf: summary.qtyLf,
       screen,

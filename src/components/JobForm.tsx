@@ -87,6 +87,7 @@ export function JobForm({
   const [address, setAddress] = useState(initial.address);
   const [city, setCity] = useState(initial.city);
   const [jobType, setJobType] = useState(initial.jobType);
+  const [status, setStatus] = useState(initial.status);
   const [screenSku, setScreenSku] = useState(initial.screenSku ?? "");
   const [sections, setSections] = useState(() => {
     const resolved = resolveFormSections(initial);
@@ -191,6 +192,7 @@ export function JobForm({
       address,
       city,
       jobType,
+      status,
       fenceType: sections[0]?.fenceType ?? "",
       qtyLf: sections[0]?.qtyLf ?? "",
       screen: Boolean(screenSku),
@@ -329,6 +331,7 @@ export function JobForm({
         branches={branches}
         inputClass={inputClass}
         labelClass={labelClass}
+        showStatus={mode === "edit"}
         date={date}
         setDate={setDate}
         branchId={branchId}
@@ -345,6 +348,8 @@ export function JobForm({
         setCity={setCity}
         jobType={jobType}
         setJobType={setJobType}
+        status={status}
+        setStatus={setStatus}
         notes={notes}
         setNotes={setNotes}
         accountExec={accountExec}

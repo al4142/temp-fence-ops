@@ -6,6 +6,7 @@ import {
   jobVisibleOnJobsList,
   jobsListWhere,
   jobsOnCalendarDay,
+  parseHideCancelled,
   type JobsListVisibilityJob,
 } from "./jobs-list";
 
@@ -55,14 +56,29 @@ describe("jobsListWhere", () => {
     expect(Object.keys(where).sort()).toEqual(["OR", "branchId", "date", "jobType"]);
   });
 
-  it("unfiltered where is empty (every saved job, including $0 Site Walk)", () => {
+  it("unfiltered where is empty (every saved job, including $0 Site Walk and Cancelled)", () => {
     expect(jobsListWhere({})).toEqual({});
+    expect(jobsListWhere({})).not.toHaveProperty("status");
   });
 
   it("same-day From/To is the calendar day list (UTC noon bounds)", () => {
     expect(jobsListWhere({ from: DAY, to: DAY })).toEqual({
       date: { gte: dateOnlyToUtc(DAY), lte: dateOnlyToUtc(DAY) },
     });
+  });
+
+  it("Hide cancelled adds a status predicate; default does not", () => {
+    expect(jobsListWhere({ hideCancelled: true })).toEqual({
+      status: { not: "Cancelled" },
+    });
+    expect(jobsListWhere({ from: DAY, to: DAY, hideCancelled: true })).toEqual({
+      date: { gte: dateOnlyToUtc(DAY), lte: dateOnlyToUtc(DAY) },
+      status: { not: "Cancelled" },
+    });
+    expect(parseHideCancelled(undefined)).toBe(false);
+    expect(parseHideCancelled("")).toBe(false);
+    expect(parseHideCancelled("1")).toBe(true);
+    expect(parseHideCancelled("true")).toBe(true);
   });
 });
 
@@ -136,6 +152,39 @@ describe("jobVisibleOnJobsList — existing types (regression)", () => {
       false
     );
     expect(jobVisibleOnJobsList(row({ jobType: "Install" }), { jobType: "Install" })).toBe(
+      true
+    );
+  });
+});
+
+describe("jobVisibleOnJobsList — Cancelled", () => {
+  const cancelledInstall: JobsListVisibilityJob = row({
+    jobType: "Install",
+    status: "Cancelled",
+    orderNumber: "ORD-CXL",
+    revenue: 4200,
+    materialCount: 4,
+  });
+
+  it("shows Cancelled jobs on the unfiltered Jobs list and same-day list", () => {
+    expect(jobVisibleOnJobsList(cancelledInstall, {})).toBe(true);
+    expect(jobVisibleOnJobsList(cancelledInstall, { from: DAY, to: DAY })).toBe(true);
+    expect(jobIsOnCalendarDay(cancelledInstall.date, DAY)).toBe(true);
+    expect(jobsOnCalendarDay([cancelledInstall], DAY)).toEqual([cancelledInstall]);
+  });
+
+  it("Hide cancelled omits them; Active Install still shows", () => {
+    expect(jobVisibleOnJobsList(cancelledInstall, { hideCancelled: true })).toBe(false);
+    expect(
+      jobVisibleOnJobsList(cancelledInstall, { from: DAY, to: DAY, hideCancelled: true })
+    ).toBe(false);
+    expect(jobVisibleOnJobsList(row({ jobType: "Install" }), { hideCancelled: true })).toBe(
+      true
+    );
+  });
+
+  it("missing status is treated as Active (visible even with Hide cancelled)", () => {
+    expect(jobVisibleOnJobsList(row({ status: undefined }), { hideCancelled: true })).toBe(
       true
     );
   });

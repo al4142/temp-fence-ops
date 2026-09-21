@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
   JOB_CLASSES,
+  JOB_STATUSES,
+  JOB_STATUS_ACTIVE,
+  JOB_STATUS_CANCELLED,
   JOB_TYPES,
   SITE_WALK_CLASSES,
   allowsEmptyFenceAndMaterials,
   allowsZeroHourLabor,
   classesForJobType,
+  isCancelledStatus,
+  isJobStatus,
   isJobType,
   mapImportJobType,
+  normalizeJobStatus,
   normalizeJobType,
 } from "./job-constants";
 import { computeOnHand, inventorySignForJobType } from "./inventory";
@@ -214,6 +220,13 @@ describe("inventorySignForJobType", () => {
     expect(other[0].onHand).toBe(100);
     expect(siteWalk[0].movementQty).toBe(0);
     expect(siteWalk[0].onHand).toBe(100);
+  });
+
+  it("Cancelled overrides type sign; Active / omitted status keep type sign", () => {
+    expect(inventorySignForJobType("Install", "Cancelled")).toBe(0);
+    expect(inventorySignForJobType("Pickup", "Cancelled")).toBe(0);
+    expect(inventorySignForJobType("Install", "Active")).toBe(-1);
+    expect(inventorySignForJobType("Install")).toBe(-1);
   });
 });
 
@@ -458,5 +471,64 @@ describe("validateAndNormalize existing job types (regression)", () => {
     expect(result.data.labor).toEqual([
       { employeeId: "emp-1", regularHours: 8, overtimeHours: 2 },
     ]);
+  });
+});
+
+describe("job status Active | Cancelled", () => {
+  function base() {
+    return {
+      ...emptyJobFormValues({ branchId: "b1", date: "2026-03-05" }),
+      orderNumber: "ORD-1",
+    };
+  }
+
+  it("exposes Title Case statuses; blank normalizes to Active", () => {
+    expect([...JOB_STATUSES]).toEqual(["Active", "Cancelled"]);
+    expect(normalizeJobStatus("")).toBe(JOB_STATUS_ACTIVE);
+    expect(normalizeJobStatus(undefined)).toBe(JOB_STATUS_ACTIVE);
+    expect(normalizeJobStatus("cancelled")).toBe(JOB_STATUS_CANCELLED);
+    expect(isJobStatus("Active")).toBe(true);
+    expect(isJobStatus("Cancelled")).toBe(true);
+    expect(isCancelledStatus("Cancelled")).toBe(true);
+    expect(isCancelledStatus("Active")).toBe(false);
+    expect(isCancelledStatus(undefined)).toBe(false);
+  });
+
+  it("empty form and omitted status save Active", () => {
+    expect(emptyJobFormValues().status).toBe(JOB_STATUS_ACTIVE);
+    const omitted = validateAndNormalize({ ...base(), status: "" });
+    expect(omitted.ok).toBe(true);
+    if (omitted.ok) expect(omitted.data.status).toBe(JOB_STATUS_ACTIVE);
+  });
+
+  it("edit can set Cancelled and keeps materials / labor", () => {
+    const result = validateAndNormalize({
+      ...base(),
+      status: "Cancelled",
+      materials: [
+        { inventoryItemId: "item-1", itemName: null, quantity: 10, notes: null },
+      ],
+      labor: [{ employeeId: "emp-1", regularHours: 8, overtimeHours: 0 }],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.status).toBe(JOB_STATUS_CANCELLED);
+    expect(result.data.materials).toHaveLength(1);
+    expect(result.data.materials[0].quantity).toBe(10);
+    expect(result.data.labor).toEqual([
+      { employeeId: "emp-1", regularHours: 8, overtimeHours: 0 },
+    ]);
+  });
+
+  it("rejects unknown status; existing types still validate as Active", () => {
+    expect(validateAndNormalize({ ...base(), status: "Closed" }).ok).toBe(false);
+    for (const jobType of ["Install", "Pickup", "Drop", "Other", "Site Walk"] as const) {
+      const result = validateAndNormalize({ ...base(), jobType, status: "Active" });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.jobType).toBe(jobType);
+        expect(result.data.status).toBe(JOB_STATUS_ACTIVE);
+      }
+    }
   });
 });

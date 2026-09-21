@@ -18,6 +18,7 @@ import {
   type ImportPreviewSummary,
   type ParsedImportRow,
 } from "@/lib/csv-import";
+import { JOB_STATUS_ACTIVE } from "@/lib/job-constants";
 
 /**
  * Preview payload for Dutch’s import UI.
@@ -233,7 +234,9 @@ export async function commitCsvImport(formData: FormData): Promise<ImportCommitR
             return "updated";
           }
 
-          const job = await tx.job.create({ data: jobFields });
+          const job = await tx.job.create({
+            data: { ...jobFields, status: JOB_STATUS_ACTIVE },
+          });
           if (write.laborData.length > 0) {
             await tx.jobLabor.createMany({
               data: write.laborData.map((l) => ({ jobId: job.id, ...l })),

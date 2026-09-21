@@ -9,6 +9,7 @@ export type JobsFilterValues = {
   branch: string;
   jobType: string;
   q: string;
+  hideCancelled: boolean;
 };
 
 type Props = {
@@ -25,7 +26,8 @@ export function JobsFilters({ filters, branches, total, page, pageSize }: Props)
     Boolean(filters.to) ||
     Boolean(filters.branch) ||
     Boolean(filters.jobType) ||
-    Boolean(filters.q);
+    Boolean(filters.q) ||
+    filters.hideCancelled;
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -36,6 +38,7 @@ export function JobsFilters({ filters, branches, total, page, pageSize }: Props)
     if (filters.branch) params.set("branch", filters.branch);
     if (filters.jobType) params.set("jobType", filters.jobType);
     if (filters.q) params.set("q", filters.q);
+    if (filters.hideCancelled) params.set("hideCancelled", "1");
     if (p > 1) params.set("page", String(p));
     const qs = params.toString();
     return qs ? `/jobs?${qs}` : "/jobs";
@@ -120,6 +123,17 @@ export function JobsFilters({ filters, branches, total, page, pageSize }: Props)
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none"
           />
         </div>
+        <label className="flex items-center gap-2 pb-2 text-sm text-slate-700">
+          <input
+            id="hideCancelled"
+            name="hideCancelled"
+            type="checkbox"
+            value="1"
+            defaultChecked={filters.hideCancelled}
+            className="rounded border-slate-300"
+          />
+          Hide cancelled
+        </label>
         <button
           type="submit"
           className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"

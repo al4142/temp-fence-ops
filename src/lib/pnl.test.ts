@@ -201,3 +201,73 @@ describe("buildOrderPnL materials", () => {
     expect(buildOrderPnL([])).toBeNull();
   });
 });
+
+describe("buildOrderPnL Cancelled jobs", () => {
+  it("excludes Cancelled tickets from revenue, materials, labor, lodging, freight, misc, variance", () => {
+    const pnl = buildOrderPnL([
+      job({
+        id: "cxl",
+        jobType: "Install",
+        status: "Cancelled",
+        revenue: 4200,
+        lodging: 200,
+        freight: 150,
+        misc: 75,
+        labor: [
+          {
+            regularHours: 8,
+            overtimeHours: 0,
+            employee: { hourlyRate: 25, name: "Carlos" },
+          },
+        ],
+        variances: [
+          {
+            quantity: -2,
+            reason: "Damaged on site",
+            itemName: null,
+            inventoryItem: { name: "6ft Panel", unitCost: UNIT_COST },
+          },
+        ],
+      }),
+    ]);
+    expect(pnl).toBeNull();
+  });
+
+  it("keeps an Active sibling on the same order; Cancelled sibling is ignored", () => {
+    const pnl = buildOrderPnL([
+      job({
+        id: "inst",
+        jobType: "Install",
+        status: "Active",
+        revenue: 4200,
+      }),
+      job({
+        id: "cxl",
+        jobType: "Install",
+        status: "Cancelled",
+        revenue: 9999,
+        lodging: 500,
+        labor: [
+          {
+            regularHours: 8,
+            overtimeHours: 0,
+            employee: { hourlyRate: 40, name: "Skip" },
+          },
+        ],
+      }),
+    ]);
+    expect(pnl).not.toBeNull();
+    expect(pnl!.jobCount).toBe(1);
+    expect(pnl!.revenue).toBe(4200);
+    expect(pnl!.materialCost).toBe(OUTBOUND_MATERIAL);
+    expect(pnl!.laborCost).toBe(0);
+    expect(pnl!.lodging).toBe(0);
+    expect(pnl!.jobs.map((j) => j.id)).toEqual(["inst"]);
+  });
+
+  it("countsTowardMaterialCost is false for Cancelled Install; Active Install unchanged", () => {
+    expect(countsTowardMaterialCost("Install", "Cancelled")).toBe(false);
+    expect(countsTowardMaterialCost("Install")).toBe(true);
+    expect(countsTowardMaterialCost("Install", "Active")).toBe(true);
+  });
+});

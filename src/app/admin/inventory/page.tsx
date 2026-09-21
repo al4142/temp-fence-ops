@@ -25,7 +25,7 @@ export default async function AdminInventoryPage() {
       orderBy: [{ active: "desc" }, { branch: { code: "asc" } }, { sku: "asc" }],
     }),
     prisma.jobMaterial.findMany({
-      include: { job: { select: { jobType: true, branchId: true } } },
+      include: { job: { select: { jobType: true, branchId: true, status: true } } },
     }),
     prisma.inventoryAdjustment.findMany(),
     prisma.inventoryAdjustment.findMany({

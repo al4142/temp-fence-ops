@@ -20,7 +20,7 @@ export default async function InventoryPage({
         orderBy: [{ branch: { code: "asc" } }, { sku: "asc" }],
       }),
       prisma.jobMaterial.findMany({
-        include: { job: { select: { jobType: true, branchId: true } } },
+        include: { job: { select: { jobType: true, branchId: true, status: true } } },
       }),
       prisma.inventoryAdjustment.findMany(),
       prisma.transferLine.findMany({
@@ -34,7 +34,11 @@ export default async function InventoryPage({
         select: { inventoryItemId: true, quantity: true },
       }),
       prisma.jobMaterialVariance.findMany({
-        select: { inventoryItemId: true, quantity: true },
+        select: {
+          inventoryItemId: true,
+          quantity: true,
+          job: { select: { status: true } },
+        },
       }),
     ]);
 

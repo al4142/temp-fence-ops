@@ -115,7 +115,9 @@ Form sections (in order):
 
 **Delete job** (edit only) removes the ticket and its material / labor / cost lines. Confirm the dialog; it cannot be undone.
 
-Job list filters (shareable in the URL): from / to date, branch, job type (including Site Walk), search (order #, customer, city, address). Pagination is 50 per page. There is **no** class filter and **no** separate calendar page. To confirm a day’s tickets, set **From** and **To** to that date and Apply — the table heading **Day list for YYYY-MM-DD** is that confirmation. $0 / blank-materials Site Walk rows stay on All types and on that same-day list (type = Install still hides them, same as any other type filter).
+**Status** (edit only): **Active** | **Cancelled**. Create always saves Active — there is no status picker on New job. Changing Active → Cancelled asks you to confirm: “Stays on Jobs and the day list. No inventory or P&L.” Setting Cancelled → Active does not confirm. Cancel does **not** delete materials or labor.
+
+Job list filters (shareable in the URL): from / to date, branch, job type (including Site Walk), search (order #, customer, city, address), optional **Hide cancelled**. Pagination is 50 per page. There is **no** class filter and **no** separate calendar page. To confirm a day’s tickets, set **From** and **To** to that date and Apply — the table heading **Day list for YYYY-MM-DD** is that confirmation. $0 / blank-materials Site Walk rows stay on All types and on that same-day list (type = Install still hides them, same as any other type filter). **Cancelled** jobs stay on the unfiltered Jobs list and the day list with a **Cancelled** badge (type badge unchanged). Default is to **show** cancelled; check **Hide cancelled** to omit them. There is no separate Cancelled page.
 
 **Export Project** on the detail page downloads an `.xlsx` for poster handoff.
 
@@ -193,6 +195,7 @@ starting qty + job movements + adjustments + transfers + write-offs + job materi
 | Pickup | **Inbound (+)** — on-hand up **only if reusable**. Consumables (`reusable: false`) stay consumed. |
 | Other | No inventory effect |
 | Site Walk | **No inventory effect** (same as Other; Jobs table Inv. column uses that wording) |
+| **Cancelled** (any type) | **No inventory effect** — on-hand does not change; materials stay on the ticket |
 
 BOM quantities are the same for Install and Pickup. The inventory sign is separate; consumables never restock.
 
@@ -202,13 +205,13 @@ Transfers (`/transfers`): from yard → to yard; destination SKU is created if m
 
 ### P&L
 
-**P&L** (`/pnl`): enter or click an order number → **Look up**. All tickets sharing that order roll up.
+**P&L** (`/pnl`): enter or click an order number → **Look up**. Active tickets sharing that order roll up. **Cancelled** tickets are excluded from revenue, labor, materials, lodging/freight/misc, and variance.
 
 Shown: revenue, labor (OT @ 1.5×; Site Walk 0-hr labor is $0), material cost (catalog unit cost × qty on **Install / Drop** only; Pickup BOM is a warehouse return, not a second cost; Other / Site Walk excluded; free-text = $0), lodging, freight, misc, material variance, total cost, gross profit.
 
 Yard expenses are a separate ledger (`/expenses`) and are **not** forced onto job P&L.
 
-**Analytics** (`/analytics`): monthly LF by branch and job-type group (Install / Drop vs Pickup vs Other; Site Walk groups with Other), plus job count, install/drop LF, pickup LF, revenue, rough labor. Job tickets only — not transfers or write-offs.
+**Analytics** (`/analytics`): monthly LF by branch and job-type group (Install / Drop vs Pickup vs Other; Site Walk groups with Other), plus job count, install/drop LF, pickup LF, revenue, rough labor. Job tickets only — not transfers or write-offs. Cancelled tickets are excluded.
 
 ---
 

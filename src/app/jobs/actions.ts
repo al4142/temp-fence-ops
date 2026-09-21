@@ -16,6 +16,7 @@ import {
   collectJobInventoryItemIds,
   validateInventoryItemsForJobYard,
 } from "@/lib/inventory-yard";
+import { JOB_STATUS_ACTIVE } from "@/lib/job-constants";
 
 async function assertBranchExists(branchId: string) {
   const b = await prisma.branch.findUnique({ where: { id: branchId } });
@@ -85,6 +86,7 @@ export async function createJob(values: JobFormValues): Promise<ActionResult> {
           address: data.address,
           city: data.city,
           jobType: data.jobType,
+          status: JOB_STATUS_ACTIVE,
           fenceType: data.fenceType,
           qtyLf: data.qtyLf,
           screen: data.screen,
@@ -232,6 +234,7 @@ export async function updateJob(
           address: data.address,
           city: data.city,
           jobType: data.jobType,
+          status: data.status,
           fenceType: data.fenceType,
           qtyLf: data.qtyLf,
           screen: data.screen,

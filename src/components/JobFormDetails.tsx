@@ -1,8 +1,12 @@
 "use client";
 
 import {
+  CANCEL_JOB_CONFIRM,
   classesForJobType,
   isJobType,
+  JOB_STATUSES,
+  JOB_STATUS_ACTIVE,
+  JOB_STATUS_CANCELLED,
   JOB_TYPES,
 } from "@/lib/job-constants";
 import type { BranchOption } from "@/components/JobForm";
@@ -11,6 +15,7 @@ type Props = {
   branches: BranchOption[];
   inputClass: string;
   labelClass: string;
+  showStatus?: boolean;
   date: string; setDate: (v: string) => void;
   branchId: string; setBranchId: (v: string) => void;
   jobClass: string; setJobClass: (v: string) => void;
@@ -19,6 +24,7 @@ type Props = {
   address: string; setAddress: (v: string) => void;
   city: string; setCity: (v: string) => void;
   jobType: string; setJobType: (v: string) => void;
+  status: string; setStatus: (v: string) => void;
   notes: string; setNotes: (v: string) => void;
   accountExec: string; setAccountExec: (v: string) => void;
   revenue: string; setRevenue: (v: string) => void;
@@ -26,10 +32,11 @@ type Props = {
 
 export function JobFormDetails(p: Props) {
   const {
-    branches, inputClass, labelClass,
+    branches, inputClass, labelClass, showStatus,
     date, setDate, branchId, setBranchId, jobClass, setJobClass,
     orderNumber, setOrderNumber, customer, setCustomer, address, setAddress,
-    city, setCity, jobType, setJobType, notes, setNotes, accountExec, setAccountExec,
+    city, setCity, jobType, setJobType, status, setStatus,
+    notes, setNotes, accountExec, setAccountExec,
     revenue, setRevenue,
   } = p;
 
@@ -41,6 +48,13 @@ export function JobFormDetails(p: Props) {
     if (jobClass && !nextClasses.includes(jobClass)) {
       setJobClass(nextClasses[0] ?? "");
     }
+  }
+
+  function handleStatusChange(next: string) {
+    if (status === JOB_STATUS_ACTIVE && next === JOB_STATUS_CANCELLED) {
+      if (!window.confirm(CANCEL_JOB_CONFIRM)) return;
+    }
+    setStatus(next);
   }
 
   return (
@@ -74,6 +88,21 @@ export function JobFormDetails(p: Props) {
               ) : null}
             </select>
           </div>
+          {showStatus ? (
+            <div>
+              <label className={labelClass} htmlFor="jobStatus">Status</label>
+              <select
+                id="jobStatus"
+                className={inputClass}
+                value={status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+              >
+                {JOB_STATUSES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div>
             <label className={labelClass} htmlFor="jobClass">Class</label>
             <select id="jobClass" className={inputClass} value={jobClass} onChange={(e) => setJobClass(e.target.value)}>

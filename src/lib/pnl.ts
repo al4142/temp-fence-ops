@@ -1,11 +1,14 @@
 import { formatCurrency } from "./format";
 import { inventorySignForJobType } from "./inventory";
+import { isCancelledStatus } from "./job-constants";
 
 export type JobForPnL = {
   id: string;
   date: Date;
   orderNumber: string;
   jobType: string;
+  /** Active | Cancelled. Missing / blank treated as Active. */
+  status?: string | null;
   customer: string;
   revenue: number;
   lodgingLines?: Array<{ amount: number }>;
@@ -79,8 +82,12 @@ export function materialCostForLine(quantity: number, unitCost: number): number 
  * Unit cost is the current catalog `inventoryItem.unitCost`. JobMaterial has
  * no per-line cost snapshot.
  */
-export function countsTowardMaterialCost(jobType: string): boolean {
-  return inventorySignForJobType(jobType) < 0;
+export function countsTowardMaterialCost(
+  jobType: string,
+  status?: string | null
+): boolean {
+  if (isCancelledStatus(status)) return false;
+  return inventorySignForJobType(jobType, status) < 0;
 }
 
 function sumLodging(job: JobForPnL): number {
@@ -106,8 +113,10 @@ function sumMisc(job: JobForPnL): number {
 
 export function buildOrderPnL(jobs: JobForPnL[]): OrderPnL | null {
   if (jobs.length === 0) return null;
-  const orderNumber = jobs[0].orderNumber;
-  const customer = jobs[0].customer;
+  const included = jobs.filter((job) => !isCancelledStatus(job.status));
+  if (included.length === 0) return null;
+  const orderNumber = included[0].orderNumber;
+  const customer = included[0].customer;
 
   let revenue = 0;
   let lodging = 0;
@@ -117,7 +126,7 @@ export function buildOrderPnL(jobs: JobForPnL[]): OrderPnL | null {
   let materialCost = 0;
   let varianceCost = 0;
 
-  for (const job of jobs) {
+  for (const job of included) {
     revenue += job.revenue;
     lodging += sumLodging(job);
     freight += sumFreight(job);
@@ -129,7 +138,7 @@ export function buildOrderPnL(jobs: JobForPnL[]): OrderPnL | null {
         line.employee.hourlyRate
       );
     }
-    if (countsTowardMaterialCost(job.jobType)) {
+    if (countsTowardMaterialCost(job.jobType, job.status)) {
       for (const mat of job.materials) {
         const unitCost = mat.inventoryItem?.unitCost ?? 0;
         materialCost += materialCostForLine(mat.quantity, unitCost);
@@ -148,7 +157,7 @@ export function buildOrderPnL(jobs: JobForPnL[]): OrderPnL | null {
   return {
     orderNumber,
     customer,
-    jobCount: jobs.length,
+    jobCount: included.length,
     revenue,
     laborCost,
     materialCost,
@@ -158,7 +167,7 @@ export function buildOrderPnL(jobs: JobForPnL[]): OrderPnL | null {
     varianceCost,
     totalCost,
     grossProfit: revenue - totalCost,
-    jobs,
+    jobs: included,
   };
 }
 
