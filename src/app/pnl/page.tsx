@@ -42,8 +42,10 @@ export default async function PnLPage({
         <h1 className="text-2xl font-semibold text-slate-900">P&amp;L by order #</h1>
         <p className="mt-1 text-sm text-slate-600">
           Rolls up all jobs sharing an order number. Labor uses employee hourly rate (OT @
-          1.5x). Material cost uses catalog unit cost x quantity (free-text lines = $0). Lodging /
-          freight / misc sum from cost line items. Material variance uses unit cost.
+          1.5x). Material cost uses catalog unit cost × quantity on outbound jobs (Install /
+          Drop) only — Pickup tickets reuse the same BOM qty for inventory return and are not
+          a second cost. Free-text lines = $0. Lodging / freight / misc sum from cost line
+          items. Material variance uses unit cost.
         </p>
       </div>
 

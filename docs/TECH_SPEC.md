@@ -95,7 +95,7 @@ Core idea:
 
 On-hand is derived (`src/lib/inventory.ts`): starting qty ± signed job movements ± adjustments ± transfers ± write-offs ± job material variance. Only catalog-linked lines move stock.
 
-P&L is derived by order number (`src/lib/pnl.ts`): revenue, labor (OT @ 1.5×), catalog material cost, cost lines, material variance. Transfers, write-offs, and yard expenses are **excluded**.
+P&L is derived by order number (`src/lib/pnl.ts`): revenue, labor (OT @ 1.5×), catalog material cost on outbound jobs only (Install / Drop; Pickup BOM is not a second cost), cost lines, material variance. Transfers, write-offs, and yard expenses are **excluded**.
 
 ---
 
@@ -145,7 +145,7 @@ Fence types, options, and the canonical smoke example are in [§6](#6-bom--fence
 | Path | Role |
 |------|------|
 | `src/app/pnl/page.tsx` | Lookup UI (`?order=`) |
-| `src/lib/pnl.ts` | `buildOrderPnL` — sums all jobs sharing an order number |
+| `src/lib/pnl.ts` | `buildOrderPnL` — sums all jobs sharing an order number; materials from outbound tickets only |
 
 Analytics (`src/app/analytics/`, `src/lib/analytics.ts`) is monthly LF by branch × job-type group from **job tickets only**.
 

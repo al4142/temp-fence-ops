@@ -199,7 +199,7 @@ Transfers (`/transfers`): from yard → to yard; destination SKU is created if m
 
 **P&L** (`/pnl`): enter or click an order number → **Look up**. All tickets sharing that order roll up.
 
-Shown: revenue, labor (OT @ 1.5×), material cost (catalog unit cost × qty; free-text = $0), lodging, freight, misc, material variance, total cost, gross profit.
+Shown: revenue, labor (OT @ 1.5×), material cost (catalog unit cost × qty on **Install / Drop** only; Pickup BOM is a warehouse return, not a second cost; free-text = $0), lodging, freight, misc, material variance, total cost, gross profit.
 
 Yard expenses are a separate ledger (`/expenses`) and are **not** forced onto job P&L.
 

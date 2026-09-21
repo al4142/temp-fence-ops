@@ -1,4 +1,5 @@
 import { formatCurrency } from "./format";
+import { inventorySignForJobType } from "./inventory";
 
 export type JobForPnL = {
   id: string;
@@ -62,6 +63,26 @@ export function materialCostForLine(quantity: number, unitCost: number): number 
   return quantity * unitCost;
 }
 
+/**
+ * Material COGS is outbound usage only (Install / Drop).
+ *
+ * Install and Pickup share the same BOM quantities (recipes do not flip sign).
+ * Pickup is a warehouse return, not a second consumption — summing Pickup
+ * qty × catalog unitCost would double-count materials on the same order.
+ *
+ * Net install−pickup per SKU was considered; outbound-only matches inventory
+ * domain (cost when goods leave the yard) and does not invent a credit that
+ * would zero reusable rental assets. Consumables stay consumed because Pickup
+ * does not restock them; P&L still costs them on the outbound ticket.
+ * Damage / missing is JobMaterialVariance, not Pickup BOM.
+ *
+ * Unit cost is the current catalog `inventoryItem.unitCost`. JobMaterial has
+ * no per-line cost snapshot.
+ */
+export function countsTowardMaterialCost(jobType: string): boolean {
+  return inventorySignForJobType(jobType) < 0;
+}
+
 function sumLodging(job: JobForPnL): number {
   if (job.lodgingLines && job.lodgingLines.length > 0) {
     return job.lodgingLines.reduce((s, l) => s + l.amount, 0);
@@ -108,9 +129,11 @@ export function buildOrderPnL(jobs: JobForPnL[]): OrderPnL | null {
         line.employee.hourlyRate
       );
     }
-    for (const mat of job.materials) {
-      const unitCost = mat.inventoryItem?.unitCost ?? 0;
-      materialCost += materialCostForLine(mat.quantity, unitCost);
+    if (countsTowardMaterialCost(job.jobType)) {
+      for (const mat of job.materials) {
+        const unitCost = mat.inventoryItem?.unitCost ?? 0;
+        materialCost += materialCostForLine(mat.quantity, unitCost);
+      }
     }
     for (const v of job.variances ?? []) {
       const unitCost = v.inventoryItem?.unitCost ?? 0;

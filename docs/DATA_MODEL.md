@@ -117,7 +117,7 @@ Only these four Title Case labels are recognized. Implementation: `src/lib/inven
 |-----------|---------|
 | Revenue | sum job.revenue |
 | Labor cost | sum (regxrate + otxratex1.5) |
-| Material cost | sum (qty x inventoryItem.unitCost); free-text -> 0 |
+| Material cost | sum (qty × inventoryItem.unitCost) on **outbound** jobs only (Install / Drop); Pickup / Other excluded so Pickup BOM is not a second cost; free-text → 0 |
 | Lodging / Freight / Misc | sum cost line amounts (fallback: denormalized job fields) |
 | Material variance | sum (-variance.qty x unitCost) |
 | Total cost | labor + materials + lodging + freight + misc + variance |
