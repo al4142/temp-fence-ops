@@ -27,6 +27,8 @@ At least one header alias for each:
 
 `class`, `customer`, `address`, `city`, `fenceType`, `qtyLf`, `screen` (Yes/No **or** a screen SKU such as `BLACK6`), `notes`, `accountExec`, `revenue`, `labor` / `assigned`, `hours`, `ot`.
 
+There is **no** Status column in v1 — imported rows are always **Active**. Re-importing an existing job does not change `status` (a cancelled ticket stays cancelled).
+
 `class` is stored as-is (trimmed). There is **no** class alias table — do not expect `Non Pay` / `Site Visit` (or EVENT / CONSTRUCTION / OTHER) to be remapped from other spellings.
 
 Material columns whose header looks like a SKU (`PANEL-6`, `BASE-STD`) are treated as quantities for that SKU on the job’s branch.

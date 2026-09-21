@@ -9,6 +9,7 @@ import {
   type JobTypeGroup,
 } from "@/lib/analytics";
 import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
+import { JOB_STATUS_CANCELLED } from "@/lib/job-constants";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export default async function AnalyticsPage({
   const { gte, lt } = yearDateRange(year);
   const jobWhere = {
     date: { gte, lt },
+    status: { not: JOB_STATUS_CANCELLED },
     ...(branch ? { branchId: branch.id } : {}),
     ...(typeIn && typeIn.length > 0
       ? { jobType: { in: typeIn } }
@@ -62,6 +64,7 @@ export default async function AnalyticsPage({
         date: true,
         branchId: true,
         jobType: true,
+        status: true,
         qtyLf: true,
         revenue: true,
       },

@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { describeInventoryEffect } from "@/lib/inventory";
 import { JobsFilters } from "@/components/JobsFilters";
+import { JobStatusBadge } from "@/components/JobStatusBadge";
 import { normalizeJobType } from "@/lib/job-constants";
-import { jobsListWhere } from "@/lib/jobs-list";
+import { jobsListWhere, parseHideCancelled } from "@/lib/jobs-list";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ type SearchParams = {
   jobType?: string;
   q?: string;
   page?: string;
+  hideCancelled?: string;
 };
 
 export default async function JobsPage({
@@ -31,6 +33,7 @@ export default async function JobsPage({
   const jobTypeParam = (sp.jobType ?? "").trim();
   const jobType = jobTypeParam ? normalizeJobType(jobTypeParam) : "";
   const q = (sp.q ?? "").trim();
+  const hideCancelled = parseHideCancelled(sp.hideCancelled);
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
   const loaded = await (async () => {
@@ -47,6 +50,7 @@ export default async function JobsPage({
           : undefined,
         jobType,
         q,
+        hideCancelled,
       });
 
       const [total, jobs] = await Promise.all([
@@ -92,7 +96,7 @@ export default async function JobsPage({
       </div>
 
       <JobsFilters
-        filters={{ from, to, branch: branchCode, jobType, q }}
+        filters={{ from, to, branch: branchCode, jobType, q, hideCancelled }}
         branches={branches}
         total={total}
         page={page}
@@ -102,7 +106,8 @@ export default async function JobsPage({
       {from && to && from === to ? (
         <p className="text-sm text-slate-700">
           Day list for <span className="font-medium">{from}</span>
-          {" \u2014 "}every ticket that date, including Site Walk with $0 / no materials.
+          {" \u2014 "}every ticket that date, including Site Walk with $0 / no materials
+          and Cancelled jobs (badge). Use Hide cancelled to omit them.
         </p>
       ) : null}
 
@@ -144,15 +149,18 @@ export default async function JobsPage({
                     </Link>
                   </td>
                   <td className="px-3 py-2">
-                    <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
-                      {j.jobType}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
+                        {j.jobType}
+                      </span>
+                      <JobStatusBadge status={j.status} />
+                    </div>
                   </td>
                   <td className="px-3 py-2 text-slate-700">{j.branch.code}</td>
                   <td className="px-3 py-2 text-slate-800">{j.customer}</td>
                   <td className="px-3 py-2 text-slate-600">{j.city ?? "\u2014"}</td>
                   <td className="px-3 py-2 text-xs text-slate-600">
-                    {describeInventoryEffect(j.jobType)}
+                    {describeInventoryEffect(j.jobType, j.status)}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
                     {formatCurrency(j.revenue)}

@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
+import { JobStatusBadge } from "@/components/JobStatusBadge";
 import {
   describeInventoryEffect,
   inventorySignForJobType,
   inventorySignForMaterial,
 } from "@/lib/inventory";
 import { laborCostForLine, materialCostForLine } from "@/lib/pnl";
+import { isCancelledStatus } from "@/lib/job-constants";
 import { isChainlinkType, normalizeFenceType, POST_MOUNT_LABELS } from "@/lib/bom/catalog";
 import { formatSectionLabel, sectionsForJob, type StoredFenceSection } from "@/lib/bom/sections";
 import { catalogLineDisplayName } from "@/lib/inventory-catalog";
@@ -47,7 +49,8 @@ export default async function JobDetailPage({ params }: Props) {
 
   const fenceSections = sectionsForJob(job);
   const totalLf = fenceSections.reduce((n, s) => n + (s.qtyLf ?? 0), 0);
-  const sign = inventorySignForJobType(job.jobType);
+  const sign = inventorySignForJobType(job.jobType, job.status);
+  const cancelled = isCancelledStatus(job.status);
   const laborTotal = job.labor.reduce(
     (sum, l) =>
       sum + laborCostForLine(l.regularHours, l.overtimeHours, l.employee.hourlyRate),
@@ -72,12 +75,19 @@ export default async function JobDetailPage({ params }: Props) {
             {job.orderNumber}{" "}
             <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-base">
               {job.jobType}
-            </span>
+            </span>{" "}
+            <JobStatusBadge status={job.status} />
           </h1>
           <p className="mt-1 text-sm text-slate-600">
             {formatDate(job.date)} | {job.branch.name} ({job.branch.code}) |{" "}
-            {describeInventoryEffect(job.jobType)}
+            {describeInventoryEffect(job.jobType, job.status)}
           </p>
+          {cancelled ? (
+            <p className="mt-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+              Cancelled — stays on Jobs and the day list. No inventory or P&amp;L.
+              Materials and labor are kept for history.
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <a
@@ -188,7 +198,8 @@ export default async function JobDetailPage({ params }: Props) {
               const sku = m.inventoryItem?.sku;
               const lineSign = inventorySignForMaterial(
                 job.jobType,
-                m.inventoryItem?.reusable !== false
+                m.inventoryItem?.reusable !== false,
+                job.status
               );
               const delta = m.inventoryItemId ? lineSign * m.quantity : 0;
               return (

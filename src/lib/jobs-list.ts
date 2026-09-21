@@ -4,10 +4,15 @@
  * There is no separate calendar widget. From/To on `/jobs` (same date in both)
  * is the day list ops use to confirm what ran. Site Walk with $0 / no materials
  * must match the same rules as Install / Pickup — never drop empty tickets.
+ * Cancelled jobs stay on the unfiltered list and same-day list unless Hide cancelled.
  */
 import type { Prisma } from "@prisma/client";
 import { dateOnlyToUtc, toDateInputValue } from "./job-form";
-import { normalizeJobType } from "./job-constants";
+import {
+  isCancelledStatus,
+  JOB_STATUS_CANCELLED,
+  normalizeJobType,
+} from "./job-constants";
 
 export type JobsListFilterInput = {
   from?: string;
@@ -16,12 +21,19 @@ export type JobsListFilterInput = {
   branchId?: string;
   jobType?: string;
   q?: string;
+  /**
+   * Optional. Default false = cancelled jobs stay on Jobs and the day list.
+   * True = Prisma/in-memory filters omit Cancelled.
+   */
+  hideCancelled?: boolean;
 };
 
 export type JobsListVisibilityJob = {
   date: Date | string;
   branchId: string;
   jobType: string;
+  /** Active | Cancelled. Missing treated as Active (visible). */
+  status?: string | null;
   orderNumber: string;
   customer: string;
   city?: string | null;
@@ -44,9 +56,15 @@ export function jobIsOnCalendarDay(jobDate: Date | string, dayYmd: string): bool
   return ymd(jobDate) === dayYmd.trim();
 }
 
+export function parseHideCancelled(raw?: string | null): boolean {
+  const v = (raw ?? "").trim().toLowerCase();
+  return v === "1" || v === "true" || v === "on";
+}
+
 /**
- * Prisma `where` for `/jobs`. Date / branch / type / search only.
+ * Prisma `where` for `/jobs`. Date / branch / type / search only by default.
  * Never keys on revenue, materials, labor, fence, or class.
+ * Does not filter Cancelled unless `hideCancelled` is true.
  */
 export function jobsListWhere(filters: JobsListFilterInput): Prisma.JobWhereInput {
   const where: Prisma.JobWhereInput = {};
@@ -70,6 +88,9 @@ export function jobsListWhere(filters: JobsListFilterInput): Prisma.JobWhereInpu
       { address: { contains: q } },
     ];
   }
+  if (filters.hideCancelled) {
+    where.status = { not: JOB_STATUS_CANCELLED };
+  }
   return where;
 }
 
@@ -80,6 +101,7 @@ function contains(haystack: string | null | undefined, needle: string): boolean 
 /**
  * In-memory twin of `jobsListWhere` for unit tests.
  * Revenue and materialCount are ignored on purpose.
+ * Cancelled jobs are visible unless hideCancelled is set.
  */
 export function jobVisibleOnJobsList(
   job: JobsListVisibilityJob,
@@ -105,6 +127,8 @@ export function jobVisibleOnJobsList(
       contains(job.address, q);
     if (!hit) return false;
   }
+
+  if (filters.hideCancelled && isCancelledStatus(job.status)) return false;
 
   return true;
 }

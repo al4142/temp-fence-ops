@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { buildOrderPnL } from "@/lib/pnl";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { JOB_STATUS_CANCELLED } from "@/lib/job-constants";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export default async function PnLPage({
   const order = (sp.order ?? "").trim();
 
   const distinctOrders = await prisma.job.findMany({
+    where: { status: { not: JOB_STATUS_CANCELLED } },
     distinct: ["orderNumber"],
     select: { orderNumber: true, customer: true },
     orderBy: { orderNumber: "asc" },
@@ -41,10 +43,12 @@ export default async function PnLPage({
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">P&amp;L by order #</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Rolls up all jobs sharing an order number. Labor uses employee hourly rate (OT @
-          1.5x). Material cost uses catalog unit cost × quantity on outbound jobs (Install /
-          Drop) only — Pickup tickets reuse the same BOM qty for inventory return and are not
-          a second cost. Free-text lines = $0. Lodging / freight / misc sum from cost line
+          Rolls up Active jobs sharing an order number. Cancelled tickets are
+          excluded (they stay on Jobs / the day list with a badge). Labor uses
+          employee hourly rate (OT @ 1.5x). Material cost uses catalog unit cost ×
+          quantity on outbound jobs (Install / Drop) only — Pickup tickets reuse
+          the same BOM qty for inventory return and are not a second cost.
+          Free-text lines = $0. Lodging / freight / misc sum from cost line
           items. Material variance uses unit cost.
         </p>
       </div>
@@ -97,7 +101,9 @@ export default async function PnLPage({
       {!order ? (
         <p className="text-sm text-slate-600">Select or enter an order number.</p>
       ) : !pnl ? (
-        <p className="text-sm text-amber-800">No jobs found for {order}.</p>
+        <p className="text-sm text-amber-800">
+          No active jobs found for {order}. Cancelled tickets are excluded from P&amp;L.
+        </p>
       ) : (
         <div className="space-y-4">
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

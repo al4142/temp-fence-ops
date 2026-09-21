@@ -1,5 +1,6 @@
 import { inventorySignForJobType } from "./inventory";
 import { laborCostForLine } from "./pnl";
+import { isCancelledStatus } from "./job-constants";
 
 /** Coarse groups used on Construction Data-style rollups. */
 export type JobTypeGroup = "Install" | "Pickup" | "Other";
@@ -46,6 +47,8 @@ export type AnalyticsJobRow = {
   date: Date;
   branchId: string;
   jobType: string;
+  /** Missing / Active counted; Cancelled skipped in rollups. */
+  status?: string | null;
   qtyLf: number | null;
   revenue: number;
 };
@@ -121,6 +124,7 @@ export function buildMonthlyLfTable(
   };
 
   for (const job of jobs) {
+    if (isCancelledStatus(job.status)) continue;
     const lf = job.qtyLf ?? 0;
     if (!lf) continue;
     const group = jobTypeGroup(job.jobType);
@@ -149,6 +153,7 @@ export function buildMonthlySeries(jobs: AnalyticsJobRow[]): MonthlySeries[] {
   }));
 
   for (const job of jobs) {
+    if (isCancelledStatus(job.status)) continue;
     const lf = job.qtyLf ?? 0;
     if (!lf) continue;
     const m = job.date.getUTCMonth();
@@ -174,8 +179,11 @@ export function summarizeJobs(
   let pickupLf = 0;
   let otherLf = 0;
   let revenue = 0;
+  let jobCount = 0;
 
   for (const job of jobs) {
+    if (isCancelledStatus(job.status)) continue;
+    jobCount += 1;
     const lf = job.qtyLf ?? 0;
     const group = jobTypeGroup(job.jobType);
     if (group === "Install") installLf += lf;
@@ -194,7 +202,7 @@ export function summarizeJobs(
   }
 
   return {
-    jobCount: jobs.length,
+    jobCount,
     installLf,
     pickupLf,
     otherLf,

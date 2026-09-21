@@ -121,6 +121,7 @@ describe("evaluateImportRows + validator parity", () => {
     expect(evaluated.row.status).toBe("accept");
     expect(evaluated.row.mappedType).toBe("Install");
     expect(evaluated.payload?.jobType).toBe("Install");
+    expect(evaluated.payload?.status).toBe("Active");
     expect(evaluated.payload?.qtyLf).toBe(100);
     expect(evaluated.materialData[0]?.quantity).toBe(40);
 

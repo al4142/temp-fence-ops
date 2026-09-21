@@ -68,6 +68,17 @@ describe("inventorySignForMaterial", () => {
   it("does not change job-type grouping signs", () => {
     expect(inventorySignForJobType("Pickup")).toBe(1);
     expect(inventorySignForJobType("Install")).toBe(-1);
+    expect(inventorySignForJobType("Install", "Active")).toBe(-1);
+    expect(inventorySignForJobType("Pickup", "Active")).toBe(1);
+  });
+
+  it("Cancelled is sign 0 regardless of job type", () => {
+    expect(inventorySignForJobType("Install", "Cancelled")).toBe(0);
+    expect(inventorySignForJobType("Drop", "cancelled")).toBe(0);
+    expect(inventorySignForJobType("Pickup", "Cancelled")).toBe(0);
+    expect(inventorySignForMaterial("Install", true, "Cancelled")).toBe(0);
+    expect(inventorySignForMaterial("Pickup", true, "Cancelled")).toBe(0);
+    expect(inventorySignForMaterial("Install", false, "Cancelled")).toBe(0);
   });
 });
 
@@ -149,5 +160,76 @@ describe("computeOnHand reusable flag", () => {
     });
     expect(rows[0].onHand).toBe(7900);
     expect(rows[0].movementQty).toBe(-100);
+  });
+});
+
+describe("computeOnHand Cancelled jobs", () => {
+  it("does not move stock for Cancelled Install materials; Active Install still decrements", () => {
+    const items = [catalogOnHandItem(platePost, "plate", { startingQty: 80 })];
+    const cancelled = computeOnHand({
+      items,
+      materials: [
+        {
+          inventoryItemId: "plate",
+          quantity: 10,
+          job: { jobType: "Install", branchId: "mia", status: "Cancelled" },
+        },
+      ],
+      adjustments: [],
+    });
+    expect(cancelled[0].movementQty).toBe(0);
+    expect(cancelled[0].onHand).toBe(80);
+
+    const active = computeOnHand({
+      items,
+      materials: [material("plate", 10, "Install")],
+      adjustments: [],
+    });
+    expect(active[0].movementQty).toBe(-10);
+    expect(active[0].onHand).toBe(70);
+  });
+
+  it("reactivating (status Active / omitted) restores the type sign", () => {
+    const items = [catalogOnHandItem(platePost, "plate", { startingQty: 80 })];
+    const rows = computeOnHand({
+      items,
+      materials: [
+        {
+          inventoryItemId: "plate",
+          quantity: 10,
+          job: { jobType: "Install", branchId: "mia", status: "Active" },
+        },
+      ],
+      adjustments: [],
+    });
+    expect(rows[0].movementQty).toBe(-10);
+    expect(rows[0].onHand).toBe(70);
+  });
+
+  it("skips variances on Cancelled jobs; Active variances still apply", () => {
+    const items = [catalogOnHandItem(platePost, "plate", { startingQty: 80 })];
+    const cancelled = computeOnHand({
+      items,
+      materials: [],
+      adjustments: [],
+      variances: [
+        {
+          inventoryItemId: "plate",
+          quantity: -3,
+          job: { status: "Cancelled" },
+        },
+      ],
+    });
+    expect(cancelled[0].varianceQty).toBe(0);
+    expect(cancelled[0].onHand).toBe(80);
+
+    const active = computeOnHand({
+      items,
+      materials: [],
+      adjustments: [],
+      variances: [{ inventoryItemId: "plate", quantity: -3 }],
+    });
+    expect(active[0].varianceQty).toBe(-3);
+    expect(active[0].onHand).toBe(77);
   });
 });

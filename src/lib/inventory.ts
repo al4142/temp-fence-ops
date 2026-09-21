@@ -5,6 +5,7 @@
  *   OUTBOUND (negative on-hand): Install, Drop — all linked catalog lines
  *   INBOUND  (positive on-hand): Pickup — reusable items only
  *   No movement: Other, Site Walk (and any unrecognized string)
+ *   Cancelled status: sign 0 regardless of jobType (materials/variances kept)
  *   Consumables (`reusable === false`) never restock on inbound jobs
  *
  * Also applied (not job analytics):
@@ -13,11 +14,20 @@
  * - Job material variances: quantity is the inventory delta (+/-)
  */
 
-import { normalizeJobType } from "./job-constants";
+import { isCancelledStatus, normalizeJobType } from "./job-constants";
 
 export type InventoryDirection = -1 | 0 | 1;
 
-export function inventorySignForJobType(jobType: string): InventoryDirection {
+/**
+ * Inventory sign for a job type. Optional `status` defaults to Active so
+ * existing Active Install / Pickup / Drop / Other / Site Walk callers are unchanged.
+ * Cancelled → 0 regardless of type.
+ */
+export function inventorySignForJobType(
+  jobType: string,
+  status?: string | null
+): InventoryDirection {
+  if (isCancelledStatus(status)) return 0;
   const key = normalizeJobType(jobType);
   if (key === "Install" || key === "Drop") return -1;
   if (key === "Pickup") return 1;
@@ -27,18 +37,23 @@ export function inventorySignForJobType(jobType: string): InventoryDirection {
 /**
  * Per-line inventory sign. Missing `reusable` follows the Prisma default (true).
  * Inbound jobs restock only when reusable is not explicitly false.
+ * Cancelled jobs (optional 3rd arg) are always 0.
  */
 export function inventorySignForMaterial(
   jobType: string,
-  reusable: boolean = true
+  reusable: boolean = true,
+  status?: string | null
 ): InventoryDirection {
-  const sign = inventorySignForJobType(jobType);
+  const sign = inventorySignForJobType(jobType, status);
   if (sign > 0 && reusable === false) return 0;
   return sign;
 }
 
-export function describeInventoryEffect(jobType: string): string {
-  const sign = inventorySignForJobType(jobType);
+export function describeInventoryEffect(
+  jobType: string,
+  status?: string | null
+): string {
+  const sign = inventorySignForJobType(jobType, status);
   if (sign < 0) return "Outbound (-)";
   if (sign > 0) return "Inbound (+)";
   return "No inventory effect";
@@ -64,7 +79,7 @@ export type OnHandRow = {
 
 /**
  * onHand = startingQty
- *   + sum(job material qty * sign(jobType, reusable))
+ *   + sum(job material qty * sign(jobType, reusable, status)) — Cancelled = 0
  *   + sum(adjustments)
  *   + sum(transfer deltas)
  *   + sum(write-off deltas)   // always negative qty stored as -quantity
@@ -88,7 +103,7 @@ export function computeOnHand(params: {
   materials: Array<{
     inventoryItemId: string | null;
     quantity: number;
-    job: { jobType: string; branchId: string };
+    job: { jobType: string; branchId: string; status?: string | null };
   }>;
   adjustments: Array<{
     inventoryItemId: string;
@@ -106,6 +121,7 @@ export function computeOnHand(params: {
   variances?: Array<{
     inventoryItemId: string | null;
     quantity: number;
+    job?: { status?: string | null };
   }>;
 }): OnHandRow[] {
   const reusableById = new Map(
@@ -116,7 +132,7 @@ export function computeOnHand(params: {
   for (const m of params.materials) {
     if (!m.inventoryItemId) continue;
     const reusable = reusableById.get(m.inventoryItemId) ?? true;
-    const sign = inventorySignForMaterial(m.job.jobType, reusable);
+    const sign = inventorySignForMaterial(m.job.jobType, reusable, m.job.status);
     if (sign === 0) continue;
     const prev = movement.get(m.inventoryItemId) ?? 0;
     movement.set(m.inventoryItemId, prev + sign * m.quantity);
@@ -150,6 +166,7 @@ export function computeOnHand(params: {
   const variance = new Map<string, number>();
   for (const v of params.variances ?? []) {
     if (!v.inventoryItemId) continue;
+    if (isCancelledStatus(v.job?.status)) continue;
     variance.set(
       v.inventoryItemId,
       (variance.get(v.inventoryItemId) ?? 0) + v.quantity

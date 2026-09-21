@@ -9,6 +9,8 @@ import {
   isActionItemOverdue,
 } from "@/lib/action-items";
 import { ActionItemStatusBadge } from "@/components/ActionItemStatusBadge";
+import { JobStatusBadge } from "@/components/JobStatusBadge";
+import { JOB_STATUS_CANCELLED } from "@/lib/job-constants";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +42,7 @@ export default async function HomePage() {
         }),
         prisma.inventoryItem.findMany({ include: { branch: true } }),
         prisma.jobMaterial.findMany({
-          include: { job: { select: { jobType: true, branchId: true } } },
+          include: { job: { select: { jobType: true, branchId: true, status: true } } },
         }),
         prisma.inventoryAdjustment.findMany(),
         prisma.transferLine.findMany({
@@ -48,7 +50,7 @@ export default async function HomePage() {
         }),
         prisma.writeOff.findMany({ select: { inventoryItemId: true, quantity: true } }),
         prisma.jobMaterialVariance.findMany({
-          select: { inventoryItemId: true, quantity: true },
+          select: { inventoryItemId: true, quantity: true, job: { select: { status: true } } },
         }),
         prisma.actionItem.findMany({
           where: { status: "Open" },
@@ -56,7 +58,10 @@ export default async function HomePage() {
           take: 6,
         }),
         prisma.actionItem.count({ where: { status: "Done" } }),
-        prisma.job.aggregate({ _sum: { revenue: true } }),
+        prisma.job.aggregate({
+          where: { status: { not: JOB_STATUS_CANCELLED } },
+          _sum: { revenue: true },
+        }),
       ]);
       return {
         jobCount,
@@ -153,6 +158,9 @@ export default async function HomePage() {
                   </Link>
                   <span className="ml-2 text-slate-500">
                     {j.jobType} | {j.branch.code}
+                  </span>
+                  <span className="ml-1 align-middle">
+                    <JobStatusBadge status={j.status} />
                   </span>
                   <div className="text-slate-600">{j.customer}</div>
                 </div>

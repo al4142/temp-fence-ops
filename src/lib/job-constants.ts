@@ -2,6 +2,18 @@ export const JOB_TYPES = ["Install", "Pickup", "Drop", "Other", "Site Walk"] as 
 
 export type JobType = (typeof JOB_TYPES)[number];
 
+/** Title Case, same pattern as jobType. Create always Active; edit may set Cancelled. */
+export const JOB_STATUSES = ["Active", "Cancelled"] as const;
+
+export type JobStatus = (typeof JOB_STATUSES)[number];
+
+export const JOB_STATUS_ACTIVE = "Active" satisfies JobStatus;
+export const JOB_STATUS_CANCELLED = "Cancelled" satisfies JobStatus;
+
+/** Confirm copy for Active → Cancelled only (edit). */
+export const CANCEL_JOB_CONFIRM =
+  "Stays on Jobs and the day list. No inventory or P&L.";
+
 /** Classes for Install / Pickup / Drop / Other. Do not rename or remove. */
 export const JOB_CLASSES = ["EVENT", "CONSTRUCTION", "OTHER"] as const;
 
@@ -115,6 +127,28 @@ export function normalizeJobType(raw: string): string {
 
 export function jobTypeMustBeMessage(): string {
   return `Job type must be ${JOB_TYPE_LIST}.`;
+}
+
+export function isJobStatus(value: string): value is JobStatus {
+  return (JOB_STATUSES as readonly string[]).includes(value);
+}
+
+/**
+ * Canonical Title Case status. Blank / missing → Active so create and legacy
+ * payloads stay Active. Unknown strings are returned trimmed (caller rejects).
+ */
+export function normalizeJobStatus(raw: string | null | undefined): string {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) return JOB_STATUS_ACTIVE;
+  return JOB_STATUSES.find((s) => s.toLowerCase() === trimmed.toLowerCase()) ?? trimmed;
+}
+
+export function isCancelledStatus(status: string | null | undefined): boolean {
+  return normalizeJobStatus(status) === JOB_STATUS_CANCELLED;
+}
+
+export function jobStatusMustBeMessage(): string {
+  return "Status must be Active or Cancelled.";
 }
 
 export {

@@ -10,6 +10,7 @@ export type ExportJob = {
   address: string | null;
   city: string | null;
   jobType: string;
+  status?: string | null;
   fenceType: string | null;
   qtyLf: number | null;
   screen: boolean;
@@ -87,6 +88,7 @@ export async function buildProjectWorkbook(job: ExportJob): Promise<Buffer> {
     ["Customer", job.customer],
     ["Address", site || "-"],
     ["Job type", job.jobType],
+    ["Status", job.status ?? "Active"],
     ["LF", job.qtyLf ?? ""],
     ["Fence type", job.fenceType ?? ""],
     ["Top rail", job.topRail ? "Yes" : "No"],

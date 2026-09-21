@@ -47,6 +47,7 @@ Key fields: `date`, `branchId`, `class`, `orderNumber`, `customer`, site fields,
 fence specs, `revenue`. `lodging` / `freight` / `misc` are **denormalized sums** of their line tables.
 
 - `jobType` — Title Case only: **Install**, **Pickup**, **Drop**, **Other**, **Site Walk** (`JOB_TYPES` in `src/lib/job-constants.ts`).
+- `status` — Title Case **Active** | **Cancelled** (`JOB_STATUSES`). Default **Active**. Create always inserts Active. Cancelled stays on Jobs / the day list; inventory sign is 0; P&L and analytics exclude the ticket. Materials / labor / cost lines are kept (not wiped).
 - `class` — optional string. Install / Pickup / Drop / Other: **EVENT**, **CONSTRUCTION**, **OTHER** (`JOB_CLASSES`). Site Walk: **Non Pay**, **Site Visit** (`SITE_WALK_CLASSES`). The form swaps the dropdown when type changes; class is **not** a Jobs-table column. Import stores the CSV cell as-is (no class alias map).
 - Site Walk may omit fence type, LF, and materials, and may keep a 0/0 hour labor row for attribution. Other types keep today’s required-line rules (unnamed material rows with a non-zero qty still error; 0/0 labor rows are dropped).
 
@@ -95,11 +96,11 @@ Manual corrections. `quantityDelta` positive adds to on-hand.
 
 ```
 onHand = startingQty
-       + sum (JobMaterial.quantity x sign(job.jobType, item.reusable))   // linked items only
+       + sum (JobMaterial.quantity x sign(job.jobType, item.reusable, job.status))   // linked items only; Cancelled = 0
        + sum InventoryAdjustment.quantityDelta
        + sum TransferLine (-from / +to)
        + sum WriteOff (-quantity)
-       + sum JobMaterialVariance.quantity                 // signed delta
+       + sum JobMaterialVariance.quantity                 // signed delta; skipped when job.status is Cancelled
 ```
 
 | jobType (normalized) | Sign | Meaning |
@@ -110,15 +111,18 @@ onHand = startingQty
 | Other | 0 | No inventory effect |
 | Site Walk | 0 | Non-pay / site visit — no inventory effect |
 | unrecognized | 0 | No inventory effect |
+| **Cancelled** (any type) | 0 | No inventory effect — materials/variances retained |
 
 Pickup inbound applies only when `InventoryItem.reusable` is true. Consumables
 (`reusable: false`, e.g. `SCREW-BOLT+ 3/8x3`, aluminum ties, zip ties) still
 decrement on Install/Drop and do **not** restock on Pickup.
 
 Canonical Title Case labels: Install, Pickup, Drop, Other, Site Walk. Implementation: `src/lib/inventory.ts`
-(`inventorySignForMaterial`).
+(`inventorySignForMaterial`). **Cancelled** jobs use sign 0 regardless of type; setting status back to Active restores the type sign.
 
 ## P&L derivation (by order number)
+
+Cancelled tickets are **excluded** from every component (revenue, labor, materials, lodging/freight/misc, variance). Order rollup `jobCount` is Active tickets only.
 
 | Component | Formula |
 |-----------|---------|
