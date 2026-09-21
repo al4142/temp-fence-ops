@@ -653,6 +653,183 @@ describe("gates", () => {
     expect(names.has("24x6 SLIDE")).toBe(true);
   });
 
+  it.each([
+    { type: "12x6 SLIDE", extra: 2, brackets: 6 },
+    { type: "15x6 SLIDE", extra: 3, brackets: 8 },
+    { type: "20x6 SLIDE", extra: 4, brackets: 10 },
+    { type: "24x6 SLIDE", extra: 5, brackets: 12 },
+  ] as const)(
+    "6′ slide $type qty 1 with CL6 LF=0 emits post qty = 2+$extra (Lance scope)",
+    ({ type, extra, brackets }) => {
+      const r = calculateBom({
+        fenceType: "CL6",
+        qtyLf: 0,
+        topRail: false,
+        gate: { type, qty: 1 },
+      });
+      const posts = 2 + extra;
+      expect(qty(r, type)).toBe(1);
+      expect(qty(r, BOM_NAMES.slideCarrier)).toBe(1);
+      expect(qty(r, BOM_NAMES.trackBracket)).toBe(brackets);
+      expect(qty(r, BOM_NAMES.cl6Wire)).toBe(0);
+      expect(qty(r, BOM_NAMES.cl6LinePost)).toBe(0);
+      expect(r.terminalsTotal).toBe(posts);
+      expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(2 + extra);
+      expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(posts);
+      expect(qty(r, BOM_NAMES.braceBand)).toBe(posts);
+      expect(qty(r, BOM_NAMES.tensionBand)).toBe(posts * 3);
+      expect(qty(r, BOM_NAMES.clBolts)).toBe(posts + posts * 3);
+      expect(qty(r, BOM_NAMES.cl8Terminal)).toBe(0);
+    }
+  );
+
+  it.each([
+    { type: "12x6 SLIDE", extra: 2 },
+    { type: "15x6 SLIDE", extra: 3 },
+    { type: "20x6 SLIDE", extra: 4 },
+    { type: "24x6 SLIDE", extra: 5 },
+  ] as const)(
+    "6′ slide $type qty 1 on panel host emits CL6 post qty = 2+$extra",
+    ({ type, extra }) => {
+      const r = calculateBom({
+        fenceType: "6x10",
+        qtyLf: 100,
+        gate: { type, qty: 1 },
+      });
+      const posts = 2 + extra;
+      expect(qty(r, "6x10")).toBe(10);
+      expect(qty(r, BOM_NAMES.cl6Wire)).toBe(0);
+      expect(r.terminalsTotal).toBe(posts);
+      expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(2 + extra);
+      expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(posts);
+      expect(qty(r, BOM_NAMES.braceBand)).toBe(posts);
+      expect(qty(r, BOM_NAMES.tensionBand)).toBe(posts * 3);
+      expect(qty(r, BOM_NAMES.cl8Terminal)).toBe(0);
+    }
+  );
+
+  it("24x6 SLIDE qty 1 on barricade still emits 7× CL6 terminals", () => {
+    const r = calculateBom({
+      fenceType: "BARRICADE",
+      qtyLf: 70,
+      gate: { type: "24x6 SLIDE", qty: 1 },
+    });
+    expect(qty(r, BOM_NAMES.barricade)).toBe(10);
+    expect(qty(r, "24x6 SLIDE")).toBe(1);
+    expect(r.terminalsTotal).toBe(2 + 5);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(2 + 5);
+    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(7);
+    expect(qty(r, BOM_NAMES.braceBand)).toBe(7);
+    expect(qty(r, BOM_NAMES.tensionBand)).toBe(21);
+  });
+
+  it("6′ slide with no fence type defaults to CL6 8' x 2-1/2 stack", () => {
+    const r = calculateBom({
+      fenceType: "",
+      qtyLf: 0,
+      gate: { type: "24x6 SLIDE", qty: 1 },
+    });
+    expect(r.terminalsTotal).toBe(7);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(7);
+    expect(qty(r, BOM_NAMES.cl8Terminal)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(7);
+    expect(qty(r, BOM_NAMES.braceBand)).toBe(7);
+    expect(qty(r, BOM_NAMES.tensionBand)).toBe(21);
+  });
+
+  it("CL8 host uses CL8 terminal SKU for 6′ slide extras (LF=0 and LF>0, no double-count)", () => {
+    const lf0 = calculateBom({
+      fenceType: "CL8",
+      qtyLf: 0,
+      topRail: false,
+      gate: { type: "24x6 SLIDE", qty: 1 },
+    });
+    expect(lf0.terminalsTotal).toBe(7);
+    expect(qty(lf0, BOM_NAMES.cl8Terminal)).toBe(7);
+    expect(qty(lf0, BOM_NAMES.cl6Terminal)).toBe(0);
+    expect(qty(lf0, BOM_NAMES.cl8TensionBar)).toBe(7);
+    expect(qty(lf0, BOM_NAMES.tensionBand)).toBe(7 * 4);
+
+    const lf = calculateBom({
+      fenceType: "CL8",
+      qtyLf: 50,
+      topRail: false,
+      gate: { type: "24x6 SLIDE", qty: 1 },
+    });
+    expect(lf.terminalsTotal).toBe(7);
+    expect(qty(lf, BOM_NAMES.cl8Terminal)).toBe(7);
+    expect(qty(lf, BOM_NAMES.cl6Terminal)).toBe(0);
+    expect(qty(lf, BOM_NAMES.cl8TensionBar)).toBe(7);
+  });
+
+  it("CL8+1 host uses CL8 terminal SKU, not a second CL6 emit", () => {
+    const r = calculateBom({
+      fenceType: "CL8+1",
+      qtyLf: 50,
+      gate: { type: "12x6 SLIDE", qty: 1 },
+    });
+    expect(r.terminalsTotal).toBe(2 + 2);
+    expect(qty(r, BOM_NAMES.cl8Terminal)).toBe(4);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(0);
+  });
+
+  it("CL6 LF>0 does not double-emit 6′ slide terminals on top of the chainlink recipe", () => {
+    const r = calculateBom({
+      fenceType: "CL6",
+      qtyLf: 50,
+      topRail: false,
+      gate: { type: "24x6 SLIDE", qty: 1 },
+    });
+    expect(r.terminalsTotal).toBe(7);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(7);
+    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(7);
+    expect(qty(r, BOM_NAMES.braceBand)).toBe(7);
+    expect(qty(r, BOM_NAMES.tensionBand)).toBe(21);
+  });
+
+  it("panel 6x12 LF=0 with 12x6 SLIDE still emits 4× CL6 terminals", () => {
+    const r = calculateBom({
+      fenceType: "6x12",
+      qtyLf: 0,
+      gate: { type: "12x6 SLIDE", qty: 1 },
+    });
+    expect(qty(r, "6x12")).toBe(0);
+    expect(r.terminalsTotal).toBe(2 + 2);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(2 + 2);
+    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(4);
+    expect(qty(r, BOM_NAMES.trackBracket)).toBe(6);
+  });
+
+  it("CL6 plate LF=0 with 24x6 SLIDE emits plate terminals + 4 bolts each", () => {
+    const r = calculateBom({
+      fenceType: "CL6",
+      qtyLf: 0,
+      topRail: false,
+      postMount: "plate",
+      gate: { type: "24x6 SLIDE", qty: 1 },
+    });
+    expect(r.terminalsTotal).toBe(7);
+    expect(qty(r, BOM_NAMES.cl6TerminalPlate)).toBe(7);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(7);
+    expect(qty(r, BOM_NAMES.screwBolt38x3)).toBe(7 * 4);
+    expect(qty(r, BOM_NAMES.cl6LinePostPlate)).toBe(0);
+  });
+
+  it("14x8 SLIDE on panel stays Excel-thin (no extra track posts / no CL6 terminal stack)", () => {
+    const r = calculateBom({
+      fenceType: "6x10",
+      qtyLf: 50,
+      gate: { type: "14x8 SLIDE", qty: 1 },
+    });
+    expect(qty(r, "14x8 SLIDE")).toBe(1);
+    expect(qty(r, BOM_NAMES.trackBracket)).toBe(6);
+    expect(r.terminalsTotal).toBe(2);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl8Terminal)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(0);
+  });
+
   it("GATE + GATE2 swing counts stack", () => {
     const r = calculateBom({
       fenceType: "6x10",
@@ -749,6 +926,7 @@ describe("guardrails", () => {
     expect(qty(r, "10x8")).toBe(2);
     expect(qty(r, BOM_NAMES.swingRoller)).toBe(2);
     expect(qty(r, BOM_NAMES.cl8Wire)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl8Terminal)).toBe(0);
   });
 });
 

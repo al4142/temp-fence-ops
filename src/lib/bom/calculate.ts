@@ -20,6 +20,7 @@ import {
   slide6ExtraTrackPosts,
   slide6GateFramePipeLf,
   slide6TrackBrackets,
+  type ChainlinkFenceType,
   type FenceType,
   type GateType,
   type PanelType,
@@ -109,6 +110,56 @@ function addPanelRecipe(
   if (weightMode === "SBAG") addLine(map, BOM_NAMES.sandBag, stands * 2);
 }
 
+/**
+ * 2-1/2″ terminal posts + tension-bar / brace-band / tension-band stack.
+ * Used by the chainlink fence body and also by 6′ slides when that body does not run
+ * (LF=0, panel, barricade). Plate screw-bolts here are the 4-per-terminal share only.
+ */
+function addTerminalStack(
+  map: Map<string, BomLine>,
+  type: ChainlinkFenceType,
+  terminalsTotal: number,
+  postMount: PostMount,
+  topRail: boolean,
+  bottomRail: boolean
+) {
+  if (terminalsTotal <= 0) return;
+  const base = chainlinkBase(type);
+  const plate = postMount === "plate";
+  const terminalName = plate
+    ? base === "CL6"
+      ? BOM_NAMES.cl6TerminalPlate
+      : BOM_NAMES.cl8TerminalPlate
+    : base === "CL6"
+      ? BOM_NAMES.cl6Terminal
+      : BOM_NAMES.cl8Terminal;
+
+  addLine(map, terminalName, terminalsTotal);
+  addLine(
+    map,
+    base === "CL6" ? BOM_NAMES.cl6TensionBar : BOM_NAMES.cl8TensionBar,
+    terminalsTotal
+  );
+  addLine(map, BOM_NAMES.braceBand, terminalsTotal);
+  const fabricBands = terminalsTotal * (base === "CL6" ? 3 : 4);
+  addLine(map, BOM_NAMES.tensionBand, fabricBands, "fabric / rail-end (temp multiplier)");
+  if (isPlusOneType(type)) {
+    addLine(map, BOM_NAMES.tensionBand, terminalsTotal * 3, "barb: 1 band per strand at each terminal");
+  }
+  const railEnds = terminalsTotal * (topRail ? 1 : 0) + terminalsTotal * (bottomRail ? 1 : 0);
+  addLine(map, BOM_NAMES.railEnd, railEnds);
+  const tensionBandQty = fabricBands + (isPlusOneType(type) ? terminalsTotal * 3 : 0);
+  addLine(map, BOM_NAMES.clBolts, terminalsTotal + tensionBandQty + railEnds);
+  if (plate) {
+    addLine(
+      map,
+      BOM_NAMES.screwBolt38x3,
+      terminalsTotal * 4,
+      "DeWalt SCREW-BOLT+; 2 per line plate, 4 per terminal plate"
+    );
+  }
+}
+
 function addChainlinkRecipe(
   map: Map<string, BomLine>,
   type: FenceType,
@@ -133,13 +184,6 @@ function addChainlinkRecipe(
     : base === "CL6"
       ? BOM_NAMES.cl6LinePost
       : BOM_NAMES.cl8LinePost;
-  const terminalName = plate
-    ? base === "CL6"
-      ? BOM_NAMES.cl6TerminalPlate
-      : BOM_NAMES.cl8TerminalPlate
-    : base === "CL6"
-      ? BOM_NAMES.cl6Terminal
-      : BOM_NAMES.cl8Terminal;
 
   addLine(map, base === "CL6" ? BOM_NAMES.cl6Wire : BOM_NAMES.cl8Wire, wireRolls);
   addLine(map, linePostName, linePosts);
@@ -148,7 +192,7 @@ function addChainlinkRecipe(
     addLine(
       map,
       BOM_NAMES.screwBolt38x3,
-      linePosts * 2 + terminalsTotal * 4,
+      linePosts * 2,
       "DeWalt SCREW-BOLT+; 2 per line plate, 4 per terminal plate"
     );
   }
@@ -163,26 +207,7 @@ function addChainlinkRecipe(
     addLine(map, BOM_NAMES.boulevardClamp, linePosts);
   }
 
-  const railEnds = terminalsTotal * (topRail ? 1 : 0) + terminalsTotal * (bottomRail ? 1 : 0);
-
-  if (terminalsTotal > 0) {
-    addLine(map, terminalName, terminalsTotal);
-    addLine(
-      map,
-      base === "CL6" ? BOM_NAMES.cl6TensionBar : BOM_NAMES.cl8TensionBar,
-      terminalsTotal
-    );
-    addLine(map, BOM_NAMES.braceBand, terminalsTotal);
-    const fabricBands = terminalsTotal * (base === "CL6" ? 3 : 4);
-    addLine(map, BOM_NAMES.tensionBand, fabricBands, "fabric / rail-end (temp multiplier)");
-    if (isPlusOneType(type)) {
-      addLine(map, BOM_NAMES.tensionBand, terminalsTotal * 3, "barb: 1 band per strand at each terminal");
-    }
-    addLine(map, BOM_NAMES.railEnd, railEnds);
-    const tensionBandQty =
-      fabricBands + (isPlusOneType(type) ? terminalsTotal * 3 : 0);
-    addLine(map, BOM_NAMES.clBolts, terminalsTotal + tensionBandQty + railEnds);
-  }
+  addTerminalStack(map, type, terminalsTotal, postMount, topRail, bottomRail);
 
   if (isPlusOneType(type) && lf > 0) {
     addLine(map, BOM_NAMES.barbArm, linePosts, "one 45° arm per line post");
@@ -349,7 +374,17 @@ function applySectionFence(
       addChainlinkRecipe(map, fenceType, qtyLf, topRail, bottomRail, terminalsTotal, resolvedMount);
     } else {
       warnings.push(`${labelPrefix}Chainlink recipe needs LF > 0.`);
+      // 6′ slide track supports still need the terminal SKU stack with no fence body.
+      if (extraTrackPosts > 0) {
+        addTerminalStack(map, fenceType, terminalsTotal, resolvedMount, topRail, bottomRail);
+      }
     }
+  }
+
+  // Panel / barricade / unknown: chainlink recipe never runs. 6′ slides still emit
+  // the usual CL6 driven terminal stack (gate ×2 + track extras).
+  if (extraTrackPosts > 0 && !(fenceType && isChainlinkType(fenceType))) {
+    addTerminalStack(map, "CL6", terminalsTotal, "driven", false, false);
   }
 
   if (weightMode && fenceType && !isPanelType(fenceType)) {
