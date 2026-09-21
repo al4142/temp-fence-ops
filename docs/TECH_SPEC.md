@@ -93,9 +93,9 @@ Core idea:
 - Yard ledger (not job P&L): transfers, write-offs, yard expenses, vendors.
 - **User** = office login (`email`, bcrypt `passwordHash`, `name`, `role`).
 
-On-hand is derived (`src/lib/inventory.ts`): starting qty ± signed job movements ± adjustments ± transfers ± write-offs ± job material variance. Only catalog-linked lines move stock.
+On-hand is derived (`src/lib/inventory.ts`): starting qty ± signed job movements ± adjustments ± transfers ± write-offs ± job material variance. Only catalog-linked lines move stock. **Cancelled** jobs contribute 0 (materials/variances kept).
 
-P&L is derived by order number (`src/lib/pnl.ts`): revenue, labor (OT @ 1.5×), catalog material cost on outbound jobs only (Install / Drop; Pickup BOM is not a second cost), cost lines, material variance. Transfers, write-offs, and yard expenses are **excluded**.
+P&L is derived by order number (`src/lib/pnl.ts`): revenue, labor (OT @ 1.5×), catalog material cost on outbound jobs only (Install / Drop; Pickup BOM is not a second cost), cost lines, material variance. **Cancelled** tickets are excluded. Transfers, write-offs, and yard expenses are **excluded**.
 
 ---
 
@@ -107,23 +107,26 @@ P&L is derived by order number (`src/lib/pnl.ts`): revenue, labor (OT @ 1.5×), 
 |------|------|
 | `src/app/jobs/` | List, create, detail, edit; `actions.ts` persist |
 | `src/components/JobForm*.tsx` | Create/edit form (details, BOM options, materials, labor, cost lines, variance) |
-| `src/lib/job-form.ts`, `src/lib/job-constants.ts` | Validation; `JOB_TYPES` (`Install`, `Pickup`, `Drop`, `Other`, `Site Walk`); `JOB_STATUSES` (`Active`, `Cancelled`); `JOB_CLASSES` vs `SITE_WALK_CLASSES` |
-| `src/lib/jobs-list.ts` | Jobs table `where` (date / branch / type / search; optional Hide cancelled); From=To same date is the day list |
+| `src/lib/job-form.ts`, `src/lib/job-constants.ts` | Validation; `JOB_TYPES` (`Install`, `Pickup`, `Drop`, `Other`, `Site Walk`); `JOB_STATUSES` (`Active`, `Cancelled`); `CANCEL_JOB_CONFIRM`; `JOB_CLASSES` vs `SITE_WALK_CLASSES` |
+| `src/lib/jobs-list.ts` | Jobs table `where` (date / branch / type / search; optional `?hideCancelled=1` via `parseHideCancelled`); From=To same date is the day list |
+| `src/components/JobStatusBadge.tsx` | Rose **Cancelled** badge next to the type badge |
 | `src/app/jobs/[id]/export/route.ts`, `src/lib/export-project.ts` | **Export Project** `.xlsx` |
 
 Required ticket fields: order #, date, branch, job type. **Generate BOM** lives on the job form under Materials — there is no standalone BOM page. Generate BOM previews in the browser; **Apply to materials** then **Create job** / **Save changes** writes the ticket.
 
-Job types that move inventory: outbound `Install` / `Drop`; inbound `Pickup`. `Other`, `Site Walk` (and any unrecognized string) have no inventory effect (`inventorySignForJobType` → `0`; Jobs table Inv. = “No inventory effect”). **Cancelled** status forces sign 0 regardless of type. Create always writes `Active` (no status picker). Edit has an Active | Cancelled select; Active → Cancelled confirms (“Stays on Jobs and the day list. No inventory or P&L.”). The job form accepts only the Title Case labels.
+Job types that move inventory: outbound `Install` / `Drop`; inbound `Pickup`. `Other`, `Site Walk` (and any unrecognized string) have no inventory effect (`inventorySignForJobType` → `0`; Jobs table Inv. = “No inventory effect”). **Cancelled** status forces sign 0 regardless of type (`inventorySignForJobType(jobType, status)`, `inventorySignForMaterial(..., status)`). The job form accepts only the Title Case labels.
 
-**Site Walk** (additive in `src/lib/job-constants.ts` / `JobFormDetails`): class dropdown is **Non Pay** / **Site Visit** (`classesForJobType`); switching type replaces class with the first option of the new set when the previous class is not in that set. Fence and materials may be empty (`allowsEmptyFenceAndMaterials`) — Install still errors on an unnamed non-zero material row. Labor may include a 0/0 hour row (`allowsZeroHourLabor`; form hint exists). Jobs list never filters on revenue, materials, labor, fence, or class, so a $0 / blank-materials Site Walk is a normal row. There is no calendar widget: **From** and **To** set to the same date on `/jobs` is the day list (`jobs-list.ts`). Cancelled jobs stay on that list by default (`jobsListWhere` has no status predicate unless `hideCancelled`).
+**Cancelled** (additive `Job.status`; default **Active**): create always writes `Active` (`createJob` hard-sets it). Edit shows Status select (`showStatus` on `JobFormDetails`); Active → Cancelled confirms with `CANCEL_JOB_CONFIRM` (“Stays on Jobs and the day list. No inventory or P&L.”); Cancelled → Active has no confirm. `jobsListWhere` has no status predicate unless `hideCancelled` (`?hideCancelled=1`). `buildOrderPnL` / `countsTowardMaterialCost` / analytics (`isCancelledStatus`) skip Cancelled tickets; order rollup `jobCount` is Active only. Materials / labor / variances are kept (not wiped). Active Install / Pickup / Drop / Other / Site Walk behavior is otherwise unchanged.
 
-**CSV import** (`src/lib/csv-import.ts`, `/admin/import`) maps known Daily Tracker aliases from `IMPORT_JOB_TYPE_ALIASES` (`INST` → Install, `PU` → Pickup, `DELIVERY` → Drop, `SITEWALK` / `SITE-WALK` → Site Walk; spaces and underscores collapse to `-`, so `SITE WALK` / `site_walk` also map). Unknown codes reject the row (never silent Other), including `SWLK`. There is **no** class alias table — `class` is stored as-is. Import then runs the same `validateAndNormalize` as the form and commits accepted rows in one transaction. Preview shape: [IMPORT.md](./IMPORT.md).
+**Site Walk** (additive in `src/lib/job-constants.ts` / `JobFormDetails`): class dropdown is **Non Pay** / **Site Visit** (`classesForJobType`); switching type replaces class with the first option of the new set when the previous class is not in that set. Fence and materials may be empty (`allowsEmptyFenceAndMaterials`) — Install still errors on an unnamed non-zero material row. Labor may include a 0/0 hour row (`allowsZeroHourLabor`; form hint exists). Jobs list never filters on revenue, materials, labor, fence, or class, so a $0 / blank-materials Site Walk is a normal row. There is no calendar widget: **From** and **To** set to the same date on `/jobs` is the day list (`jobs-list.ts`). Cancelled still overrides inventory/P&L on a Site Walk the same as any other type.
+
+**CSV import** (`src/lib/csv-import.ts`, `/admin/import`) maps known Daily Tracker aliases from `IMPORT_JOB_TYPE_ALIASES` (`INST` → Install, `PU` → Pickup, `DELIVERY` → Drop, `SITEWALK` / `SITE-WALK` → Site Walk; spaces and underscores collapse to `-`, so `SITE WALK` / `site_walk` also map). Unknown codes reject the row (never silent Other), including `SWLK`. There is **no** class alias table — `class` is stored as-is. There is **no** Status column — creates are always `Active`; re-import `jobFields` omit `status` so a cancelled ticket stays cancelled. Import then runs the same `validateAndNormalize` as the form and commits accepted rows in one transaction. Preview shape: [IMPORT.md](./IMPORT.md).
 
 ### Inventory
 
 | Path | Role |
 |------|------|
-| `src/lib/inventory.ts` | Sign by job type + on-hand computation |
+| `src/lib/inventory.ts` | Sign by job type + `status` + on-hand computation (`Cancelled` → 0) |
 | `src/app/inventory/page.tsx` | On-hand by branch |
 | `src/app/admin/inventory/` | Catalog CRUD + manual adjustments |
 | `src/app/transfers/`, `src/app/write-offs/` | Yard-to-yard qty moves; damaged/scrap/shrink |
@@ -141,7 +144,7 @@ Catalog pick on a job line links `JobMaterial.inventoryItemId` and drives stock 
 | `src/lib/bom/calculate.test.ts` | Vitest coverage |
 | `src/components/JobForm.tsx` | Generate BOM preview / apply |
 
-Install vs Pickup does **not** change BOM quantities. Inventory sign is applied later from `jobType`. Unmatched names stay free-text; the app does not invent catalog rows.
+Install vs Pickup does **not** change BOM quantities. Inventory sign is applied later from `jobType` (and `status` — Cancelled → 0). Unmatched names stay free-text; the app does not invent catalog rows.
 
 Fence types, options, and the canonical smoke example are in [§6](#6-bom--fence-types-and-options). Point math: [BOM_APPROVED.md](./BOM_APPROVED.md).
 
@@ -150,9 +153,9 @@ Fence types, options, and the canonical smoke example are in [§6](#6-bom--fence
 | Path | Role |
 |------|------|
 | `src/app/pnl/page.tsx` | Lookup UI (`?order=`) |
-| `src/lib/pnl.ts` | `buildOrderPnL` — sums all jobs sharing an order number; materials from outbound tickets only |
+| `src/lib/pnl.ts` | `buildOrderPnL` — sums Active jobs sharing an order number; Cancelled excluded; materials from outbound tickets only |
 
-Analytics (`src/app/analytics/`, `src/lib/analytics.ts`) is monthly LF by branch × job-type group from **job tickets only**. Groups follow inventory sign: Install / Drop, Pickup, Other (`Site Walk` groups with Other).
+Analytics (`src/app/analytics/`, `src/lib/analytics.ts`) is monthly LF by branch × job-type group from **job tickets only**. Groups follow inventory sign: Install / Drop, Pickup, Other (`Site Walk` groups with Other). Cancelled tickets are skipped (`isCancelledStatus`).
 
 Related office screens (not part of job P&L): `/expenses` (yard ledger), `/admin/vendors`, `/admin/branches`, `/admin/employees`, `/admin/import`.
 
