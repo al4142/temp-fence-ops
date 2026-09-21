@@ -6,6 +6,7 @@ import {
   GATE_TYPES,
   KNOWN_SKU_GAPS,
   SLIDE_6_EXTRA_TRACK_POSTS,
+  SLIDE_6_GATE_FRAME_PIPE_LF,
   SLIDE_6_GATE_TYPES,
   SLIDE_6_TRACK_BRACKETS,
   TUBE_138_STICK_FT,
@@ -504,34 +505,41 @@ describe("gates", () => {
     expect(qty(r, BOM_NAMES.cb38x214)).toBe(2);
   });
 
-  it.each([
-    { type: "12x6 SLIDE", opening: 12 },
-    { type: "15x6 SLIDE", opening: 15 },
-    { type: "20x6 SLIDE", opening: 20 },
-    { type: "24x6 SLIDE", opening: 24 },
-  ] as const)("6′ slide $type: rich hardware + extra track posts + gate-frame pipe", ({ type, opening }) => {
-    const r = calculateBom({
-      fenceType: "CL6",
-      qtyLf: 50,
-      topRail: false,
-      gate: { type, qty: 1 },
-    });
-    const extra = SLIDE_6_EXTRA_TRACK_POSTS[opening];
-    const brackets = SLIDE_6_TRACK_BRACKETS[opening];
-    const pipeLf = 2 * opening;
-    expect(qty(r, type)).toBe(1);
-    expect(qty(r, BOM_NAMES.slideCarrier)).toBe(1);
-    expect(qty(r, BOM_NAMES.slideSafetyRoller)).toBe(2);
-    expect(qty(r, BOM_NAMES.trackBracket)).toBe(brackets);
-    expect(qty(r, BOM_NAMES.swingRoller)).toBe(0);
-    expect(r.terminalsTotal).toBe(2 + extra);
-    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(2 + extra);
-    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(2 + extra);
-    expect(qty(r, BOM_NAMES.tensionBand)).toBe((2 + extra) * 3);
-    expect(qty(r, BOM_NAMES.tube138)).toBe(Math.ceil(pipeLf / TUBE_138_STICK_FT));
-    expect(r.lines.find((l) => l.skuOrName === BOM_NAMES.tube138)?.notes).toMatch(/gate frame/i);
-    expect(r.lines.find((l) => l.skuOrName === BOM_NAMES.tube138)?.notes).toContain(`${pipeLf}′ LF`);
+  it("ALE-30 6′ maps are the locked table (no W/5 or other inferred formula)", () => {
+    expect(SLIDE_6_TRACK_BRACKETS).toEqual({ 12: 6, 15: 8, 20: 10, 24: 12 });
+    expect(SLIDE_6_EXTRA_TRACK_POSTS).toEqual({ 12: 2, 15: 3, 20: 4, 24: 5 });
+    expect(SLIDE_6_GATE_FRAME_PIPE_LF).toEqual({ 12: 24, 15: 30, 20: 40, 24: 48 });
   });
+
+  it.each([
+    { type: "12x6 SLIDE", brackets: 6, extra: 2, pipeLf: 24, terminals: 4 },
+    { type: "15x6 SLIDE", brackets: 8, extra: 3, pipeLf: 30, terminals: 5 },
+    { type: "20x6 SLIDE", brackets: 10, extra: 4, pipeLf: 40, terminals: 6 },
+    { type: "24x6 SLIDE", brackets: 12, extra: 5, pipeLf: 48, terminals: 7 },
+  ] as const)(
+    "6′ slide $type qty 1: brackets $brackets, rollers 2, carrier 1, terminals $terminals, pipe $pipeLf LF",
+    ({ type, brackets, extra, pipeLf, terminals }) => {
+      const r = calculateBom({
+        fenceType: "CL6",
+        qtyLf: 50,
+        topRail: false,
+        gate: { type, qty: 1 },
+      });
+      expect(qty(r, type)).toBe(1);
+      expect(qty(r, BOM_NAMES.slideCarrier)).toBe(1);
+      expect(qty(r, BOM_NAMES.slideSafetyRoller)).toBe(2);
+      expect(qty(r, BOM_NAMES.trackBracket)).toBe(brackets);
+      expect(qty(r, BOM_NAMES.swingRoller)).toBe(0);
+      expect(r.terminalsTotal).toBe(terminals);
+      expect(r.terminalsTotal).toBe(2 + extra);
+      expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(terminals);
+      expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(terminals);
+      expect(qty(r, BOM_NAMES.tensionBand)).toBe(terminals * 3);
+      expect(qty(r, BOM_NAMES.tube138)).toBe(Math.ceil(pipeLf / TUBE_138_STICK_FT));
+      expect(r.lines.find((l) => l.skuOrName === BOM_NAMES.tube138)?.notes).toMatch(/gate frame/i);
+      expect(r.lines.find((l) => l.skuOrName === BOM_NAMES.tube138)?.notes).toContain(`${pipeLf}′ LF`);
+    }
+  );
 
   it("two 12x6 SLIDE doubles hardware, extras, and pipe LF (stick ceil on total LF)", () => {
     const r = calculateBom({

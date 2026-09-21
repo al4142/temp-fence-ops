@@ -108,6 +108,12 @@ export const SLIDE_6_EXTRA_TRACK_POSTS: Record<number, number> = { 12: 2, 15: 3,
 /** Track brackets per 6′ slide opening (ALE-30). Not the Excel 6-vs-8 mixed branch. */
 export const SLIDE_6_TRACK_BRACKETS: Record<number, number> = { 12: 6, 15: 8, 20: 10, 24: 12 };
 
+/**
+ * Horizontal gate-frame 1-3/8″ pipe LF per 6′ slide (ALE-30 table).
+ * Top + bottom, each = opening. Not fence-side track. Not a derived W×2 lookup at call sites — table only.
+ */
+export const SLIDE_6_GATE_FRAME_PIPE_LF: Record<number, number> = { 12: 24, 15: 30, 20: 40, 24: 48 };
+
 /** 1-3/8″ tube stick length as stored in inventory (same divisor as fence top/bottom rail). */
 export const TUBE_138_STICK_FT = 21;
 
@@ -467,6 +473,13 @@ export function slide6TrackBrackets(type: string): number {
   const size = parseSlideGateSize(type);
   if (!size) return 0;
   return SLIDE_6_TRACK_BRACKETS[size.openingFt] ?? 0;
+}
+
+export function slide6GateFramePipeLf(type: string): number {
+  if (!isSlide6Gate(type)) return 0;
+  const size = parseSlideGateSize(type);
+  if (!size) return 0;
+  return SLIDE_6_GATE_FRAME_PIPE_LF[size.openingFt] ?? 0;
 }
 
 export function isShortSlideGate(type: string): boolean {

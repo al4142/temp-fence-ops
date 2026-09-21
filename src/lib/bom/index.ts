@@ -23,10 +23,14 @@ export {
   isPanelType,
   isChainlinkType,
   isPlusOneType,
+  SLIDE_6_EXTRA_TRACK_POSTS,
+  SLIDE_6_TRACK_BRACKETS,
+  SLIDE_6_GATE_FRAME_PIPE_LF,
   isSlideGate,
   isSlide6Gate,
   parseSlideGateSize,
   slide6ExtraTrackPosts,
+  slide6GateFramePipeLf,
   slide6TrackBrackets,
 } from "./catalog";
 export { calculateBom } from "./calculate";

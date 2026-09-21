@@ -250,9 +250,9 @@ rollers  = GATE PIPE TRACK SAFETY ROLLER WHEEL 5" × 2
 brackets = TRACK BRACKET 2-1/2 × table qty
 ```
 
-**Horizontal gate pipe (locked):** 1-3/8″ **gate-frame** tube — top of the gate + bottom of the gate, each = opening. Total LF = `2 * opening_ft`. This is **not** fence-side overhead/cantilever track. Emitted as existing `TOP RAIL` sticks: `CEILING(LF / 21)` (same 21′ stick as fence rail). Open question for ops: dedicated SKU vs shared top-rail SKU.
+**Horizontal gate pipe (locked):** 1-3/8″ **gate-frame** tube — top of the gate + bottom of the gate, each = opening. Table LF: `{12:24, 15:30, 20:40, 24:48}`. This is **not** fence-side overhead/cantilever track. Inventory emits existing `TOP RAIL` sticks as `CEILING(table_LF / 21)` (same 21′ stick as fence rail; storage conversion only). Open question for ops: dedicated SKU vs shared top-rail SKU.
 
-**Extra track posts:** explicit map `{12:2, 15:3, 20:4, 24:5}` — not a guessed `W/5` formula. Feed the same terminal stack as `terminals_total`.
+**Extra track posts:** explicit map `{12:2, 15:3, 20:4, 24:5}` — not a guessed `W/5` formula. Feed the same terminal stack as `terminals_total`. Brackets `{12:6, 15:8, 20:10, 24:12}`. Rollers always 2; carrier always 1. Multiply table rows by qty.
 
 ### 8′ slide hardware (Excel — thin math until takeoff)
 

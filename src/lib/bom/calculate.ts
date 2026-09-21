@@ -17,8 +17,8 @@ import {
   normalizePostMount,
   normalizeScreenSku,
   normalizeWeightMode,
-  parseSlideGateSize,
   slide6ExtraTrackPosts,
+  slide6GateFramePipeLf,
   slide6TrackBrackets,
   type FenceType,
   type GateType,
@@ -236,12 +236,11 @@ function addGateRecipes(
     if (isSlideGate(g.type)) {
       resultGates.push({ type: g.type, qty: g.qty, kind: "slide" });
       if (isSlide6Gate(g.type)) {
-        const size = parseSlideGateSize(g.type);
         addLine(map, BOM_NAMES.slideCarrier, g.qty);
         addLine(map, BOM_NAMES.slideSafetyRoller, g.qty * 2);
         addLine(map, BOM_NAMES.trackBracket, g.qty * slide6TrackBrackets(g.type));
-        // Horizontal gate-frame 1-3/8″ pipe: top + bottom, each = opening. Not fence-side track.
-        if (size) gateFramePipeLf += 2 * size.openingFt * g.qty;
+        // Horizontal gate-frame 1-3/8″ pipe from ALE-30 table (top + bottom). Not fence-side track.
+        gateFramePipeLf += slide6GateFramePipeLf(g.type) * g.qty;
       } else {
         // TODO(Alex): 8′ slide rich recipe — takeoff pending
         excelSlideCount += g.qty;
