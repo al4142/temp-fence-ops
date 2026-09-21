@@ -59,6 +59,24 @@ describe("parseImportText job-type map", () => {
     ]);
   });
 
+  it("maps SITE WALK / SITE-WALK / SITEWALK to Site Walk", () => {
+    const parsed = parseImportText(
+      csv([
+        "2026-04-07,MIA,ORD-7,Acme,SITE WALK,,,0,,,,",
+        "2026-04-08,MIA,ORD-8,Acme,SITE-WALK,,,0,,,,",
+        "2026-04-09,MIA,ORD-9,Acme,SITEWALK,,,0,,,,",
+        "2026-04-10,MIA,ORD-10,Acme,Site Walk,,,0,,,,",
+      ])
+    );
+    const mapped = parsed.rows.map((r) => [r.originalType, r.mappedType, r.status, r.jobType]);
+    expect(mapped).toEqual([
+      ["SITE WALK", "Site Walk", "accept", "Site Walk"],
+      ["SITE-WALK", "Site Walk", "accept", "Site Walk"],
+      ["SITEWALK", "Site Walk", "accept", "Site Walk"],
+      ["Site Walk", "Site Walk", "accept", "Site Walk"],
+    ]);
+  });
+
   it("rejects unknown codes and never stores Other for them", () => {
     const parsed = parseImportText(
       csv([
@@ -160,6 +178,46 @@ describe("evaluateImportRows + validator parity", () => {
     expect(evaluated.map((e) => e.row.status)).toEqual(["accept", "accept", "accept"]);
     expect(evaluated.map((e) => e.payload?.qtyLf)).toEqual([null, 0, 100]);
     expect(planImportCommit(evaluated).ok).toBe(true);
+  });
+
+  it("accepts Site Walk with empty fence/materials and 0-hour labor", () => {
+    const parsed = parseImportText(
+      csv(["2026-04-11,MIA,ORD-SW,Acme,SITE WALK,,,0,Carlos Rivera,0,0,"])
+    );
+    const [evaluated] = evaluateImportRows(parsed.rows, lookup());
+    expect(evaluated.row.status).toBe("accept");
+    expect(evaluated.payload?.jobType).toBe("Site Walk");
+    expect(evaluated.payload?.fenceType).toBeNull();
+    expect(evaluated.payload?.materials).toEqual([]);
+    expect(evaluated.payload?.labor).toEqual([
+      { employeeId: "emp-1", regularHours: 0, overtimeHours: 0 },
+    ]);
+    expect(evaluated.laborData).toEqual([
+      { employeeId: "emp-1", regularHours: 0, overtimeHours: 0 },
+    ]);
+    expect(planImportCommit([evaluated]).ok).toBe(true);
+
+    const formValues = importRowToFormValues(parsed.rows[0], {
+      branchId: "branch-mia",
+      laborEmployeeId: "emp-1",
+    });
+    const form = validateAndNormalize(formValues);
+    expect(form.ok).toBe(true);
+    if (form.ok) {
+      expect(form.data.jobType).toBe("Site Walk");
+      expect(form.data.labor).toHaveLength(1);
+      expect(form.data.labor[0].regularHours).toBe(0);
+    }
+  });
+
+  it("still drops 0-hour import labor on Install", () => {
+    const parsed = parseImportText(
+      csv(["2026-04-01,MIA,ORD-1,Acme,Install,6x10,100,0,Carlos Rivera,0,0,"])
+    );
+    const [evaluated] = evaluateImportRows(parsed.rows, lookup());
+    expect(evaluated.row.status).toBe("accept");
+    expect(evaluated.payload?.labor).toEqual([]);
+    expect(evaluated.laborData).toEqual([]);
   });
 
   it("rejects the same bad qty the job form rejects", () => {

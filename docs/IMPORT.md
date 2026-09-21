@@ -21,7 +21,7 @@ At least one header alias for each:
 | date | `date`, `Job Date` |
 | branch | `branch`, `yard` (use branch **code**: `MIA`, `DAV`) |
 | orderNumber | `orderNumber`, `Order #`, `WO` |
-| jobType | `jobType`, `Type`, `Txn` (values: `Install`, `Pickup`, `Drop`, `Other`; known aliases such as `INST` / `PU` / `DELIVERY` map; **unknown codes reject the row** — never coerced to Other) |
+| jobType | `jobType`, `Type`, `Txn` (values: `Install`, `Pickup`, `Drop`, `Other`, `Site Walk`; known aliases such as `INST` / `PU` / `DELIVERY` / `SITEWALK` map; **unknown codes reject the row** — never coerced to Other) |
 
 ## Optional columns
 
@@ -38,7 +38,7 @@ Material columns whose header looks like a SKU (`PANEL-6`, `BASE-STD`) are treat
 
 ## Job-type map (import only)
 
-The job **form** still accepts only Title Case `Install` / `Pickup` / `Drop` / `Other`. Import applies this alias table, then runs the same `validateAndNormalize` as the form:
+The job **form** still accepts only Title Case `Install` / `Pickup` / `Drop` / `Other` / `Site Walk`. Import applies this alias table, then runs the same `validateAndNormalize` as the form:
 
 | CSV / Excel value | Stored type | Inventory sign |
 |-------------------|-------------|----------------|
@@ -46,6 +46,7 @@ The job **form** still accepts only Title Case `Install` / `Pickup` / `Drop` / `
 | Pickup, PU, PICK-UP, RETURN, RET | Pickup | inbound |
 | Drop, DELIVERY, DEL | Drop | outbound |
 | Other | Other | none |
+| Site Walk, SITE WALK, SITE-WALK, SITEWALK | Site Walk | none |
 | SWLK, RELOCATE, REP, MOVE, blank, anything else | **reject** | — |
 
 ## API shape for Dutch (preview)
@@ -56,7 +57,7 @@ The job **form** still accepts only Title Case `Install` / `Pickup` / `Drop` / `
 rows[]: {
   rowNumber: number
   originalType: string          // raw CSV cell
-  mappedType: "Install" | "Pickup" | "Drop" | "Other" | null
+  mappedType: "Install" | "Pickup" | "Drop" | "Other" | "Site Walk" | null
   status: "accept" | "reject"
   rejectReason: string | null
   action?: "create" | "update" | "skip" | "error"

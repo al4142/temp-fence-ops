@@ -1,4 +1,10 @@
-import { isJobType, normalizeJobType } from "./job-constants";
+import {
+  allowsEmptyFenceAndMaterials,
+  allowsZeroHourLabor,
+  isJobType,
+  jobTypeMustBeMessage,
+  normalizeJobType,
+} from "./job-constants";
 import { VARIANCE_REASONS } from "./ops-constants";
 import { normalizeFenceType, normalizePostMount, normalizeWeightMode } from "./bom/catalog";
 import {
@@ -201,7 +207,7 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
   if (!date) return { ok: false, error: "Date is required." };
   if (!jobType) return { ok: false, error: "Job type is required." };
   if (!isJobType(jobType)) {
-    return { ok: false, error: "Job type must be Install, Pickup, Drop, or Other." };
+    return { ok: false, error: jobTypeMustBeMessage() };
   }
 
   if (Number.isNaN(Date.parse(date))) {
@@ -216,6 +222,9 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
     const inventoryItemId = m.inventoryItemId?.trim() || null;
     const itemName = m.itemName?.trim() || null;
     if (!inventoryItemId && !itemName) {
+      // Site Walk: skip the form's empty placeholder row (qty defaults to 1).
+      // Other types still require a catalog item or name when qty is non-zero.
+      if (allowsEmptyFenceAndMaterials(jobType)) continue;
       return { ok: false, error: "Each material line needs an inventory item or a name." };
     }
     materials.push({
@@ -235,7 +244,7 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
     if (regularHours < 0 || overtimeHours < 0) {
       return { ok: false, error: "Labor hours cannot be negative." };
     }
-    if (regularHours === 0 && overtimeHours === 0) continue;
+    if (regularHours === 0 && overtimeHours === 0 && !allowsZeroHourLabor(jobType)) continue;
     labor.push({ employeeId, regularHours, overtimeHours });
   }
 

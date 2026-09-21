@@ -403,6 +403,7 @@ export function JobForm({
         inputClass={inputClass}
         labelClass={labelClass}
         newKey={newKey}
+        jobType={jobType}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">

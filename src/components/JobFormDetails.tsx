@@ -1,6 +1,10 @@
 "use client";
 
-import { isJobType, JOB_CLASSES, JOB_TYPES } from "@/lib/job-constants";
+import {
+  classesForJobType,
+  isJobType,
+  JOB_TYPES,
+} from "@/lib/job-constants";
 import type { BranchOption } from "@/components/JobForm";
 
 type Props = {
@@ -29,6 +33,16 @@ export function JobFormDetails(p: Props) {
     revenue, setRevenue,
   } = p;
 
+  const classOptions = classesForJobType(jobType);
+
+  function handleJobTypeChange(next: string) {
+    setJobType(next);
+    const nextClasses = classesForJobType(next);
+    if (jobClass && !nextClasses.includes(jobClass)) {
+      setJobClass(nextClasses[0] ?? "");
+    }
+  }
+
   return (
     <>
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -53,7 +67,7 @@ export function JobFormDetails(p: Props) {
           </div>
           <div>
             <label className={labelClass} htmlFor="jobType">Job type *</label>
-            <select id="jobType" required className={inputClass} value={jobType} onChange={(e) => setJobType(e.target.value)}>
+            <select id="jobType" required className={inputClass} value={jobType} onChange={(e) => handleJobTypeChange(e.target.value)}>
               {JOB_TYPES.map((t) => (<option key={t} value={t}>{t}</option>))}
               {jobType && !isJobType(jobType) ? (
                 <option value={jobType}>{jobType}</option>
@@ -64,7 +78,10 @@ export function JobFormDetails(p: Props) {
             <label className={labelClass} htmlFor="jobClass">Class</label>
             <select id="jobClass" className={inputClass} value={jobClass} onChange={(e) => setJobClass(e.target.value)}>
               <option value="">-</option>
-              {JOB_CLASSES.map((c) => (<option key={c} value={c}>{c}</option>))}
+              {classOptions.map((c) => (<option key={c} value={c}>{c}</option>))}
+              {jobClass && !classOptions.includes(jobClass) ? (
+                <option value={jobClass}>{jobClass}</option>
+              ) : null}
             </select>
           </div>
           <div>

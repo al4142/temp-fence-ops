@@ -1,11 +1,10 @@
 import Link from "next/link";
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { describeInventoryEffect } from "@/lib/inventory";
 import { JobsFilters } from "@/components/JobsFilters";
-import { dateOnlyToUtc } from "@/lib/job-form";
 import { normalizeJobType } from "@/lib/job-constants";
+import { jobsListWhere } from "@/lib/jobs-list";
 
 export const dynamic = "force-dynamic";
 
@@ -40,35 +39,15 @@ export default async function JobsPage({
         orderBy: [{ active: "desc" }, { code: "asc" }],
       });
 
-      const where: Prisma.JobWhereInput = {};
-
-      if (from || to) {
-        where.date = {};
-        if (from) where.date.gte = dateOnlyToUtc(from);
-        if (to) {
-          // inclusive end-of-day via next day exclusive would be better, but noon UTC dates work with lte same day
-          where.date.lte = dateOnlyToUtc(to);
-        }
-      }
-
-      if (branchCode) {
-        const branch = branches.find((b) => b.code === branchCode);
-        if (branch) where.branchId = branch.id;
-        else where.branchId = "__none__";
-      }
-
-      if (jobType) {
-        where.jobType = jobType;
-      }
-
-      if (q) {
-        where.OR = [
-          { orderNumber: { contains: q } },
-          { customer: { contains: q } },
-          { city: { contains: q } },
-          { address: { contains: q } },
-        ];
-      }
+      const where = jobsListWhere({
+        from,
+        to,
+        branchId: branchCode
+          ? branches.find((b) => b.code === branchCode)?.id ?? "__none__"
+          : undefined,
+        jobType,
+        q,
+      });
 
       const [total, jobs] = await Promise.all([
         prisma.job.count({ where }),
@@ -100,7 +79,8 @@ export default async function JobsPage({
           <h1 className="text-2xl font-semibold text-slate-900">Jobs</h1>
           <p className="mt-1 text-sm text-slate-600">
             Daily work tickets. Material line items drive inventory; labor lines drive P&amp;L.
-            Filters are shareable via the URL.
+            Filters are shareable via the URL. Set From and To to the same date for that
+            day&apos;s list.
           </p>
         </div>
         <Link
@@ -118,6 +98,13 @@ export default async function JobsPage({
         page={page}
         pageSize={PAGE_SIZE}
       />
+
+      {from && to && from === to ? (
+        <p className="text-sm text-slate-700">
+          Day list for <span className="font-medium">{from}</span>
+          {" \u2014 "}every ticket that date, including Site Walk with $0 / no materials.
+        </p>
+      ) : null}
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">

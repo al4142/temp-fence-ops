@@ -39,6 +39,7 @@ describe("countsTowardMaterialCost", () => {
     expect(countsTowardMaterialCost("install")).toBe(true);
     expect(countsTowardMaterialCost("Pickup")).toBe(false);
     expect(countsTowardMaterialCost("Other")).toBe(false);
+    expect(countsTowardMaterialCost("Site Walk")).toBe(false);
     expect(countsTowardMaterialCost("RELOCATE")).toBe(false);
   });
 });
@@ -136,6 +137,28 @@ describe("buildOrderPnL materials", () => {
   it("does not treat Other materials as outbound cost", () => {
     const pnl = buildOrderPnL([job({ id: "other", jobType: "Other" })]);
     expect(pnl!.materialCost).toBe(0);
+  });
+
+  it("does not treat Site Walk materials as outbound cost; 0-hour labor is $0", () => {
+    const pnl = buildOrderPnL([
+      job({
+        id: "walk",
+        jobType: "Site Walk",
+        revenue: 0,
+        labor: [
+          {
+            regularHours: 0,
+            overtimeHours: 0,
+            employee: { hourlyRate: 40, name: "Alex" },
+          },
+        ],
+      }),
+    ]);
+    expect(pnl!.materialCost).toBe(0);
+    expect(pnl!.laborCost).toBe(0);
+    expect(pnl!.totalCost).toBe(0);
+    expect(pnl!.grossProfit).toBe(0);
+    expect(laborCostForLine(0, 0, 40)).toBe(0);
   });
 
   it("still applies Pickup variance; free-text outbound lines stay $0", () => {

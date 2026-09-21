@@ -73,12 +73,12 @@ model Job {
   id          String   @id @default(cuid())
   date        DateTime
   branchId    String
-  class       String? // e.g. EVENT, CONSTRUCTION
+  class       String? // EVENT, CONSTRUCTION, OTHER; Site Walk: Non Pay, Site Visit
   orderNumber String
   customer    String
   address     String?
   city        String?
-  jobType     String // Install, Pickup, Drop, Other
+  jobType     String // Install, Pickup, Drop, Other, Site Walk
   fenceType   String? // canonical: CL6, CL8, CL6+1, CL8+1, 6x10, 6x12, 8x10, 8x12, BARRICADE
   qtyLf       Float?
   screen      Boolean  @default(false)
