@@ -1,6 +1,6 @@
 # BOM rules — approved decisions
 
-**Status:** Locked through Alex updates 2026-09-15 → 2026-09-16 (ET). Barb rolls, bottom rail, tension-wire defer confirmed AM Sep 16.  
+**Status:** Locked through Alex updates 2026-09-15 → 2026-09-21 (ET). 6′ slide field recipe (ALE-30) locked 2026-09-21. Barb rolls, bottom rail, tension-wire defer confirmed AM Sep 16.  
 **App:** Temp Fence Ops  
 **Excel draft:** `BOM_FROM_EXCEL_DRAFT.md` = historical reverse-engineer; this file wins on conflicts.  
 **Implementation:** `src/lib/bom/` (calculator + job create/edit Generate BOM).
@@ -96,10 +96,21 @@ If both rails Yes → **2 × rail_sticks** tube + top loop caps/rail ends + bott
 ### Terminals
 
 ```
-terminals_total = (GATE_QTY + GATE_QTY2) * 2 + terminals_manual
+terminals_total = (GATE_QTY + GATE_QTY2) * 2 + terminals_manual + extra_track_posts
 ```
 
 Manual = corners + start/stop + extras.
+
+**6′ slide extra track posts** (ALE-30; in addition to the gate rule ×2, not instead of it):
+
+| Opening | Extra track-support terminals |
+|---------|-------------------------------|
+| 12′ | +2 |
+| 15′ | +3 |
+| 20′ | +4 |
+| 24′ | +5 |
+
+Swing and 8′ slides add **0** extras. Those extras use the same terminal SKU / tension-band stack (driven vs plate still follows section `postMount`).
 
 From `terminals_total` (temp fence — **fewer bands than permanent/Hoover**):
 
@@ -133,7 +144,7 @@ Counts are the same as driven, using **that section’s** LF and terminals:
 
 ```
 line_posts      = CEILING(section_LF / 10)
-terminals_total = (section GATE_QTY + GATE_QTY2) * 2 + section terminals_manual
+terminals_total = (section GATE_QTY + GATE_QTY2) * 2 + section terminals_manual + extra_track_posts
 ```
 
 **SCREW-BOLT+ (consumable)** — DeWalt SCREW-BOLT+ ⅜″×3″, PFM1411240. Canonical: `SCREW-BOLT+ 3/8x3` (aliases: DeWalt / PFM1411240). Plate sections only:
@@ -208,11 +219,11 @@ SKU pick required (BLACK6, …), not Yes/No.
 
 ---
 
-## 7. Gates — Excel math (locked)
+## 7. Gates — Excel swing + 6′ slide field recipe (ALE-30)
 
 ### Bodies
 
-Match GATE / GATE2 + qtys to SKU columns (Excel list).
+Match GATE / GATE2 + qtys to SKU columns. Dropdown includes `12x6 SLIDE` and `24x6 SLIDE` (new) plus existing `15x6 SLIDE` / `20x6 SLIDE` / `14x8 SLIDE` / `20x8 SLIDE`.
 
 ### Swing hardware
 
@@ -222,21 +233,42 @@ MH2-1/2 = swing_count * 2; CB3/8x3 = same
 FH1-3/8 = swing_count * 2; CB3/8x2-1/4 = same
 ```
 
-### Slide hardware (Excel — do **not** use Hoover permanent)
+### 6′ slide hardware (Alex field recipe, 2026-09-21)
 
-Slide SKUs: `15x6 SLIDE`, `20x6 SLIDE`, `14x8 SLIDE`, `20x8 SLIDE`.
+Per gate (qty 1). Multiply by qty. **Do not** use the Excel 6-vs-8 mixed-size bracket branch for these sizes.
+
+| Opening | Gate body | Track brackets | Rollers | Carrier | Gate-rule terminals | + Track support posts | Total terminals from this gate | Horizontal 1-3/8″ pipe LF (top+bottom) |
+|---------|-----------|----------------|---------|---------|---------------------|-----------------------|--------------------------------|----------------------------------------|
+| 12′ | `12x6 SLIDE` | 6 | 2 | 1 | 2 | **+2** | 4 (= 3 track + 1 latch) | 24′ (12′+12′) |
+| 15′ | `15x6 SLIDE` | 8 | 2 | 1 | 2 | **+3** | 5 (= 4 track + 1 latch) | 30′ (15′+15′) |
+| 20′ | `20x6 SLIDE` | 10 | 2 | 1 | 2 | **+4** | 6 (= 5 track + 1 latch) | 40′ (20′+20′) |
+| 24′ | `24x6 SLIDE` | 12 | 2 | 1 | 2 | **+5** | 7 (= 6 track + 1 latch) | 48′ (24′+24′) |
 
 ```
-CJ = sum of those slide qtys
+carrier  = DBL WHEEL GATE CARRIER 8"
+rollers  = GATE PIPE TRACK SAFETY ROLLER WHEEL 5" × 2
+brackets = TRACK BRACKET 2-1/2 × table qty
+```
+
+**Horizontal gate pipe (locked):** 1-3/8″ **gate-frame** tube — top of the gate + bottom of the gate, each = opening. Table LF: `{12:24, 15:30, 20:40, 24:48}`. This is **not** fence-side overhead/cantilever track. Inventory emits existing `TOP RAIL` sticks as `CEILING(table_LF / 21)` (same 21′ stick as fence rail; storage conversion only). Open question for ops: dedicated SKU vs shared top-rail SKU.
+
+**Extra track posts:** explicit map `{12:2, 15:3, 20:4, 24:5}` — not a guessed `W/5` formula. Feed the same terminal stack as `terminals_total`. Brackets `{12:6, 15:8, 20:10, 24:12}`. Rollers always 2; carrier always 1. Multiply table rows by qty.
+
+### 8′ slide hardware (Excel — thin math until takeoff)
+
+`14x8 SLIDE` / `20x8 SLIDE` stay on Excel-thin math. **TODO(Alex): 8′ slide rich recipe — takeoff pending.**
+
+```
+CJ = sum of 8′ (and unknown) slide qtys
 DBL WHEEL GATE CARRIER 8"              = CJ
 GATE PIPE TRACK SAFETY ROLLER WHEEL 5" = CJ * 2
 TRACK BRACKET 2-1/2 =
-  if any 15x6 or 14x8 slide → CJ * 6
-  else if any 20x6 or 20x8 slide → CJ * 8
+  if any 14x8 slide → CJ * 6
+  else if any 20x8 slide → CJ * 8
   else 0
 ```
 
-(If mixed 15/14 and 20 present, Excel `*6` branch wins.)
+(If mixed 14x8 and 20x8 present, Excel `*6` branch wins.) No extra track posts and no gate-frame pipe on this path.
 
 ---
 
@@ -259,7 +291,7 @@ TRACK BRACKET 2-1/2 =
 [x] Temp tension-band multipliers (*3 CL6 / *4 CL8)
 [x] Barb: arm per line post; 3 strands; terminal secure
 [x] Screens CEIL/50; zip 110/roll
-[x] Slide + swing = Excel
+[x] Slide 6′ = ALE-30 field recipe; 8′ slides = Excel thin (takeoff pending)
 [x] Pickup inventory up
 [x] Barb terminal bands: 3 per terminal (one per strand)
 [x] Rail ends on terminals for top and/or bottom (Excel-style + tension band)

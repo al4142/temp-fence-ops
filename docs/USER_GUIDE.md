@@ -154,13 +154,13 @@ Leave weights blank → no BIG FEET / SAND BAG. **SBAG** uses the same 2× stand
 
 **Barricade:** `CEILING(LF / 7)` of BARRICADE. Example: 275 LF → 40.
 
-**Chainlink (CL6 / CL8 / +1):** per section. Wire rolls `CEILING(section LF/50)`; line posts `CEILING(section LF/10)`. **Post mount** is per chainlink section: Driven (bury-length posts) or Plate (fence-height posts + `SCREW-BOLT+ 3/8x3` = `(line×2)+(terminals×4)`). Mixed warehouse/yard = two chainlink sections with the LF split. Aluminum ties `(LF/10)*8` CL6 or `*10` CL8, plus extra ties if top rail. Optional **Top rail** / **Bottom rail**. **Tension wire is not in v1.** Gates and manual terminals are per section; auto terminals = (that section’s gate qty × 2).
+**Chainlink (CL6 / CL8 / +1):** per section. Wire rolls `CEILING(section LF/50)`; line posts `CEILING(section LF/10)`. **Post mount** is per chainlink section: Driven (bury-length posts) or Plate (fence-height posts + `SCREW-BOLT+ 3/8x3` = `(line×2)+(terminals×4)`). Mixed warehouse/yard = two chainlink sections with the LF split. Aluminum ties `(LF/10)*8` CL6 or `*10` CL8, plus extra ties if top rail. Optional **Top rail** / **Bottom rail**. **Tension wire is not in v1.** Gates and manual terminals are per section; auto terminals = (that section’s gate qty × 2) plus extra track-support posts on 6′ slides.
 
 **CL6+1 / CL8+1:** full CL base, then barb arms (one per line post), barb wire `CEILING((LF×3)/1320)` rolls, plus 3 tension bands per terminal. Top rail defaults **on** for +1 (overridable).
 
 **Screens:** pick a SKU (`BLACK6`, `BLACK8`, `GREEN6`, `GREEN8`, `ROYAL6`, `NAVY6`, `CUSTOM`) — not Yes/No. Rolls = `CEILING(LF/50)`; zip ties = rolls × 110.
 
-**Gates:** Gate + Gate 2 type/qty. Swing hardware vs slide hardware follow Excel (see [BOM_APPROVED.md](./BOM_APPROVED.md) §7). Known catalog gaps `4x6`, `12x8`, `CUSTOM` still emit a **free-text** line and warn; they do **not** create inventory SKUs. `4x8` is not in the dropdown.
+**Gates:** Gate + Gate 2 type/qty. Swing hardware follows Excel. **6′ slides** (`12x6` / `15x6` / `20x6` / `24x6 SLIDE`) use the ALE-30 field recipe (per-size brackets, extra track posts, gate-frame 1-3/8″ pipe). **8′ slides** stay on Excel-thin math until takeoff — see [BOM_APPROVED.md](./BOM_APPROVED.md) §7. Known catalog gaps `4x6`, `12x8`, `CUSTOM` still emit a **free-text** line and warn; they do **not** create inventory SKUs. `4x8` is not in the dropdown.
 
 Preview Match column:
 

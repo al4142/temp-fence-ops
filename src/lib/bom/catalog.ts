@@ -70,11 +70,13 @@ export const GATE_TYPES = [
   "7x6",
   "9x6",
   "12x6",
+  "12x6 SLIDE",
   "14x6",
   "15x6",
   "15x6 SLIDE",
   "20x6",
   "20x6 SLIDE",
+  "24x6 SLIDE",
   "6x8",
   "10x8",
   "12x8",
@@ -86,14 +88,38 @@ export const GATE_TYPES = [
 export type GateType = (typeof GATE_TYPES)[number];
 
 export const SLIDE_GATE_TYPES = [
+  "12x6 SLIDE",
   "15x6 SLIDE",
   "20x6 SLIDE",
+  "24x6 SLIDE",
   "14x8 SLIDE",
   "20x8 SLIDE",
 ] as const;
 
-export const SHORT_SLIDE_GATE_TYPES = ["15x6 SLIDE", "14x8 SLIDE"] as const;
-export const LONG_SLIDE_GATE_TYPES = ["20x6 SLIDE", "20x8 SLIDE"] as const;
+/** 6′ slides use the ALE-30 rich recipe (per-size brackets / extra track posts / gate-frame pipe). */
+export const SLIDE_6_GATE_TYPES = ["12x6 SLIDE", "15x6 SLIDE", "20x6 SLIDE", "24x6 SLIDE"] as const;
+
+/**
+ * Extra 2-1/2″ terminals for 6′ slide track supports (ALE-30 table).
+ * Do not infer from W/5 — use this map.
+ */
+export const SLIDE_6_EXTRA_TRACK_POSTS: Record<number, number> = { 12: 2, 15: 3, 20: 4, 24: 5 };
+
+/** Track brackets per 6′ slide opening (ALE-30). Not the Excel 6-vs-8 mixed branch. */
+export const SLIDE_6_TRACK_BRACKETS: Record<number, number> = { 12: 6, 15: 8, 20: 10, 24: 12 };
+
+/**
+ * Horizontal gate-frame 1-3/8″ pipe LF per 6′ slide (ALE-30 table).
+ * Top + bottom, each = opening. Not fence-side track. Not a derived W×2 lookup at call sites — table only.
+ */
+export const SLIDE_6_GATE_FRAME_PIPE_LF: Record<number, number> = { 12: 24, 15: 30, 20: 40, 24: 48 };
+
+/** 1-3/8″ tube stick length as stored in inventory (same divisor as fence top/bottom rail). */
+export const TUBE_138_STICK_FT = 21;
+
+/** 8′ slides still use Excel short/long bracket branches until Alex takeoff. */
+export const SHORT_SLIDE_GATE_TYPES = ["14x8 SLIDE"] as const;
+export const LONG_SLIDE_GATE_TYPES = ["20x8 SLIDE"] as const;
 
 /** Names with no inventory SKU / not sold. Still emit the line + warning if they appear (import/legacy). `4x8` is also not selectable. */
 export const KNOWN_SKU_GAPS = new Set<string>(["12x8", "4x6", "4x8", "CUSTOM"]);
@@ -115,11 +141,13 @@ const GATE_SEED_STATS: Partial<Record<GateType, { startingQty: number; unitCost:
   "7x6": { startingQty: 8, unitCost: 130 },
   "9x6": { startingQty: 8, unitCost: 140 },
   "12x6": { startingQty: 10, unitCost: 160 },
+  "12x6 SLIDE": { startingQty: 4, unitCost: 220 },
   "14x6": { startingQty: 6, unitCost: 180 },
   "15x6": { startingQty: 4, unitCost: 190 },
   "15x6 SLIDE": { startingQty: 4, unitCost: 240 },
   "20x6": { startingQty: 3, unitCost: 220 },
   "20x6 SLIDE": { startingQty: 3, unitCost: 280 },
+  "24x6 SLIDE": { startingQty: 2, unitCost: 320 },
   "6x8": { startingQty: 8, unitCost: 140 },
   "10x8": { startingQty: 6, unitCost: 170 },
   "14x8": { startingQty: 4, unitCost: 200 },
@@ -357,6 +385,7 @@ const POST_MOUNT_LOOKUP = new Map<string, PostMount>([
   ["CONCRETE", "plate"],
 ]);
 const SLIDE_SET = new Set<string>(SLIDE_GATE_TYPES);
+const SLIDE_6_SET = new Set<string>(SLIDE_6_GATE_TYPES);
 const SHORT_SLIDE_SET = new Set<string>(SHORT_SLIDE_GATE_TYPES);
 const LONG_SLIDE_SET = new Set<string>(LONG_SLIDE_GATE_TYPES);
 const PANEL_SET = new Set<string>(PANEL_TYPES);
@@ -417,6 +446,40 @@ export function normalizePostMount(raw: string | null | undefined): PostMount | 
 
 export function isSlideGate(type: string): boolean {
   return SLIDE_SET.has(type) || /\bSLIDE\b/i.test(type);
+}
+
+/** Opening × height from names like `12x6 SLIDE`. */
+export function parseSlideGateSize(type: string): { openingFt: number; heightFt: number } | null {
+  const m = type.trim().match(/^(\d+)\s*x\s*(\d+)\s+SLIDE$/i);
+  if (!m) return null;
+  return { openingFt: Number(m[1]), heightFt: Number(m[2]) };
+}
+
+export function isSlide6Gate(type: string): boolean {
+  if (SLIDE_6_SET.has(type)) return true;
+  const size = parseSlideGateSize(type);
+  return Boolean(size && size.heightFt === 6 && size.openingFt in SLIDE_6_TRACK_BRACKETS);
+}
+
+export function slide6ExtraTrackPosts(type: string): number {
+  if (!isSlide6Gate(type)) return 0;
+  const size = parseSlideGateSize(type);
+  if (!size) return 0;
+  return SLIDE_6_EXTRA_TRACK_POSTS[size.openingFt] ?? 0;
+}
+
+export function slide6TrackBrackets(type: string): number {
+  if (!isSlide6Gate(type)) return 0;
+  const size = parseSlideGateSize(type);
+  if (!size) return 0;
+  return SLIDE_6_TRACK_BRACKETS[size.openingFt] ?? 0;
+}
+
+export function slide6GateFramePipeLf(type: string): number {
+  if (!isSlide6Gate(type)) return 0;
+  const size = parseSlideGateSize(type);
+  if (!size) return 0;
+  return SLIDE_6_GATE_FRAME_PIPE_LF[size.openingFt] ?? 0;
 }
 
 export function isShortSlideGate(type: string): boolean {
