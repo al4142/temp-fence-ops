@@ -178,7 +178,7 @@ A job has **one or more fence sections**. Generate BOM runs each section’s rec
 
 **Mixed driven + plate** = two (or more) chainlink sections with the LF split (Option A). Panels with T-stands can sit on the same job as chainlink.
 
-**Gates are per-section** (panel and/or chainlink), not job-global only. Auto terminals (2 per gate) and manual terminals apply to **that section’s** terminal count (chainlink posts/bands only).
+**Gates are per-section** (panel and/or chainlink), not job-global only. Auto terminals (2 per gate) and manual terminals apply to **that section’s** terminal count (chainlink posts/bands). **6′ slide track-support terminals** still emit as the usual CL6 terminal SKU stack when the chainlink body does not run (LF=0, panel, or barricade).
 
 Screen SKU stays **job-level**: rolls = `CEILING(sum of section LF / 50)`.
 
@@ -252,7 +252,7 @@ brackets = TRACK BRACKET 2-1/2 × table qty
 
 **Horizontal gate pipe (locked):** 1-3/8″ **gate-frame** tube — top of the gate + bottom of the gate, each = opening. Table LF: `{12:24, 15:30, 20:40, 24:48}`. This is **not** fence-side overhead/cantilever track. Inventory emits existing `TOP RAIL` sticks as `CEILING(table_LF / 21)` (same 21′ stick as fence rail; storage conversion only). Open question for ops: dedicated SKU vs shared top-rail SKU.
 
-**Extra track posts:** explicit map `{12:2, 15:3, 20:4, 24:5}` — not a guessed `W/5` formula. Feed the same terminal stack as `terminals_total`. Brackets `{12:6, 15:8, 20:10, 24:12}`. Rollers always 2; carrier always 1. Multiply table rows by qty.
+**Extra track posts:** explicit map `{12:2, 15:3, 20:4, 24:5}` — not a guessed `W/5` formula. Feed the same terminal stack as `terminals_total` (posts + tension bar + brace/tension bands). That stack still emits when the chainlink fence body does not run: **chainlink LF=0**, or a **panel / barricade** section hosting a 6′ slide, as the usual CL6 driven SKU (`8' x 2-1/2`). On a chainlink section, driven vs plate still follows `postMount`. Brackets `{12:6, 15:8, 20:10, 24:12}`. Rollers always 2; carrier always 1. Multiply table rows by qty.
 
 ### 8′ slide hardware (Excel — thin math until takeoff)
 
