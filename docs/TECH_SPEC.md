@@ -107,12 +107,17 @@ P&L is derived by order number (`src/lib/pnl.ts`): revenue, labor (OT @ 1.5×), 
 |------|------|
 | `src/app/jobs/` | List, create, detail, edit; `actions.ts` persist |
 | `src/components/JobForm*.tsx` | Create/edit form (details, BOM options, materials, labor, cost lines, variance) |
-| `src/lib/job-form.ts`, `src/lib/job-constants.ts` | Validation, job types (`Install`, `Pickup`, `Drop`, `Other`, `Site Walk`), classes |
+| `src/lib/job-form.ts`, `src/lib/job-constants.ts` | Validation; `JOB_TYPES` (`Install`, `Pickup`, `Drop`, `Other`, `Site Walk`); `JOB_CLASSES` vs `SITE_WALK_CLASSES` |
+| `src/lib/jobs-list.ts` | Jobs table `where` (date / branch / type / search only); From=To same date is the day list |
 | `src/app/jobs/[id]/export/route.ts`, `src/lib/export-project.ts` | **Export Project** `.xlsx` |
 
 Required ticket fields: order #, date, branch, job type. **Generate BOM** lives on the job form under Materials — there is no standalone BOM page. Generate BOM previews in the browser; **Apply to materials** then **Create job** / **Save changes** writes the ticket.
 
-Job types that move inventory: outbound `Install` / `Drop`; inbound `Pickup`. `Other`, `Site Walk` (and any unrecognized string) have no inventory effect. The job form accepts only the Title Case labels. **CSV import** (`src/lib/csv-import.ts`, `/admin/import`) maps known Daily Tracker aliases (`INST` → Install, `PU` → Pickup, `DELIVERY` → Drop, `SITEWALK` → Site Walk, …), rejects unknown codes (never silent Other), runs the same `validateAndNormalize` as the form, and commits accepted rows in one transaction. Preview shape: [IMPORT.md](./IMPORT.md).
+Job types that move inventory: outbound `Install` / `Drop`; inbound `Pickup`. `Other`, `Site Walk` (and any unrecognized string) have no inventory effect (`inventorySignForJobType` → `0`; Jobs table Inv. = “No inventory effect”). The job form accepts only the Title Case labels.
+
+**Site Walk** (additive in `src/lib/job-constants.ts` / `JobFormDetails`): class dropdown is **Non Pay** / **Site Visit** (`classesForJobType`); switching type replaces class with the first option of the new set when the previous class is not in that set. Fence and materials may be empty (`allowsEmptyFenceAndMaterials`) — Install still errors on an unnamed non-zero material row. Labor may include a 0/0 hour row (`allowsZeroHourLabor`; form hint exists). Jobs list never filters on revenue, materials, labor, fence, or class, so a $0 / blank-materials Site Walk is a normal row. There is no calendar widget: **From** and **To** set to the same date on `/jobs` is the day list (`jobs-list.ts`).
+
+**CSV import** (`src/lib/csv-import.ts`, `/admin/import`) maps known Daily Tracker aliases from `IMPORT_JOB_TYPE_ALIASES` (`INST` → Install, `PU` → Pickup, `DELIVERY` → Drop, `SITEWALK` / `SITE-WALK` → Site Walk; spaces and underscores collapse to `-`, so `SITE WALK` / `site_walk` also map). Unknown codes reject the row (never silent Other), including `SWLK`. There is **no** class alias table — `class` is stored as-is. Import then runs the same `validateAndNormalize` as the form and commits accepted rows in one transaction. Preview shape: [IMPORT.md](./IMPORT.md).
 
 ### Inventory
 
@@ -147,7 +152,7 @@ Fence types, options, and the canonical smoke example are in [§6](#6-bom--fence
 | `src/app/pnl/page.tsx` | Lookup UI (`?order=`) |
 | `src/lib/pnl.ts` | `buildOrderPnL` — sums all jobs sharing an order number; materials from outbound tickets only |
 
-Analytics (`src/app/analytics/`, `src/lib/analytics.ts`) is monthly LF by branch × job-type group from **job tickets only**.
+Analytics (`src/app/analytics/`, `src/lib/analytics.ts`) is monthly LF by branch × job-type group from **job tickets only**. Groups follow inventory sign: Install / Drop, Pickup, Other (`Site Walk` groups with Other).
 
 Related office screens (not part of job P&L): `/expenses` (yard ledger), `/admin/vendors`, `/admin/branches`, `/admin/employees`, `/admin/import`.
 
