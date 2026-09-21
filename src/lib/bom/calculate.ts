@@ -2,6 +2,7 @@ import {
   BOM_NAMES,
   KNOWN_SKU_GAPS,
   PANEL_WIDTH,
+  TUBE_138_STICK_FT,
   chainlinkBase,
   isChainlinkType,
   isKnownSkuGap,
@@ -9,12 +10,16 @@ import {
   isPanelType,
   isPlusOneType,
   isShortSlideGate,
+  isSlide6Gate,
   isSlideGate,
   normalizeFenceType,
   normalizeGateType,
   normalizePostMount,
   normalizeScreenSku,
   normalizeWeightMode,
+  parseSlideGateSize,
+  slide6ExtraTrackPosts,
+  slide6TrackBrackets,
   type FenceType,
   type GateType,
   type PanelType,
@@ -148,7 +153,7 @@ function addChainlinkRecipe(
     );
   }
 
-  const railSticks = topRail || bottomRail ? ceil(lf / 21) : 0;
+  const railSticks = topRail || bottomRail ? ceil(lf / TUBE_138_STICK_FT) : 0;
   if (topRail) {
     addLine(map, BOM_NAMES.tube138, railSticks, '1-3/8″ tube (top rail)');
     addLine(map, BOM_NAMES.loopCap, linePosts);
@@ -219,19 +224,31 @@ function addGateRecipes(
   resultGates: BomResult["gates"]
 ) {
   let swingCount = 0;
-  let slideCount = 0;
-  let hasShortSlide = false;
-  let hasLongSlide = false;
+  // 8′ (and unknown) slides keep Excel-thin hardware until Alex takeoff.
+  let excelSlideCount = 0;
+  let hasShortExcelSlide = false;
+  let hasLongExcelSlide = false;
+  let gateFramePipeLf = 0;
 
   for (const g of gates) {
     if (g.qty <= 0) continue;
     addLine(map, g.type, g.qty);
     if (isSlideGate(g.type)) {
-      slideCount += g.qty;
-      if (isShortSlideGate(g.type)) hasShortSlide = true;
-      else if (isLongSlideGate(g.type)) hasLongSlide = true;
-      else hasShortSlide = true; // unknown SLIDE → Excel *6 branch (safer / shorter)
       resultGates.push({ type: g.type, qty: g.qty, kind: "slide" });
+      if (isSlide6Gate(g.type)) {
+        const size = parseSlideGateSize(g.type);
+        addLine(map, BOM_NAMES.slideCarrier, g.qty);
+        addLine(map, BOM_NAMES.slideSafetyRoller, g.qty * 2);
+        addLine(map, BOM_NAMES.trackBracket, g.qty * slide6TrackBrackets(g.type));
+        // Horizontal gate-frame 1-3/8″ pipe: top + bottom, each = opening. Not fence-side track.
+        if (size) gateFramePipeLf += 2 * size.openingFt * g.qty;
+      } else {
+        // TODO(Alex): 8′ slide rich recipe — takeoff pending
+        excelSlideCount += g.qty;
+        if (isShortSlideGate(g.type)) hasShortExcelSlide = true;
+        else if (isLongSlideGate(g.type)) hasLongExcelSlide = true;
+        else hasShortExcelSlide = true; // unknown SLIDE → Excel *6 branch (safer / shorter)
+      }
     } else {
       swingCount += g.qty;
       resultGates.push({ type: g.type, qty: g.qty, kind: "swing" });
@@ -246,13 +263,22 @@ function addGateRecipes(
     addLine(map, BOM_NAMES.cb38x214, swingCount * 2);
   }
 
-  if (slideCount > 0) {
-    addLine(map, BOM_NAMES.slideCarrier, slideCount);
-    addLine(map, BOM_NAMES.slideSafetyRoller, slideCount * 2);
+  if (excelSlideCount > 0) {
+    addLine(map, BOM_NAMES.slideCarrier, excelSlideCount);
+    addLine(map, BOM_NAMES.slideSafetyRoller, excelSlideCount * 2);
     let bracketMult = 0;
-    if (hasShortSlide) bracketMult = 6;
-    else if (hasLongSlide) bracketMult = 8;
-    addLine(map, BOM_NAMES.trackBracket, slideCount * bracketMult);
+    if (hasShortExcelSlide) bracketMult = 6;
+    else if (hasLongExcelSlide) bracketMult = 8;
+    addLine(map, BOM_NAMES.trackBracket, excelSlideCount * bracketMult);
+  }
+
+  if (gateFramePipeLf > 0) {
+    addLine(
+      map,
+      BOM_NAMES.tube138,
+      ceil(gateFramePipeLf / TUBE_138_STICK_FT),
+      `1-3/8″ tube (slide gate frame: top + bottom, each = opening; ${gateFramePipeLf}′ LF)`
+    );
   }
 }
 
@@ -298,7 +324,11 @@ function applySectionFence(
   const g2 = parseGate(section.gate2, warnings, `${labelPrefix}Gate 2`.trim() || "Gate 2");
   const gateQtyTotal = g1.qty + g2.qty;
   const terminalsManual = nonNegInt(section.terminalsManual);
-  const terminalsTotal = gateQtyTotal * 2 + terminalsManual;
+  const extraTrackPosts =
+    (g1.type && g1.qty > 0 ? slide6ExtraTrackPosts(g1.type) * g1.qty : 0) +
+    (g2.type && g2.qty > 0 ? slide6ExtraTrackPosts(g2.type) * g2.qty : 0);
+  // Gate rule ×2 still applies to slides; 6′ slides also add track-support terminals (ALE-30).
+  const terminalsTotal = gateQtyTotal * 2 + terminalsManual + extraTrackPosts;
 
   if (fenceType && isPanelType(fenceType)) {
     if (qtyLf > 0) addPanelRecipe(map, fenceType, qtyLf, weightMode);

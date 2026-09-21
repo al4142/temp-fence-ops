@@ -5,6 +5,10 @@ import {
   BOM_SEED_ITEMS,
   GATE_TYPES,
   KNOWN_SKU_GAPS,
+  SLIDE_6_EXTRA_TRACK_POSTS,
+  SLIDE_6_GATE_TYPES,
+  SLIDE_6_TRACK_BRACKETS,
+  TUBE_138_STICK_FT,
   gateTypesExpectedInSeed,
 } from "./catalog";
 import { bomLinesToMaterials, matchCatalogItem } from "./match-catalog";
@@ -500,31 +504,67 @@ describe("gates", () => {
     expect(qty(r, BOM_NAMES.cb38x214)).toBe(2);
   });
 
-  it("slide 15x6: carrier, safety×2, track brackets×6", () => {
+  it.each([
+    { type: "12x6 SLIDE", opening: 12 },
+    { type: "15x6 SLIDE", opening: 15 },
+    { type: "20x6 SLIDE", opening: 20 },
+    { type: "24x6 SLIDE", opening: 24 },
+  ] as const)("6′ slide $type: rich hardware + extra track posts + gate-frame pipe", ({ type, opening }) => {
     const r = calculateBom({
       fenceType: "CL6",
       qtyLf: 50,
       topRail: false,
-      gate: { type: "15x6 SLIDE", qty: 1 },
+      gate: { type, qty: 1 },
     });
-    expect(qty(r, "15x6 SLIDE")).toBe(1);
+    const extra = SLIDE_6_EXTRA_TRACK_POSTS[opening];
+    const brackets = SLIDE_6_TRACK_BRACKETS[opening];
+    const pipeLf = 2 * opening;
+    expect(qty(r, type)).toBe(1);
     expect(qty(r, BOM_NAMES.slideCarrier)).toBe(1);
     expect(qty(r, BOM_NAMES.slideSafetyRoller)).toBe(2);
-    expect(qty(r, BOM_NAMES.trackBracket)).toBe(6);
+    expect(qty(r, BOM_NAMES.trackBracket)).toBe(brackets);
     expect(qty(r, BOM_NAMES.swingRoller)).toBe(0);
+    expect(r.terminalsTotal).toBe(2 + extra);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(2 + extra);
+    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(2 + extra);
+    expect(qty(r, BOM_NAMES.tensionBand)).toBe((2 + extra) * 3);
+    expect(qty(r, BOM_NAMES.tube138)).toBe(Math.ceil(pipeLf / TUBE_138_STICK_FT));
+    expect(r.lines.find((l) => l.skuOrName === BOM_NAMES.tube138)?.notes).toMatch(/gate frame/i);
+    expect(r.lines.find((l) => l.skuOrName === BOM_NAMES.tube138)?.notes).toContain(`${pipeLf}′ LF`);
   });
 
-  it("slide 20x8: track brackets×8", () => {
+  it("two 12x6 SLIDE doubles hardware, extras, and pipe LF (stick ceil on total LF)", () => {
     const r = calculateBom({
-      fenceType: "CL8",
+      fenceType: "CL6",
       qtyLf: 50,
       topRail: false,
-      gate: { type: "20x8 SLIDE", qty: 1 },
+      gate: { type: "12x6 SLIDE", qty: 2 },
     });
-    expect(qty(r, BOM_NAMES.trackBracket)).toBe(8);
+    expect(qty(r, "12x6 SLIDE")).toBe(2);
+    expect(qty(r, BOM_NAMES.slideCarrier)).toBe(2);
+    expect(qty(r, BOM_NAMES.slideSafetyRoller)).toBe(4);
+    expect(qty(r, BOM_NAMES.trackBracket)).toBe(12);
+    expect(r.terminalsTotal).toBe(8);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(8);
+    expect(qty(r, BOM_NAMES.tube138)).toBe(Math.ceil(48 / TUBE_138_STICK_FT));
   });
 
-  it("mixed 15/14 and 20 slide: *6 branch wins", () => {
+  it("swing gate still only ×2 terminals (no track extras or slide hardware)", () => {
+    const r = calculateBom({
+      fenceType: "CL6",
+      qtyLf: 50,
+      topRail: false,
+      gate: { type: "5x6", qty: 1 },
+    });
+    expect(r.terminalsTotal).toBe(2);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(2);
+    expect(qty(r, BOM_NAMES.slideCarrier)).toBe(0);
+    expect(qty(r, BOM_NAMES.trackBracket)).toBe(0);
+    expect(qty(r, BOM_NAMES.tube138)).toBe(0);
+    expect(qty(r, BOM_NAMES.swingRoller)).toBe(1);
+  });
+
+  it("mixed 15x6 + 20x6 slides use per-size brackets (not Excel mixed *6)", () => {
     const r = calculateBom({
       fenceType: "CL6",
       qtyLf: 50,
@@ -534,7 +574,75 @@ describe("gates", () => {
     });
     expect(qty(r, BOM_NAMES.slideCarrier)).toBe(2);
     expect(qty(r, BOM_NAMES.slideSafetyRoller)).toBe(4);
+    expect(qty(r, BOM_NAMES.trackBracket)).toBe(8 + 10);
+    expect(r.terminalsTotal).toBe(2 * 2 + 3 + 4);
+    expect(qty(r, BOM_NAMES.tube138)).toBe(Math.ceil((30 + 40) / TUBE_138_STICK_FT));
+  });
+
+  it("slide 14x8: Excel-thin hardware, no extra track posts or gate-frame pipe", () => {
+    const r = calculateBom({
+      fenceType: "CL8",
+      qtyLf: 50,
+      topRail: false,
+      gate: { type: "14x8 SLIDE", qty: 1 },
+    });
+    expect(qty(r, "14x8 SLIDE")).toBe(1);
+    expect(qty(r, BOM_NAMES.slideCarrier)).toBe(1);
+    expect(qty(r, BOM_NAMES.slideSafetyRoller)).toBe(2);
+    expect(qty(r, BOM_NAMES.trackBracket)).toBe(6);
+    expect(r.terminalsTotal).toBe(2);
+    expect(qty(r, BOM_NAMES.cl8Terminal)).toBe(2);
+    expect(qty(r, BOM_NAMES.tube138)).toBe(0);
+  });
+
+  it("slide 20x8: Excel track brackets×8, no extra track posts", () => {
+    const r = calculateBom({
+      fenceType: "CL8",
+      qtyLf: 50,
+      topRail: false,
+      gate: { type: "20x8 SLIDE", qty: 1 },
+    });
+    expect(qty(r, BOM_NAMES.trackBracket)).toBe(8);
+    expect(r.terminalsTotal).toBe(2);
+    expect(qty(r, BOM_NAMES.tube138)).toBe(0);
+  });
+
+  it("mixed 14x8 and 20x8 slide: Excel *6 branch still wins", () => {
+    const r = calculateBom({
+      fenceType: "CL8",
+      qtyLf: 50,
+      topRail: false,
+      gate: { type: "14x8 SLIDE", qty: 1 },
+      gate2: { type: "20x8 SLIDE", qty: 1 },
+    });
+    expect(qty(r, BOM_NAMES.slideCarrier)).toBe(2);
+    expect(qty(r, BOM_NAMES.slideSafetyRoller)).toBe(4);
     expect(qty(r, BOM_NAMES.trackBracket)).toBe(12);
+    expect(r.terminalsTotal).toBe(4);
+  });
+
+  it("mixed 6′ rich and 8′ Excel slides keep separate hardware paths", () => {
+    const r = calculateBom({
+      fenceType: "CL6",
+      qtyLf: 50,
+      topRail: false,
+      gate: { type: "12x6 SLIDE", qty: 1 },
+      gate2: { type: "14x8 SLIDE", qty: 1 },
+    });
+    expect(qty(r, BOM_NAMES.slideCarrier)).toBe(2);
+    expect(qty(r, BOM_NAMES.slideSafetyRoller)).toBe(4);
+    expect(qty(r, BOM_NAMES.trackBracket)).toBe(6 + 6);
+    expect(r.terminalsTotal).toBe(4 + 2);
+    expect(qty(r, BOM_NAMES.tube138)).toBe(Math.ceil(24 / TUBE_138_STICK_FT));
+  });
+
+  it("12x6 SLIDE and 24x6 SLIDE are selectable catalog/seed bodies", () => {
+    expect((GATE_TYPES as readonly string[]).includes("12x6 SLIDE")).toBe(true);
+    expect((GATE_TYPES as readonly string[]).includes("24x6 SLIDE")).toBe(true);
+    expect([...SLIDE_6_GATE_TYPES]).toEqual(["12x6 SLIDE", "15x6 SLIDE", "20x6 SLIDE", "24x6 SLIDE"]);
+    const names = new Set(BOM_SEED_ITEMS.map((i) => i.name));
+    expect(names.has("12x6 SLIDE")).toBe(true);
+    expect(names.has("24x6 SLIDE")).toBe(true);
   });
 
   it("GATE + GATE2 swing counts stack", () => {

@@ -2,6 +2,9 @@ export {
   FENCE_TYPES,
   FENCE_TYPE_LABELS,
   GATE_TYPES,
+  SLIDE_GATE_TYPES,
+  SLIDE_6_GATE_TYPES,
+  TUBE_138_STICK_FT,
   SCREEN_SKUS,
   WEIGHT_MODES,
   POST_MOUNTS,
@@ -20,6 +23,11 @@ export {
   isPanelType,
   isChainlinkType,
   isPlusOneType,
+  isSlideGate,
+  isSlide6Gate,
+  parseSlideGateSize,
+  slide6ExtraTrackPosts,
+  slide6TrackBrackets,
 } from "./catalog";
 export { calculateBom } from "./calculate";
 export {

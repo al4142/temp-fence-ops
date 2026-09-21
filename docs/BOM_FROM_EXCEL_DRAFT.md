@@ -198,6 +198,8 @@ qty(G) = (GATE == G ? GATE QTY : 0) + (GATE2 == G ? GATE QTY2 : 0)
 
 ### Slide-gate hardware
 
+**Superseded for 6′ slides** (`12x6` / `15x6` / `20x6` / `24x6 SLIDE`): see `BOM_APPROVED.md` §7 (ALE-30 field recipe). This Excel branch still applies to **8′ slides** only.
+
 Slide SKUs in formulas: `15x6 SLIDE`, `20x6 SLIDE`, `14x8 SLIDE`, `20x8 SLIDE`.
 
 | Material | Qty logic |
