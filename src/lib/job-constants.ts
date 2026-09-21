@@ -1,8 +1,39 @@
-export const JOB_TYPES = ["Install", "Pickup", "Drop", "Other"] as const;
+export const JOB_TYPES = ["Install", "Pickup", "Drop", "Other", "Site Walk"] as const;
 
 export type JobType = (typeof JOB_TYPES)[number];
 
+/** Classes for Install / Pickup / Drop / Other. Do not rename or remove. */
 export const JOB_CLASSES = ["EVENT", "CONSTRUCTION", "OTHER"] as const;
+
+/** Classes for Site Walk only. Additive — not shown on existing job types. */
+export const SITE_WALK_CLASSES = ["Non Pay", "Site Visit"] as const;
+
+export type JobClass = (typeof JOB_CLASSES)[number] | (typeof SITE_WALK_CLASSES)[number];
+
+export function isSiteWalk(jobType: string): boolean {
+  return normalizeJobType(jobType) === "Site Walk";
+}
+
+/**
+ * Class dropdown options for a job type.
+ * Existing types keep EVENT / CONSTRUCTION / OTHER; Site Walk uses Non Pay / Site Visit.
+ */
+export function classesForJobType(jobType: string): readonly string[] {
+  return isSiteWalk(jobType) ? SITE_WALK_CLASSES : JOB_CLASSES;
+}
+
+/** Site Walk may store a 0/0 hour labor row so a supervisor is attributed without P&L $. */
+export function allowsZeroHourLabor(jobType: string): boolean {
+  return isSiteWalk(jobType);
+}
+
+/**
+ * Site Walk may omit fence type, LF, and materials. Other types keep today's required-line rules
+ * (unnamed material rows with a non-zero qty still error).
+ */
+export function allowsEmptyFenceAndMaterials(jobType: string): boolean {
+  return isSiteWalk(jobType);
+}
 
 /**
  * Import-only aliases from the Excel Daily Tracker / older CSVs.
@@ -23,6 +54,8 @@ export const IMPORT_JOB_TYPE_ALIASES: Record<string, JobType> = {
   DEL: "Drop",
   DROP: "Drop",
   OTHER: "Other",
+  "SITE-WALK": "Site Walk",
+  SITEWALK: "Site Walk",
 };
 
 export type ImportJobTypeMapResult =
@@ -33,6 +66,8 @@ export type ImportJobTypeMapResult =
 export function importJobTypeAliasKey(raw: string): string {
   return raw.trim().toUpperCase().replace(/[\s_]+/g, "-");
 }
+
+const JOB_TYPE_LIST = "Install, Pickup, Drop, Other, or Site Walk";
 
 /**
  * Map a CSV/Excel job-type cell for import.
@@ -59,7 +94,7 @@ export function mapImportJobType(raw: string): ImportJobTypeMapResult {
     ok: false,
     original,
     mapped: null,
-    reason: `Unknown job type "${original}". Use Install, Pickup, Drop, or Other (or a known alias such as INST, PU, DELIVERY). Unknown codes are not coerced to Other.`,
+    reason: `Unknown job type "${original}". Use ${JOB_TYPE_LIST} (or a known alias such as INST, PU, DELIVERY, SITEWALK). Unknown codes are not coerced to Other.`,
   };
 }
 
@@ -68,7 +103,7 @@ export function isJobType(value: string): value is JobType {
 }
 
 /**
- * Canonical Title Case label when the input matches one of the four types
+ * Canonical Title Case label when the input matches a known type
  * (case-insensitive). Unknown values are returned trimmed.
  * Does not apply import aliases — the job form rejects INST / PU / DELIVERY.
  */
@@ -76,6 +111,10 @@ export function normalizeJobType(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return "";
   return JOB_TYPES.find((t) => t.toLowerCase() === trimmed.toLowerCase()) ?? trimmed;
+}
+
+export function jobTypeMustBeMessage(): string {
+  return `Job type must be ${JOB_TYPE_LIST}.`;
 }
 
 export {

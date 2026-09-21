@@ -102,13 +102,15 @@ onHand = startingQty
 | Install | -1 | Leave yard / install on site |
 | Drop | -1 | Outbound delivery / drop |
 | Pickup | +1 if `reusable`, else 0 | Return to yard (consumables stay consumed) |
-| Other (and unrecognized) | 0 | No inventory effect |
+| Other | 0 | No inventory effect |
+| Site Walk | 0 | Non-pay / site visit — no inventory effect |
+| unrecognized | 0 | No inventory effect |
 
 Pickup inbound applies only when `InventoryItem.reusable` is true. Consumables
 (`reusable: false`, e.g. `SCREW-BOLT+ 3/8x3`, aluminum ties, zip ties) still
 decrement on Install/Drop and do **not** restock on Pickup.
 
-Only these four Title Case labels are recognized. Implementation: `src/lib/inventory.ts`
+Canonical Title Case labels: Install, Pickup, Drop, Other, Site Walk. Implementation: `src/lib/inventory.ts`
 (`inventorySignForMaterial`).
 
 ## P&L derivation (by order number)
@@ -117,7 +119,7 @@ Only these four Title Case labels are recognized. Implementation: `src/lib/inven
 |-----------|---------|
 | Revenue | sum job.revenue |
 | Labor cost | sum (regxrate + otxratex1.5) |
-| Material cost | sum (qty × inventoryItem.unitCost) on **outbound** jobs only (Install / Drop); Pickup / Other excluded so Pickup BOM is not a second cost; free-text → 0 |
+| Material cost | sum (qty × inventoryItem.unitCost) on **outbound** jobs only (Install / Drop); Pickup / Other / Site Walk excluded so Pickup BOM is not a second cost; free-text → 0 |
 | Lodging / Freight / Misc | sum cost line amounts (fallback: denormalized job fields) |
 | Material variance | sum (-variance.qty x unitCost) |
 | Total cost | labor + materials + lodging + freight + misc + variance |

@@ -4,7 +4,7 @@
  * Canonical labels (Title Case) only:
  *   OUTBOUND (negative on-hand): Install, Drop — all linked catalog lines
  *   INBOUND  (positive on-hand): Pickup — reusable items only
- *   No movement: Other (and any unrecognized string)
+ *   No movement: Other, Site Walk (and any unrecognized string)
  *   Consumables (`reusable === false`) never restock on inbound jobs
  *
  * Also applied (not job analytics):

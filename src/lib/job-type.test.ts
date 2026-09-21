@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  JOB_CLASSES,
   JOB_TYPES,
+  SITE_WALK_CLASSES,
+  allowsEmptyFenceAndMaterials,
+  allowsZeroHourLabor,
+  classesForJobType,
   isJobType,
   mapImportJobType,
   normalizeJobType,
@@ -10,8 +15,8 @@ import { jobTypeGroup } from "./analytics";
 import { emptyJobFormValues, validateAndNormalize } from "./job-form";
 
 describe("JOB_TYPES", () => {
-  it("exposes only the four Title Case labels", () => {
-    expect([...JOB_TYPES]).toEqual(["Install", "Pickup", "Drop", "Other"]);
+  it("exposes the Title Case labels including Site Walk", () => {
+    expect([...JOB_TYPES]).toEqual(["Install", "Pickup", "Drop", "Other", "Site Walk"]);
   });
 });
 
@@ -21,13 +26,16 @@ describe("normalizeJobType", () => {
     expect(normalizeJobType("Pickup")).toBe("Pickup");
     expect(normalizeJobType("Drop")).toBe("Drop");
     expect(normalizeJobType("Other")).toBe("Other");
+    expect(normalizeJobType("Site Walk")).toBe("Site Walk");
   });
 
-  it("title-cases the four known labels", () => {
+  it("title-cases the known labels", () => {
     expect(normalizeJobType("install")).toBe("Install");
     expect(normalizeJobType(" PICKUP ")).toBe("Pickup");
     expect(normalizeJobType("DROP")).toBe("Drop");
     expect(normalizeJobType("other")).toBe("Other");
+    expect(normalizeJobType("site walk")).toBe("Site Walk");
+    expect(normalizeJobType(" SITE WALK ")).toBe("Site Walk");
   });
 
   it("does not map former codes INST / PU / DELIVERY / RETURN", () => {
@@ -63,6 +71,11 @@ describe("mapImportJobType", () => {
     });
     expect(mapImportJobType("DROP")).toEqual({ ok: true, original: "DROP", mapped: "Drop" });
     expect(mapImportJobType("other")).toEqual({ ok: true, original: "other", mapped: "Other" });
+    expect(mapImportJobType("Site Walk")).toEqual({
+      ok: true,
+      original: "Site Walk",
+      mapped: "Site Walk",
+    });
   });
 
   it("maps known Daily Tracker aliases", () => {
@@ -76,6 +89,10 @@ describe("mapImportJobType", () => {
     expect(mapImportJobType("DELIVERY").mapped).toBe("Drop");
     expect(mapImportJobType("DEL").mapped).toBe("Drop");
     expect(mapImportJobType("OTHER").mapped).toBe("Other");
+    expect(mapImportJobType("SITE WALK").mapped).toBe("Site Walk");
+    expect(mapImportJobType("SITE-WALK").mapped).toBe("Site Walk");
+    expect(mapImportJobType("SITEWALK").mapped).toBe("Site Walk");
+    expect(mapImportJobType("site_walk").mapped).toBe("Site Walk");
   });
 
   it("rejects unknown codes instead of coercing to Other", () => {
@@ -106,8 +123,10 @@ describe("inventorySignForJobType", () => {
     expect(inventorySignForJobType("pickup")).toBe(1);
   });
 
-  it("Other and unrecognized strings have no inventory effect", () => {
+  it("Other, Site Walk, and unrecognized strings have no inventory effect", () => {
     expect(inventorySignForJobType("Other")).toBe(0);
+    expect(inventorySignForJobType("Site Walk")).toBe(0);
+    expect(inventorySignForJobType("site walk")).toBe(0);
     expect(inventorySignForJobType("INST")).toBe(0);
     expect(inventorySignForJobType("PU")).toBe(0);
     expect(inventorySignForJobType("DELIVERY")).toBe(0);
@@ -174,6 +193,17 @@ describe("inventorySignForJobType", () => {
       ],
       adjustments: [],
     });
+    const siteWalk = computeOnHand({
+      items,
+      materials: [
+        {
+          inventoryItemId: "panel",
+          quantity: qty,
+          job: { jobType: "Site Walk", branchId: "mia" },
+        },
+      ],
+      adjustments: [],
+    });
 
     expect(install[0].movementQty).toBe(-qty);
     expect(install[0].onHand).toBe(90);
@@ -182,6 +212,8 @@ describe("inventorySignForJobType", () => {
     expect(drop[0].movementQty).toBe(-qty);
     expect(other[0].movementQty).toBe(0);
     expect(other[0].onHand).toBe(100);
+    expect(siteWalk[0].movementQty).toBe(0);
+    expect(siteWalk[0].onHand).toBe(100);
   });
 });
 
@@ -191,6 +223,7 @@ describe("jobTypeGroup", () => {
     expect(jobTypeGroup("Drop")).toBe("Install");
     expect(jobTypeGroup("Pickup")).toBe("Pickup");
     expect(jobTypeGroup("Other")).toBe("Other");
+    expect(jobTypeGroup("Site Walk")).toBe("Other");
     expect(jobTypeGroup("INST")).toBe("Other");
     expect(jobTypeGroup("PU")).toBe("Other");
   });
@@ -210,7 +243,7 @@ describe("validateAndNormalize job type", () => {
     if (result.ok) expect(result.data.jobType).toBe("Install");
   });
 
-  it("accepts each of the four types", () => {
+  it("accepts each canonical type", () => {
     for (const jobType of JOB_TYPES) {
       const result = validateAndNormalize({ ...base(), jobType });
       expect(result.ok).toBe(true);
@@ -291,5 +324,139 @@ describe("validateAndNormalize job type", () => {
     const positive = validateAndNormalize({ ...base(), qtyLf: "100" });
     expect(positive.ok).toBe(true);
     if (positive.ok) expect(positive.data.qtyLf).toBe(100);
+  });
+});
+
+describe("job classes", () => {
+  it("keeps EVENT / CONSTRUCTION / OTHER for existing types", () => {
+    expect([...JOB_CLASSES]).toEqual(["EVENT", "CONSTRUCTION", "OTHER"]);
+    for (const jobType of ["Install", "Pickup", "Drop", "Other"] as const) {
+      expect(classesForJobType(jobType)).toEqual(JOB_CLASSES);
+    }
+  });
+
+  it("uses Non Pay and Site Visit only for Site Walk", () => {
+    expect([...SITE_WALK_CLASSES]).toEqual(["Non Pay", "Site Visit"]);
+    expect(classesForJobType("Site Walk")).toEqual(SITE_WALK_CLASSES);
+    expect(classesForJobType("site walk")).toEqual(SITE_WALK_CLASSES);
+  });
+});
+
+describe("validateAndNormalize Site Walk", () => {
+  function base() {
+    return {
+      ...emptyJobFormValues({ branchId: "b1", date: "2026-03-05" }),
+      orderNumber: "ORD-SW",
+    };
+  }
+
+  const emptyMaterialRow = {
+    inventoryItemId: null,
+    itemName: null,
+    quantity: 1,
+    notes: null,
+  };
+
+  it("saves with no fence type, no materials, and no labor", () => {
+    for (const jobClass of SITE_WALK_CLASSES) {
+      const result = validateAndNormalize({
+        ...base(),
+        jobType: "Site Walk",
+        class: jobClass,
+        fenceType: "",
+        qtyLf: "",
+        materials: [emptyMaterialRow],
+        labor: [],
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.jobType).toBe("Site Walk");
+      expect(result.data.class).toBe(jobClass);
+      expect(result.data.fenceType).toBeNull();
+      expect(result.data.materials).toEqual([]);
+      expect(result.data.labor).toEqual([]);
+      expect(result.data.revenue).toBe(0);
+    }
+  });
+
+  it("keeps a 0-hour labor row when an employee is selected", () => {
+    expect(allowsZeroHourLabor("Site Walk")).toBe(true);
+    const result = validateAndNormalize({
+      ...base(),
+      jobType: "Site Walk",
+      class: "Non Pay",
+      labor: [{ employeeId: "emp-1", regularHours: 0, overtimeHours: 0 }],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.labor).toEqual([
+      { employeeId: "emp-1", regularHours: 0, overtimeHours: 0 },
+    ]);
+  });
+
+  it("still skips 0-hour labor when no employee is selected", () => {
+    const result = validateAndNormalize({
+      ...base(),
+      jobType: "Site Walk",
+      labor: [{ employeeId: "  ", regularHours: 0, overtimeHours: 0 }],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.labor).toEqual([]);
+  });
+});
+
+describe("validateAndNormalize existing job types (regression)", () => {
+  function base(jobType: string) {
+    return {
+      ...emptyJobFormValues({ branchId: "b1", date: "2026-03-05" }),
+      orderNumber: "ORD-1",
+      jobType,
+    };
+  }
+
+  const unnamedQty1 = {
+    inventoryItemId: null as string | null,
+    itemName: null as string | null,
+    quantity: 1,
+    notes: null as string | null,
+  };
+
+  it("still rejects unnamed non-zero material rows on Install / Pickup / Drop / Other", () => {
+    for (const jobType of ["Install", "Pickup", "Drop", "Other"] as const) {
+      expect(allowsEmptyFenceAndMaterials(jobType)).toBe(false);
+      const result = validateAndNormalize({ ...base(jobType), materials: [unnamedQty1] });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error).toMatch(/inventory item or a name/i);
+    }
+  });
+
+  it("still drops 0-hour labor rows on Install / Pickup / Drop / Other", () => {
+    for (const jobType of ["Install", "Pickup", "Drop", "Other"] as const) {
+      expect(allowsZeroHourLabor(jobType)).toBe(false);
+      const result = validateAndNormalize({
+        ...base(jobType),
+        labor: [{ employeeId: "emp-1", regularHours: 0, overtimeHours: 0 }],
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.labor).toEqual([]);
+    }
+  });
+
+  it("still keeps non-zero labor and named materials on Install", () => {
+    const result = validateAndNormalize({
+      ...base("Install"),
+      materials: [
+        { inventoryItemId: "item-1", itemName: null, quantity: 10, notes: null },
+      ],
+      labor: [{ employeeId: "emp-1", regularHours: 8, overtimeHours: 2 }],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.materials).toHaveLength(1);
+    expect(result.data.labor).toEqual([
+      { employeeId: "emp-1", regularHours: 8, overtimeHours: 2 },
+    ]);
   });
 });

@@ -1,5 +1,7 @@
 "use client";
 
+import { allowsZeroHourLabor } from "@/lib/job-constants";
+
 type LaborRow = {
   key: string;
   employeeId: string;
@@ -22,6 +24,7 @@ type Props = {
   inputClass: string;
   labelClass: string;
   newKey: () => string;
+  jobType?: string;
 };
 
 export function JobFormLabor({
@@ -31,6 +34,7 @@ export function JobFormLabor({
   inputClass,
   labelClass,
   newKey,
+  jobType,
 }: Props) {
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -39,6 +43,9 @@ export function JobFormLabor({
           <h2 className="font-semibold text-slate-900">Labor</h2>
           <p className="text-xs text-slate-500">
             Same-branch employees listed first. OT uses 1.5x in P&amp;L.
+            {allowsZeroHourLabor(jobType ?? "")
+              ? " 0 hours is allowed so a supervisor is attributed without labor cost."
+              : null}
           </p>
         </div>
         <button

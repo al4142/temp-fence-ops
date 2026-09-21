@@ -107,12 +107,12 @@ P&L is derived by order number (`src/lib/pnl.ts`): revenue, labor (OT @ 1.5×), 
 |------|------|
 | `src/app/jobs/` | List, create, detail, edit; `actions.ts` persist |
 | `src/components/JobForm*.tsx` | Create/edit form (details, BOM options, materials, labor, cost lines, variance) |
-| `src/lib/job-form.ts`, `src/lib/job-constants.ts` | Validation, job types (`Install`, `Pickup`, `Drop`, `Other`), classes |
+| `src/lib/job-form.ts`, `src/lib/job-constants.ts` | Validation, job types (`Install`, `Pickup`, `Drop`, `Other`, `Site Walk`), classes |
 | `src/app/jobs/[id]/export/route.ts`, `src/lib/export-project.ts` | **Export Project** `.xlsx` |
 
 Required ticket fields: order #, date, branch, job type. **Generate BOM** lives on the job form under Materials — there is no standalone BOM page. Generate BOM previews in the browser; **Apply to materials** then **Create job** / **Save changes** writes the ticket.
 
-Job types that move inventory: outbound `Install` / `Drop`; inbound `Pickup`. `Other` (and any unrecognized string) has no inventory effect. The job form accepts only the four Title Case labels. **CSV import** (`src/lib/csv-import.ts`, `/admin/import`) maps known Daily Tracker aliases (`INST` → Install, `PU` → Pickup, `DELIVERY` → Drop, …), rejects unknown codes (never silent Other), runs the same `validateAndNormalize` as the form, and commits accepted rows in one transaction. Preview shape: [IMPORT.md](./IMPORT.md).
+Job types that move inventory: outbound `Install` / `Drop`; inbound `Pickup`. `Other`, `Site Walk` (and any unrecognized string) have no inventory effect. The job form accepts only the Title Case labels. **CSV import** (`src/lib/csv-import.ts`, `/admin/import`) maps known Daily Tracker aliases (`INST` → Install, `PU` → Pickup, `DELIVERY` → Drop, `SITEWALK` → Site Walk, …), rejects unknown codes (never silent Other), runs the same `validateAndNormalize` as the form, and commits accepted rows in one transaction. Preview shape: [IMPORT.md](./IMPORT.md).
 
 ### Inventory
 

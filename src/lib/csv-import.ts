@@ -1,5 +1,5 @@
 import { parseCsv, rowToObject } from "./csv";
-import { mapImportJobType, type JobType } from "./job-constants";
+import { allowsZeroHourLabor, mapImportJobType, type JobType } from "./job-constants";
 import {
   dateOnlyToUtc,
   emptyJobFormValues,
@@ -328,7 +328,8 @@ export function importRowToFormValues(
     accountExec: row.accountExec ?? "",
     revenue: String(row.revenue),
     labor:
-      opts.laborEmployeeId && (row.laborHours > 0 || row.laborOt > 0)
+      opts.laborEmployeeId &&
+      (row.laborHours > 0 || row.laborOt > 0 || allowsZeroHourLabor(jobType))
         ? [
             {
               employeeId: opts.laborEmployeeId,
@@ -480,7 +481,12 @@ export function evaluateImportRows(
             regularHours: input.laborHours,
             overtimeHours: input.laborOt,
           },
-        ].filter((l) => l.regularHours > 0 || l.overtimeHours > 0)
+        ].filter(
+          (l) =>
+            l.regularHours > 0 ||
+            l.overtimeHours > 0 ||
+            allowsZeroHourLabor(input.mappedType ?? input.jobType)
+        )
       : [];
 
     const formValues = importRowToFormValues(input, {
