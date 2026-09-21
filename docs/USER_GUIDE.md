@@ -88,15 +88,19 @@ There is no separate “BOM page.” Generate BOM lives on the job create/edit f
 8. On the job detail page, confirm materials and inventory effect. Optionally **Export Project**.
 9. Open **Inventory** to see on-hand. Open **P&L**, enter the order #, **Look up**.
 
+**Site Walk (unpaid visit):** **Jobs** → **New job** → type **Site Walk**. Class becomes **Non Pay** / **Site Visit**. Fence and materials may stay blank. Labor is optional (0 hrs still attributes a supervisor). Save, then open **Jobs**, set **From** and **To** to that date, **Apply**. There is no separate calendar page — that table is the day list. A $0 / no-materials Site Walk is still a normal row (**Inv.** = **No inventory effect**).
+
 ---
 
 ## 4. Core functionality
 
 ### Jobs (create / edit)
 
-Required: **Order #**, **Date**, **Branch**, **Job type**. Class is EVENT / CONSTRUCTION / OTHER. Also: customer, address, city, account exec, revenue, notes.
+Required: **Order #**, **Date**, **Branch**, **Job type**. Class depends on type: EVENT / CONSTRUCTION / OTHER for Install, Pickup, Drop, and Other; **Non Pay** / **Site Visit** for Site Walk. Changing type swaps the class dropdown to the matching set (and resets the value if the previous class is not in the new set). Also: customer, address, city, account exec, revenue, notes.
 
-Job types in the form: **Install**, **Pickup**, **Drop**, **Other**.
+Job types in the form: **Install**, **Pickup**, **Drop**, **Other**, **Site Walk**.
+
+**Site Walk** (additive; Install / Pickup / Drop / Other are unchanged): unpaid site visit / preconstruction walk. Fence type and materials may be blank. Labor is optional, including **0-hr** attribution (the Labor section hint says 0 hours is allowed so a supervisor is attributed without labor cost). Inventory sign is 0 — the Jobs table **Inv.** column shows **No inventory effect**. A $0 ticket with no materials is still a normal Jobs table row for its date. Class is not a Jobs-table column; the type badge is enough. Install still errors on an empty unnamed materials row (`Each material line needs an inventory item or a name`).
 
 Form sections (in order):
 
@@ -105,13 +109,13 @@ Form sections (in order):
 3. **Cost lines** — lodging (amount / facility), freight (company / cost), misc (amount / category)
 4. **Materials** — catalog pick or free-text name + qty; **Generate BOM**
 5. **Material variance** — signed inventory delta (damaged on site, lost, extra used, returned unused)
-6. **Labor** — employee, regular hours, OT (cost uses 1.5× rate)
+6. **Labor** — employee, regular hours, OT (cost uses 1.5× rate). On Site Walk, 0 regular + 0 OT is kept when an employee is selected.
 
 **Create job** / **Save changes** writes the ticket. Generate BOM does **not** save until you apply and submit.
 
 **Delete job** (edit only) removes the ticket and its material / labor / cost lines. Confirm the dialog; it cannot be undone.
 
-Job list filters (shareable in the URL): from / to date, branch, job type, search (order #, customer, city, address). Pagination is 50 per page.
+Job list filters (shareable in the URL): from / to date, branch, job type (including Site Walk), search (order #, customer, city, address). Pagination is 50 per page. There is **no** class filter and **no** separate calendar page. To confirm a day’s tickets, set **From** and **To** to that date and Apply — the table heading **Day list for YYYY-MM-DD** is that confirmation. $0 / blank-materials Site Walk rows stay on All types and on that same-day list (type = Install still hides them, same as any other type filter).
 
 **Export Project** on the detail page downloads an `.xlsx` for poster handoff.
 
@@ -188,6 +192,7 @@ starting qty + job movements + adjustments + transfers + write-offs + job materi
 | Install, Drop | **Outbound (−)** — on-hand down (reusable and consumable) |
 | Pickup | **Inbound (+)** — on-hand up **only if reusable**. Consumables (`reusable: false`) stay consumed. |
 | Other | No inventory effect |
+| Site Walk | **No inventory effect** (same as Other; Jobs table Inv. column uses that wording) |
 
 BOM quantities are the same for Install and Pickup. The inventory sign is separate; consumables never restock.
 
@@ -199,11 +204,11 @@ Transfers (`/transfers`): from yard → to yard; destination SKU is created if m
 
 **P&L** (`/pnl`): enter or click an order number → **Look up**. All tickets sharing that order roll up.
 
-Shown: revenue, labor (OT @ 1.5×), material cost (catalog unit cost × qty on **Install / Drop** only; Pickup BOM is a warehouse return, not a second cost; free-text = $0), lodging, freight, misc, material variance, total cost, gross profit.
+Shown: revenue, labor (OT @ 1.5×; Site Walk 0-hr labor is $0), material cost (catalog unit cost × qty on **Install / Drop** only; Pickup BOM is a warehouse return, not a second cost; Other / Site Walk excluded; free-text = $0), lodging, freight, misc, material variance, total cost, gross profit.
 
 Yard expenses are a separate ledger (`/expenses`) and are **not** forced onto job P&L.
 
-**Analytics** (`/analytics`): monthly LF by branch and job-type group (Install / Drop vs Pickup vs Other), plus job count, install/drop LF, pickup LF, revenue, rough labor. Job tickets only — not transfers or write-offs.
+**Analytics** (`/analytics`): monthly LF by branch and job-type group (Install / Drop vs Pickup vs Other; Site Walk groups with Other), plus job count, install/drop LF, pickup LF, revenue, rough labor. Job tickets only — not transfers or write-offs.
 
 ---
 

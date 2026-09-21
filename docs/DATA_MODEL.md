@@ -46,6 +46,10 @@ One daily ticket. Multiple jobs can share an `orderNumber` (install then pickup)
 Key fields: `date`, `branchId`, `class`, `orderNumber`, `customer`, site fields, `jobType`,
 fence specs, `revenue`. `lodging` / `freight` / `misc` are **denormalized sums** of their line tables.
 
+- `jobType` — Title Case only: **Install**, **Pickup**, **Drop**, **Other**, **Site Walk** (`JOB_TYPES` in `src/lib/job-constants.ts`).
+- `class` — optional string. Install / Pickup / Drop / Other: **EVENT**, **CONSTRUCTION**, **OTHER** (`JOB_CLASSES`). Site Walk: **Non Pay**, **Site Visit** (`SITE_WALK_CLASSES`). The form swaps the dropdown when type changes; class is **not** a Jobs-table column. Import stores the CSV cell as-is (no class alias map).
+- Site Walk may omit fence type, LF, and materials, and may keep a 0/0 hour labor row for attribution. Other types keep today’s required-line rules (unnamed material rows with a non-zero qty still error; 0/0 labor rows are dropped).
+
 BOM generator inputs (optional; used by **Generate BOM** on create/edit):
 - `fenceSections` (JSON) — one or more sections. Each has `fenceType`, `qtyLf`, rails/weights as applicable, `postMount` (chainlink only), per-section gates, `terminalsManual`
 - Legacy columns (`fenceType`, `qtyLf`, `topRail`, `bottomRail`, `weightMode`, `postMount`, gates, `terminalsManual`) stay as **denormalized** totals / first-section values. Jobs with `fenceSections = null` map to one driven section from those columns
@@ -68,6 +72,7 @@ Moves on-hand; P&L treats `-qty * unitCost` as variance cost.
 
 ### JobLabor
 `regularHours` + `overtimeHours` against an `Employee`. Cost = `reg * rate + ot * rate * 1.5`.
+Site Walk may store a 0/0 hour row for attribution (P&L labor stays $0). Other types still drop 0/0 rows.
 
 ### Vendor
 Admin CRUD: name, optional notes, active. Used on yard expenses; future purchases.

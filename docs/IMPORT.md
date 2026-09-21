@@ -21,11 +21,13 @@ At least one header alias for each:
 | date | `date`, `Job Date` |
 | branch | `branch`, `yard` (use branch **code**: `MIA`, `DAV`) |
 | orderNumber | `orderNumber`, `Order #`, `WO` |
-| jobType | `jobType`, `Type`, `Txn` (values: `Install`, `Pickup`, `Drop`, `Other`, `Site Walk`; known aliases such as `INST` / `PU` / `DELIVERY` / `SITEWALK` map; **unknown codes reject the row** — never coerced to Other) |
+| jobType | `jobType`, `Type`, `Txn` (values: `Install`, `Pickup`, `Drop`, `Other`, `Site Walk`; known aliases such as `INST` / `PU` / `DELIVERY` / `SITEWALK` / `SITE-WALK` map; spaces and underscores collapse to `-`, so `SITE WALK` and `site_walk` also map. **Unknown codes reject the row** — never coerced to Other. `SWLK` rejects.) |
 
 ## Optional columns
 
 `class`, `customer`, `address`, `city`, `fenceType`, `qtyLf`, `screen` (Yes/No **or** a screen SKU such as `BLACK6`), `notes`, `accountExec`, `revenue`, `labor` / `assigned`, `hours`, `ot`.
+
+`class` is stored as-is (trimmed). There is **no** class alias table — do not expect `Non Pay` / `Site Visit` (or EVENT / CONSTRUCTION / OTHER) to be remapped from other spellings.
 
 Material columns whose header looks like a SKU (`PANEL-6`, `BASE-STD`) are treated as quantities for that SKU on the job’s branch.
 
@@ -38,7 +40,7 @@ Material columns whose header looks like a SKU (`PANEL-6`, `BASE-STD`) are treat
 
 ## Job-type map (import only)
 
-The job **form** still accepts only Title Case `Install` / `Pickup` / `Drop` / `Other` / `Site Walk`. Import applies this alias table, then runs the same `validateAndNormalize` as the form:
+The job **form** still accepts only Title Case `Install` / `Pickup` / `Drop` / `Other` / `Site Walk`. Import applies this alias table (`IMPORT_JOB_TYPE_ALIASES` in `src/lib/job-constants.ts`; keys after collapsing spaces/underscores to `-`), then runs the same `validateAndNormalize` as the form. Site Walk rows may omit fence/materials and may keep 0-hour labor when a labor name matches an employee.
 
 | CSV / Excel value | Stored type | Inventory sign |
 |-------------------|-------------|----------------|
