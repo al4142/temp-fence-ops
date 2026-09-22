@@ -33,7 +33,8 @@ model Employee {
   id         String   @id @default(cuid())
   name       String
   nameKey    String   @unique
-  hourlyRate Float
+  /// USD per hour, exact to 4 decimal places. Example: 21.0635.
+  hourlyRate Decimal  @db.Decimal(10, 4)
   position   String
   branchId   String
   active     Boolean  @default(true)
