@@ -44,11 +44,12 @@ Catalog row **per branch** (`@@unique([branchId, sku])`).
 ### Job
 One daily ticket. Multiple jobs can share an `orderNumber` (install then pickup).
 Key fields: `date`, `branchId`, `class`, `orderNumber`, `customer`, site fields, `jobType`,
-fence specs, `revenue`. `lodging` / `freight` / `misc` are **denormalized sums** of their line tables.
+fence specs, `revenue`, optional `contact1` / `contact2`. `lodging` / `freight` / `misc` are **denormalized sums** of their line tables.
 
 - `jobType` — Title Case only: **Install**, **Pickup**, **Drop**, **Other**, **Site Walk**, **Relocate** (`JOB_TYPES` in `src/lib/job-constants.ts`).
 - `status` — Title Case **Active** | **Cancelled** (`JOB_STATUSES`), same pattern as `jobType`. Prisma `@default("Active")`. Blank / missing treated as Active. Create always inserts Active (no picker). Edit may set Cancelled. Cancelled stays on Jobs / the day list; inventory sign is 0 regardless of `jobType`; P&L and analytics exclude the ticket. Materials / labor / cost lines / variances are kept (not wiped). Setting status back to Active restores that type’s inventory sign and P&L inclusion.
 - `class` — optional string. Install / Pickup / Drop / Other / Relocate: **EVENT**, **CONSTRUCTION**, **OTHER** (`JOB_CLASSES`). Site Walk: **Non Pay**, **Site Visit** (`SITE_WALK_CLASSES`). The form swaps the dropdown when type changes; class is **not** a Jobs-table column. Import stores the CSV cell as-is (no class alias map). Create default class is shared with Install (not a Relocate-only default).
+- `contact1` / `contact2` — optional free text (`String?`, SQL `TEXT`, nullable). Each is a site contact (name and phone in one string). Blank on the form stores NULL. Independent of `notes`: clearing a contact does not change notes. Create and edit persist both. Migration `prisma/migrations/20260922101500_job_contacts`. CSV import does not map these columns.
 - Site Walk and Relocate may omit fence type, LF, and materials (`allowsEmptyFenceAndMaterials`). **Site Walk only** may keep a 0/0 hour labor row for attribution (`allowsZeroHourLabor`). Relocate keeps `JOB_CLASSES` (not Non Pay / Site Visit) and drops 0/0 labor rows — hours are billable. Install / Pickup / Drop / Other keep today’s required-line rules (unnamed material rows with a non-zero qty still error; 0/0 labor rows are dropped).
 
 BOM generator inputs (optional; used by **Generate BOM** on create/edit):
