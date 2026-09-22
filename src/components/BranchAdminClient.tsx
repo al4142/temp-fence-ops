@@ -6,7 +6,9 @@ import {
   updateBranch,
   removeBranch,
   reactivateBranch,
+  seedBranchCatalogFromDavie,
 } from "@/app/admin/branches/actions";
+import { DAVIE_YARD_CODE } from "@/lib/inventory-seed-catalog";
 
 type BranchRow = {
   id: string;
@@ -26,6 +28,13 @@ type Props = { branches: BranchRow[] };
 const emptyForm = { code: "", name: "", active: "true" };
 
 const inputCls = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
+
+function seedSummary(seeded?: number, skipped?: number): string | null {
+  if (seeded == null) return null;
+  const skipPart =
+    skipped && skipped > 0 ? ` (${skipped} SKU(s) already present skipped)` : "";
+  return `Seeded ${seeded} catalog SKU(s) from Davie at qty 0${skipPart}.`;
+}
 
 export function BranchAdminClient({ branches }: Props) {
   const [error, setError] = useState<string | null>(null);
@@ -53,9 +62,11 @@ export function BranchAdminClient({ branches }: Props) {
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const code = form.code;
     const fd = new FormData();
     if (editingId) fd.set("id", editingId);
     Object.entries(form).forEach(([k, v]) => fd.set(k, v));
+    const wasCreate = !editingId;
     startTransition(async () => {
       const result = editingId ? await updateBranch(fd) : await createBranch(fd);
       if (!result.ok) {
@@ -64,8 +75,13 @@ export function BranchAdminClient({ branches }: Props) {
         return;
       }
       setError(null);
-      setInfo(null);
       cancelEdit();
+      if (wasCreate) {
+        const summary = seedSummary(result.seeded, result.skipped);
+        setInfo(summary ? `Created "${code}". ${summary}` : `Created "${code}".`);
+      } else {
+        setInfo(null);
+      }
     });
   }
 
@@ -106,6 +122,31 @@ export function BranchAdminClient({ branches }: Props) {
     });
   }
 
+  function onSeedFromDavie(b: BranchRow) {
+    if (b.code === DAVIE_YARD_CODE) return;
+    if (
+      !window.confirm(
+        `Seed "${b.code}" catalog from Davie? Existing SKUs are skipped; new SKUs start at qty 0.`
+      )
+    ) {
+      return;
+    }
+    const fd = new FormData();
+    fd.set("id", b.id);
+    startTransition(async () => {
+      const result = await seedBranchCatalogFromDavie(fd);
+      if (!result.ok) {
+        setError(result.error);
+        setInfo(null);
+        return;
+      }
+      setError(null);
+      setInfo(
+        `"${b.code}": ${seedSummary(result.seeded, result.skipped) ?? "Catalog seed complete."}`
+      );
+    });
+  }
+
   return (
     <div className="space-y-6">
       <form onSubmit={onSubmit} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -114,7 +155,8 @@ export function BranchAdminClient({ branches }: Props) {
         </h2>
         <p className="mt-1 text-xs text-slate-500">
           Code is stored uppercase and must be unique (e.g. DAV, MIA). New yards appear in job,
-          employee, inventory, filter, and analytics dropdowns.
+          employee, inventory, filter, and analytics dropdowns. Creating a yard copies Davie&apos;s
+          catalog SKUs at qty 0.
         </p>
         {error ? (
           <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
@@ -222,7 +264,7 @@ export function BranchAdminClient({ branches }: Props) {
                   )}
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <div className="flex justify-end gap-2">
+                  <div className="flex flex-wrap justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => startEdit(b)}
@@ -230,6 +272,17 @@ export function BranchAdminClient({ branches }: Props) {
                     >
                       Edit
                     </button>
+                    {b.code !== DAVIE_YARD_CODE ? (
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => onSeedFromDavie(b)}
+                        className="text-slate-700 hover:underline disabled:opacity-60"
+                        title="Copy Davie catalog SKUs at qty 0; skip existing"
+                      >
+                        Seed from Davie
+                      </button>
+                    ) : null}
                     {b.active ? (
                       <button
                         type="button"

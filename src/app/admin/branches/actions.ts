@@ -3,8 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
+import { prismaSeedCatalogStore } from "@/lib/inventory-seed-catalog-prisma";
+import {
+  DAVIE_YARD_CODE,
+  missingDavieYardError,
+  seedCatalogFromDavie,
+} from "@/lib/inventory-seed-catalog";
 
-export type AdminActionResult = { ok: true } | { ok: false; error: string };
+export type AdminActionResult =
+  | { ok: true; seeded?: number; skipped?: number }
+  | { ok: false; error: string };
 
 export type RemoveBranchResult =
   | { ok: true; mode: "deleted" }
@@ -41,11 +49,33 @@ export async function createBranch(formData: FormData): Promise<AdminActionResul
   if (!name) return { ok: false, error: "Name is required (e.g. Davie Yard)." };
 
   try {
-    await prisma.branch.create({
+    const store = prismaSeedCatalogStore();
+    const davie = await store.findDavieYard();
+    const creatingDavie = code === DAVIE_YARD_CODE;
+    // New yards need Davie's baseline catalog; creating Davie itself is allowed.
+    if (!davie && !creatingDavie) {
+      return { ok: false, error: missingDavieYardError() };
+    }
+
+    const branch = await prisma.branch.create({
       data: { code, name, active: true },
     });
+
+    let seeded = 0;
+    let skipped = 0;
+    if (davie && branch.id !== davie.id) {
+      const seed = await seedCatalogFromDavie(store, branch.id);
+      if (!seed.ok) {
+        // Roll back the empty yard so create appears atomic when seed fails.
+        await prisma.branch.delete({ where: { id: branch.id } }).catch(() => undefined);
+        return { ok: false, error: seed.error };
+      }
+      seeded = seed.created;
+      skipped = seed.skipped;
+    }
+
     revalidateBranchPaths();
-    return { ok: true };
+    return { ok: true, seeded, skipped };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Failed to create branch.";
     if (msg.includes("Unique constraint") || msg.includes("UNIQUE")) {
@@ -53,6 +83,27 @@ export async function createBranch(formData: FormData): Promise<AdminActionResul
     }
     return { ok: false, error: msg };
   }
+}
+
+/** Copy Davie's catalog definitions onto an existing yard (qty 0, skip existing SKUs). */
+export async function seedBranchCatalogFromDavie(
+  formData: FormData
+): Promise<AdminActionResult> {
+  await requireSession();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { ok: false, error: "Missing branch id." };
+
+  const branch = await prisma.branch.findUnique({
+    where: { id },
+    select: { id: true, code: true },
+  });
+  if (!branch) return { ok: false, error: "Branch not found." };
+
+  const seed = await seedCatalogFromDavie(prismaSeedCatalogStore(), branch.id);
+  if (!seed.ok) return { ok: false, error: seed.error };
+
+  revalidateBranchPaths();
+  return { ok: true, seeded: seed.created, skipped: seed.skipped };
 }
 
 export async function updateBranch(formData: FormData): Promise<AdminActionResult> {
