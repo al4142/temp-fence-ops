@@ -95,6 +95,8 @@ export function JobForm({
   });
   const [notes, setNotes] = useState(initial.notes);
   const [accountExec, setAccountExec] = useState(initial.accountExec);
+  const [contact1, setContact1] = useState(initial.contact1);
+  const [contact2, setContact2] = useState(initial.contact2);
   const [revenue, setRevenue] = useState(initial.revenue);
 
   const [lodging, setLodging] = useState<LodgingRow[]>(() =>
@@ -212,6 +214,8 @@ export function JobForm({
       sections,
       notes,
       accountExec,
+      contact1,
+      contact2,
       revenue,
       lodgingLines: lodging.map((l) => ({
         amount: Number(l.amount) || 0,
@@ -354,6 +358,10 @@ export function JobForm({
         setNotes={setNotes}
         accountExec={accountExec}
         setAccountExec={setAccountExec}
+        contact1={contact1}
+        setContact1={setContact1}
+        contact2={contact2}
+        setContact2={setContact2}
         revenue={revenue}
         setRevenue={setRevenue}
       />

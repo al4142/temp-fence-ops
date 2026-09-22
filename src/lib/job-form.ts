@@ -87,6 +87,9 @@ export type JobFormValues = {
   sections: JobFenceSectionForm[];
   notes: string;
   accountExec: string;
+  /** Optional free-text site contact (name and phone in one string). */
+  contact1: string;
+  contact2: string;
   revenue: string;
   lodgingLines: LodgingLineInput[];
   freightLines: FreightLineInput[];
@@ -123,6 +126,8 @@ export type JobFormPayload = {
   fenceSections: StoredFenceSection[];
   notes: string | null;
   accountExec: string | null;
+  contact1: string | null;
+  contact2: string | null;
   revenue: number;
   lodging: number;
   freight: number;
@@ -196,6 +201,8 @@ export function emptyJobFormValues(defaults?: {
     sections: [emptyJobFenceSectionForm()],
     notes: "",
     accountExec: "",
+    contact1: "",
+    contact2: "",
     revenue: "0",
     lodgingLines: [],
     freightLines: [],
@@ -398,6 +405,8 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
       fenceSections,
       notes: input.notes.trim() || null,
       accountExec: input.accountExec.trim() || null,
+      contact1: input.contact1.trim() || null,
+      contact2: input.contact2.trim() || null,
       revenue: parseRequiredNumber(input.revenue, 0),
       lodging,
       freight,

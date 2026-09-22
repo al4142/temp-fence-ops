@@ -29,6 +29,8 @@ export type ExportJob = {
   fenceSections?: unknown;
   notes: string | null;
   accountExec: string | null;
+  contact1?: string | null;
+  contact2?: string | null;
   revenue: number;
   branch: { code: string; name: string };
   materials: Array<{
@@ -105,6 +107,8 @@ export async function buildProjectWorkbook(job: ExportJob): Promise<Buffer> {
     ["Manual terminals", job.terminalsManual ?? 0],
     ["Account exec", job.accountExec ?? ""],
     ["Revenue", job.revenue],
+    ["Contact 1", job.contact1 ?? ""],
+    ["Contact 2", job.contact2 ?? ""],
     ["Notes", job.notes ?? ""],
   ];
   for (const [field, value] of rows) {

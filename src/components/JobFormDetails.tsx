@@ -27,6 +27,8 @@ type Props = {
   status: string; setStatus: (v: string) => void;
   notes: string; setNotes: (v: string) => void;
   accountExec: string; setAccountExec: (v: string) => void;
+  contact1: string; setContact1: (v: string) => void;
+  contact2: string; setContact2: (v: string) => void;
   revenue: string; setRevenue: (v: string) => void;
 };
 
@@ -37,6 +39,7 @@ export function JobFormDetails(p: Props) {
     orderNumber, setOrderNumber, customer, setCustomer, address, setAddress,
     city, setCity, jobType, setJobType, status, setStatus,
     notes, setNotes, accountExec, setAccountExec,
+    contact1, setContact1, contact2, setContact2,
     revenue, setRevenue,
   } = p;
 
@@ -129,9 +132,19 @@ export function JobFormDetails(p: Props) {
             <label className={labelClass} htmlFor="accountExec">Account exec</label>
             <input id="accountExec" className={inputClass} value={accountExec} onChange={(e) => setAccountExec(e.target.value)} />
           </div>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label className={labelClass} htmlFor="revenue">Revenue</label>
             <input id="revenue" type="number" step="0.01" min="0" className={inputClass} value={revenue} onChange={(e) => setRevenue(e.target.value)} />
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="contact1">Contact 1</label>
+            <input id="contact1" className={inputClass} value={contact1} onChange={(e) => setContact1(e.target.value)} />
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="contact2">Contact 2</label>
+            <input id="contact2" className={inputClass} value={contact2} onChange={(e) => setContact2(e.target.value)} />
           </div>
         </div>
         <div className="mt-4">

@@ -125,6 +125,8 @@ export default async function JobDetailPage({ params }: Props) {
         />
         <Info label="Account exec" value={job.accountExec ?? "-"} />
         <Info label="Revenue" value={formatCurrency(job.revenue)} />
+        <Info label="Contact 1" value={job.contact1 ?? "-"} />
+        <Info label="Contact 2" value={job.contact2 ?? "-"} />
         <Info
           label="Lodging / Freight / Misc"
           value={`${formatCurrency(lodgingTotal)} / ${formatCurrency(freightTotal)} / ${formatCurrency(miscTotal)}`}

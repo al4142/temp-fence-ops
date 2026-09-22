@@ -104,6 +104,10 @@ model Job {
   fenceSections Json?
   notes       String?
   accountExec String?
+  /// Optional free-text site contact (name and phone in one string).
+  contact1    String?
+  /// Optional second site contact (name and phone in one string).
+  contact2    String?
   revenue     Float    @default(0)
   /// Denormalized sum of lodgingLines (kept for simple rollups / legacy seed)
   lodging     Float    @default(0)
