@@ -73,12 +73,12 @@ model Job {
   id          String   @id @default(cuid())
   date        DateTime
   branchId    String
-  class       String? // EVENT, CONSTRUCTION, OTHER; Site Walk: Non Pay, Site Visit
+  class       String? // EVENT, CONSTRUCTION, OTHER (incl. Relocate); Site Walk: Non Pay, Site Visit
   orderNumber String
   customer    String
   address     String?
   city        String?
-  jobType     String // Install, Pickup, Drop, Other, Site Walk
+  jobType     String // Install, Pickup, Drop, Other, Site Walk, Relocate
   /// Active | Cancelled (Title Case). Cancelled stays on Jobs / day list; inventory sign 0; excluded from P&L.
   status      String   @default("Active")
   fenceType   String? // canonical: CL6, CL8, CL6+1, CL8+1, 6x10, 6x12, 8x10, 8x12, BARRICADE
