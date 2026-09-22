@@ -49,7 +49,7 @@ fence specs, `revenue`. `lodging` / `freight` / `misc` are **denormalized sums**
 - `jobType` — Title Case only: **Install**, **Pickup**, **Drop**, **Other**, **Site Walk**, **Relocate** (`JOB_TYPES` in `src/lib/job-constants.ts`).
 - `status` — Title Case **Active** | **Cancelled** (`JOB_STATUSES`), same pattern as `jobType`. Prisma `@default("Active")`. Blank / missing treated as Active. Create always inserts Active (no picker). Edit may set Cancelled. Cancelled stays on Jobs / the day list; inventory sign is 0 regardless of `jobType`; P&L and analytics exclude the ticket. Materials / labor / cost lines / variances are kept (not wiped). Setting status back to Active restores that type’s inventory sign and P&L inclusion.
 - `class` — optional string. Install / Pickup / Drop / Other / Relocate: **EVENT**, **CONSTRUCTION**, **OTHER** (`JOB_CLASSES`). Site Walk: **Non Pay**, **Site Visit** (`SITE_WALK_CLASSES`). The form swaps the dropdown when type changes; class is **not** a Jobs-table column. Import stores the CSV cell as-is (no class alias map). Create default class is shared with Install (not a Relocate-only default).
-- Site Walk and Relocate may omit fence type, LF, and materials (`allowsEmptyFenceAndMaterials`). Site Walk may also keep a 0/0 hour labor row for attribution. Relocate does not: hours are billable and 0/0 labor rows are dropped. Install / Pickup / Drop / Other keep today’s required-line rules (unnamed material rows with a non-zero qty still error; 0/0 labor rows are dropped).
+- Site Walk and Relocate may omit fence type, LF, and materials (`allowsEmptyFenceAndMaterials`). **Site Walk only** may keep a 0/0 hour labor row for attribution (`allowsZeroHourLabor`). Relocate keeps `JOB_CLASSES` (not Non Pay / Site Visit) and drops 0/0 labor rows — hours are billable. Install / Pickup / Drop / Other keep today’s required-line rules (unnamed material rows with a non-zero qty still error; 0/0 labor rows are dropped).
 
 BOM generator inputs (optional; used by **Generate BOM** on create/edit):
 - `fenceSections` (JSON) — one or more sections. Each has `fenceType`, `qtyLf`, rails/weights as applicable, `postMount` (chainlink only), per-section gates, `terminalsManual`
@@ -73,7 +73,7 @@ Moves on-hand unless the job is **Cancelled**; P&L treats `-qty * unitCost` as v
 
 ### JobLabor
 `regularHours` + `overtimeHours` against an `Employee`. Cost = `reg * rate + ot * rate * 1.5`.
-Site Walk may store a 0/0 hour row for attribution (P&L labor stays $0). Relocate and other types still drop 0/0 rows. Relocate hours that are present count on P&L like Install.
+Site Walk may store a 0/0 hour row for attribution (P&L labor stays $0). **0-hr labor is Site Walk only** — Relocate and other types drop 0/0 rows. Relocate hours that are present count on P&L like Install.
 
 ### Vendor
 Admin CRUD: name, optional notes, active. Used on yard expenses; future purchases.
@@ -110,7 +110,7 @@ onHand = startingQty
 | Pickup | +1 if `reusable`, else 0 | Return to yard (consumables stay consumed) |
 | Other | 0 | No inventory effect |
 | Site Walk | 0 | Non-pay / site visit — no inventory effect |
-| Relocate | 0 | Move a section — no new materials, no stock move |
+| Relocate | 0 | Move a section — no inventory effect (Jobs Inv. wording); no new materials |
 | unrecognized | 0 | No inventory effect |
 | **Cancelled** (any type) | 0 | No inventory effect — materials/variances retained |
 
