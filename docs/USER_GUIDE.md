@@ -62,7 +62,7 @@ After sign-in, the header nav is:
 
 | Link | Route | Screen |
 |------|-------|--------|
-| Yards | `/admin/branches` | Yards / branches |
+| Yards | `/admin/branches` | Yards / branches; a new yard copies the Davie catalog at qty 0 |
 | Vendors | `/admin/vendors` | Suppliers for yard expenses |
 | Employees | `/admin/employees` | Crew on labor lines |
 | Inv. admin | `/admin/inventory` | Catalog CRUD + manual adjustments |
@@ -185,11 +185,30 @@ Apply replaces material rows (confirm if rows already exist). Then **Create job*
 
 ### Materials / catalog
 
-Catalog lives **per yard** (SKU unique per branch). Seed loads both a few demo items (`PANEL-6`, `BASE-STD`, …) **and** the BOM catalog (`6x10`, `T-STANDS`, `SADDLE CLAMP`, `BIG FEET`, chainlink SKUs, gate bodies, …) on Miami (`MIA`) and Davie (`DAV`).
+Catalog lives **per yard** (SKU unique per branch). The demo load (`npm run db:seed`) puts a few demo items (`PANEL-6`, `BASE-STD`, …) **and** the BOM catalog (`6x10`, `T-STANDS`, `SADDLE CLAMP`, `BIG FEET`, chainlink SKUs, gate bodies, …) on Miami (`MIA`) and Davie (`DAV`). A yard you add in the app gets Davie’s catalog at qty 0 from **Yards** — see [Yards / branches](#yards--branches).
 
 On the job form, the inventory dropdown prefers items for the selected branch. You can still type a free-text name if you leave the catalog pick blank.
 
 Maintain the catalog on **Inv. admin** (`/admin/inventory`): add/edit items, starting qty, unit cost, reusable flag, and **manual adjustments**. Prefer **Deactivate** for SKUs that appear on jobs, transfers, write-offs, or adjustments — hard-delete is blocked when anything still references the item so job history keeps the name. Inactive SKUs stay on past jobs and are hidden from the new-job picker. On-hand uses the same math as `/inventory`.
+
+### Yards / branches
+
+**Yards** (`/admin/branches`) opens **Yards / branches**. Yards you add here show up on jobs, employees, inventory, filters, and analytics. The page says to prefer deactivate — **Remove** when the yard is still referenced — so historical records stay linked. **Show inactive** lists deactivated yards; **Reactivate** turns one back on. **Delete** is only on an inactive yard that nothing references.
+
+**Add yard / branch** takes **Code** and **Name**. Code is stored uppercase and must be unique (for example `DAV`, `MIA`). The helper under the heading says creating a yard copies Davie’s catalog SKUs at qty 0.
+
+**Create** copies the Davie (`DAV`) catalog onto that yard (ALE-38):
+
+- Each new SKU keeps Davie’s name, description, unit, reusable flag, unit cost, and active or inactive state, with **starting qty 0**.
+- Davie’s quantities, adjustments, transfers, and job movements stay on Davie.
+- The amber note after create is `Created "{code}". Seeded {n} catalog SKU(s) from Davie at qty 0.` When any SKU was already on the yard, that second sentence is `Seeded {n} catalog SKU(s) from Davie at qty 0 ({skipped} SKU(s) already present skipped).`
+- **Save changes** on an existing yard updates code, name, or status and leaves catalog rows as stored.
+
+**Seed from Davie** is on every yard whose code is not `DAV`. Davie has **Edit** and **Remove**, and no seed button. The control’s title is “Copy Davie catalog SKUs at qty 0; skip existing.” Confirm reads `Seed "{code}" catalog from Davie? Existing SKUs are skipped; new SKUs start at qty 0.` Cancel leaves the catalog unchanged. Confirm skips SKUs already on that yard (the match ignores letter case) and adds only the missing ones at qty 0. A second run skips those SKUs and leaves stored quantities in place. The note afterward is `"{code}": Seeded {n} catalog SKU(s) from Davie at qty 0.` When any SKUs were already present it is `"{code}": Seeded {n} catalog SKU(s) from Davie at qty 0 ({skipped} SKU(s) already present skipped).`
+
+If Davie is missing, **Create** for any other code stops with `Davie yard (code DAV) was not found. Create or restore Davie before seeding catalogs.` Creating code `DAV` is allowed; the banner reports `Seeded 0` because nothing is copied onto Davie itself.
+
+Opening stock is a later step on **Inv. admin** (starting qty or a manual adjustment). Seeded SKUs are available on that yard’s job catalog pick immediately.
 
 ### Inventory (Install vs Pickup)
 

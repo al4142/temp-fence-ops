@@ -133,9 +133,13 @@ Job types that move inventory: outbound `Install` / `Drop`; inbound `Pickup`. `O
 | `src/lib/inventory.ts` | Sign by job type + `status` + on-hand computation (`Cancelled` → 0) |
 | `src/app/inventory/page.tsx` | On-hand by branch |
 | `src/app/admin/inventory/` | Catalog CRUD + manual adjustments |
+| `src/lib/inventory-seed-catalog.ts`, `src/lib/inventory-seed-catalog-prisma.ts` | Copy Davie catalog definitions onto a yard at `startingQty` 0; skip existing SKUs |
+| `src/app/admin/branches/`, `src/components/BranchAdminClient.tsx` | Yard admin; **Create** and **Seed from Davie** |
 | `src/app/transfers/`, `src/app/write-offs/` | Yard-to-yard qty moves; damaged/scrap/shrink |
 
 Catalog pick on a job line links `JobMaterial.inventoryItemId` and drives stock + P&L cost. Free-text `itemName` does **not** move inventory and costs $0 on P&L.
+
+**Catalog seed from Davie** (ALE-38 / #33): `seedCatalogFromDavie` resolves the source with `DAVIE_YARD_CODE` (`DAV`), then a yard named `Davie` or whose name starts with `Davie `. `planCatalogSeed` copies SKU, name, description, unit, reusable, unit cost, and `active`, and sets `startingQty` to `0`. Existing target SKUs are skipped case-insensitively. `createBranch` runs that copy unless the new row is Davie; a failed seed deletes the new branch. `seedBranchCatalogFromDavie` is the same copy for an existing yard. **Seed from Davie** is omitted when `code === "DAV"`. The post-create and post-seed banners report seeded and skipped counts. This path does not call `prisma/seed.ts` and does not copy on-hand. `src/lib/bom/catalog.ts` remains the BOM recipe and demo item list.
 
 ### BOM calculator
 
