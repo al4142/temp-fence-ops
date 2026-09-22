@@ -40,6 +40,7 @@ describe("countsTowardMaterialCost", () => {
     expect(countsTowardMaterialCost("Pickup")).toBe(false);
     expect(countsTowardMaterialCost("Other")).toBe(false);
     expect(countsTowardMaterialCost("Site Walk")).toBe(false);
+    expect(countsTowardMaterialCost("Relocate")).toBe(false);
     expect(countsTowardMaterialCost("RELOCATE")).toBe(false);
   });
 });
@@ -137,6 +138,30 @@ describe("buildOrderPnL materials", () => {
   it("does not treat Other materials as outbound cost", () => {
     const pnl = buildOrderPnL([job({ id: "other", jobType: "Other" })]);
     expect(pnl!.materialCost).toBe(0);
+  });
+
+  it("includes Relocate revenue and labor; materials are not outbound cost", () => {
+    const pnl = buildOrderPnL([
+      job({
+        id: "rel",
+        jobType: "Relocate",
+        revenue: 650,
+        labor: [
+          {
+            regularHours: 4,
+            overtimeHours: 1,
+            employee: { hourlyRate: 30, name: "Luis" },
+          },
+        ],
+      }),
+    ]);
+    expect(pnl).not.toBeNull();
+    expect(pnl!.jobCount).toBe(1);
+    expect(pnl!.revenue).toBe(650);
+    expect(pnl!.laborCost).toBe(laborCostForLine(4, 1, 30));
+    expect(pnl!.materialCost).toBe(0);
+    expect(pnl!.totalCost).toBe(pnl!.laborCost);
+    expect(pnl!.grossProfit).toBe(650 - pnl!.laborCost);
   });
 
   it("does not treat Site Walk materials as outbound cost; 0-hour labor is $0", () => {

@@ -234,8 +234,9 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
     const inventoryItemId = m.inventoryItemId?.trim() || null;
     const itemName = m.itemName?.trim() || null;
     if (!inventoryItemId && !itemName) {
-      // Site Walk: skip the form's empty placeholder row (qty defaults to 1).
+      // Site Walk / Relocate: skip the form's empty placeholder row (qty defaults to 1).
       // Other types still require a catalog item or name when qty is non-zero.
+      // Relocate does not keep 0-hour labor (allowsZeroHourLabor stays Site Walk only).
       if (allowsEmptyFenceAndMaterials(jobType)) continue;
       return { ok: false, error: "Each material line needs an inventory item or a name." };
     }

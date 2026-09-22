@@ -90,7 +90,9 @@ There is no separate “BOM page.” Generate BOM lives on the job create/edit f
 
 **Site Walk (unpaid visit):** **Jobs** → **New job** → type **Site Walk**. Class becomes **Non Pay** / **Site Visit**. Fence and materials may stay blank. Labor is optional (0 hrs still attributes a supervisor). Save, then open **Jobs**, set **From** and **To** to that date, **Apply**. There is no separate calendar page — that table is the day list. A $0 / no-materials Site Walk is still a normal row (**Inv.** = **No inventory effect**).
 
-**Cancel a scheduled job:** **Jobs** → **Edit** on an existing ticket (create has no Status picker — new jobs are always **Active**). Set Status **Cancelled**. Confirm: “Stays on Jobs and the day list. No inventory or P&L.” Save. The type badge is unchanged; a rose **Cancelled** badge sits next to it. Set **From** and **To** to that date, **Apply** — it stays on the day list (the banner can mention Cancelled). **Inv.** = **No inventory effect** regardless of Install / Pickup / Drop / Other / Site Walk. On-hand does not move; P&L omits the ticket. Check **Hide cancelled** (URL `hideCancelled=1`) to omit it. Status back to **Active** has no confirm and restores that type’s inventory / P&L rules. Use **Delete job** only for a true mistake.
+**Relocate (billable move):** **Jobs** → **New job** → type **Relocate**. Class stays **EVENT** / **CONSTRUCTION** / **OTHER** (same as Install — not Non Pay / Site Visit). Fence, materials, and Generate BOM may stay blank (no new stock). Labor hours and revenue are billable and show on P&L. **Inv.** = **No inventory effect**. The ticket is a normal Jobs / day-list row for its date.
+
+**Cancel a scheduled job:** **Jobs** → **Edit** on an existing ticket (create has no Status picker — new jobs are always **Active**). Set Status **Cancelled**. Confirm: “Stays on Jobs and the day list. No inventory or P&L.” Save. The type badge is unchanged; a rose **Cancelled** badge sits next to it. Set **From** and **To** to that date, **Apply** — it stays on the day list (the banner can mention Cancelled). **Inv.** = **No inventory effect** regardless of Install / Pickup / Drop / Other / Site Walk / Relocate. On-hand does not move; P&L omits the ticket. Check **Hide cancelled** (URL `hideCancelled=1`) to omit it. Status back to **Active** has no confirm and restores that type’s inventory / P&L rules. Use **Delete job** only for a true mistake.
 
 ---
 
@@ -98,11 +100,13 @@ There is no separate “BOM page.” Generate BOM lives on the job create/edit f
 
 ### Jobs (create / edit)
 
-Required: **Order #**, **Date**, **Branch**, **Job type**. Class depends on type: EVENT / CONSTRUCTION / OTHER for Install, Pickup, Drop, and Other; **Non Pay** / **Site Visit** for Site Walk. Changing type swaps the class dropdown to the matching set (and resets the value if the previous class is not in the new set). Also: customer, address, city, account exec, revenue, notes.
+Required: **Order #**, **Date**, **Branch**, **Job type**. Class depends on type: EVENT / CONSTRUCTION / OTHER for Install, Pickup, Drop, Other, and Relocate; **Non Pay** / **Site Visit** for Site Walk. Changing type swaps the class dropdown to the matching set (and resets the value if the previous class is not in the new set). Also: customer, address, city, account exec, revenue, notes.
 
-Job types in the form: **Install**, **Pickup**, **Drop**, **Other**, **Site Walk**.
+Job types in the form: **Install**, **Pickup**, **Drop**, **Other**, **Site Walk**, **Relocate**.
 
-**Site Walk** (additive; Install / Pickup / Drop / Other are unchanged): unpaid site visit / preconstruction walk. Fence type and materials may be blank. Labor is optional, including **0-hr** attribution (the Labor section hint says 0 hours is allowed so a supervisor is attributed without labor cost). Inventory sign is 0 — the Jobs table **Inv.** column shows **No inventory effect**. A $0 ticket with no materials is still a normal Jobs table row for its date. Class is not a Jobs-table column; the type badge is enough. Install still errors on an empty unnamed materials row (`Each material line needs an inventory item or a name`).
+**Site Walk** (additive; Install / Pickup / Drop / Other / Relocate are unchanged): unpaid site visit / preconstruction walk. Fence type and materials may be blank. Labor is optional, including **0-hr** attribution (the Labor section hint says 0 hours is allowed so a supervisor is attributed without labor cost). Inventory sign is 0 — the Jobs table **Inv.** column shows **No inventory effect**. A $0 ticket with no materials is still a normal Jobs table row for its date. Class is not a Jobs-table column; the type badge is enough. Install still errors on an empty unnamed materials row (`Each material line needs an inventory item or a name`).
+
+**Relocate** (additive): client asks the installer to move a fence section. No new materials — fence, materials, and Generate BOM may stay blank (same empty-line path as Site Walk). Class is EVENT / CONSTRUCTION / OTHER, not Site Walk’s Non Pay / Site Visit. Hours and revenue count on P&L (0-hr labor rows are dropped, same as Install). Inventory sign is 0.
 
 Form sections (in order):
 
@@ -111,7 +115,7 @@ Form sections (in order):
 3. **Cost lines** — lodging (amount / facility), freight (company / cost), misc (amount / category)
 4. **Materials** — catalog pick or free-text name + qty; **Generate BOM**
 5. **Material variance** — signed inventory delta (damaged on site, lost, extra used, returned unused)
-6. **Labor** — employee, regular hours, OT (cost uses 1.5× rate). On Site Walk, 0 regular + 0 OT is kept when an employee is selected.
+6. **Labor** — employee, regular hours, OT (cost uses 1.5× rate). On Site Walk, 0 regular + 0 OT is kept when an employee is selected. Relocate hours are billable; a 0/0 row is dropped.
 
 **Create job** / **Save changes** writes the ticket. Generate BOM does **not** save until you apply and submit.
 
@@ -119,7 +123,7 @@ Form sections (in order):
 
 **Status** (edit only, Job details): **Active** | **Cancelled**. Create always saves Active — there is no status picker on New job. Changing Active → Cancelled asks you to confirm: “Stays on Jobs and the day list. No inventory or P&L.” Setting Cancelled → Active does not confirm. Cancel does **not** delete materials, labor, or history. Job detail shows a rose banner with the same stay-on-list / no inventory / no P&L copy.
 
-Job list filters (shareable in the URL): from / to date, branch, job type (including Site Walk), search (order #, customer, city, address), optional **Hide cancelled** (`hideCancelled=1`). Pagination is 50 per page. There is **no** class filter and **no** separate calendar page. To confirm a day’s tickets, set **From** and **To** to that date and Apply — the table heading **Day list for YYYY-MM-DD** is that confirmation (the banner can mention Cancelled jobs). $0 / blank-materials Site Walk rows stay on All types and on that same-day list (type = Install still hides them, same as any other type filter). **Cancelled** jobs stay on the unfiltered Jobs list and the day list with a rose **Cancelled** badge alongside the type badge. Default is to **show** cancelled; check **Hide cancelled** to omit them. There is no separate Cancelled page.
+Job list filters (shareable in the URL): from / to date, branch, job type (including Site Walk and Relocate), search (order #, customer, city, address), optional **Hide cancelled** (`hideCancelled=1`). Pagination is 50 per page. There is **no** class filter and **no** separate calendar page. To confirm a day’s tickets, set **From** and **To** to that date and Apply — the table heading **Day list for YYYY-MM-DD** is that confirmation (the banner can mention Cancelled jobs). $0 / blank-materials Site Walk rows and no-materials Relocate rows stay on All types and on that same-day list (type = Install still hides them, same as any other type filter). **Cancelled** jobs stay on the unfiltered Jobs list and the day list with a rose **Cancelled** badge alongside the type badge. Default is to **show** cancelled; check **Hide cancelled** to omit them. There is no separate Cancelled page.
 
 **Export Project** on the detail page downloads an `.xlsx` for poster handoff.
 
@@ -197,6 +201,7 @@ starting qty + job movements + adjustments + transfers + write-offs + job materi
 | Pickup | **Inbound (+)** — on-hand up **only if reusable**. Consumables (`reusable: false`) stay consumed. |
 | Other | No inventory effect |
 | Site Walk | **No inventory effect** (same as Other; Jobs table Inv. column uses that wording) |
+| Relocate | **No inventory effect** (move a section; no stock move) |
 | **Cancelled** (any type) | **No inventory effect** — overrides Install / Pickup / Drop / Other / Site Walk; on-hand does not change; materials stay on the ticket. Jobs table **Inv.** uses that wording. |
 
 BOM quantities are the same for Install and Pickup. The inventory sign is separate; **Cancelled** forces no movement regardless of type; consumables never restock.
@@ -209,11 +214,11 @@ Transfers (`/transfers`): from yard → to yard; destination SKU is created if m
 
 **P&L** (`/pnl`): enter or click an order number → **Look up**. Active tickets sharing that order roll up. **Cancelled** tickets are excluded from revenue, labor, materials, lodging/freight/misc, and variance (a cancelled sibling on the same order # is ignored). If every ticket on the order is Cancelled, lookup shows the cancelled-excluded empty state.
 
-Shown: revenue, labor (OT @ 1.5×; Site Walk 0-hr labor is $0), material cost (catalog unit cost × qty on **Install / Drop** only; Pickup BOM is a warehouse return, not a second cost; Other / Site Walk excluded; free-text = $0), lodging, freight, misc, material variance, total cost, gross profit.
+Shown: revenue, labor (OT @ 1.5×; Site Walk 0-hr labor is $0; Relocate hours and revenue count), material cost (catalog unit cost × qty on **Install / Drop** only; Pickup BOM is a warehouse return, not a second cost; Other / Site Walk / Relocate excluded; free-text = $0), lodging, freight, misc, material variance, total cost, gross profit.
 
 Yard expenses are a separate ledger (`/expenses`) and are **not** forced onto job P&L.
 
-**Analytics** (`/analytics`): monthly LF by branch and job-type group (Install / Drop vs Pickup vs Other; Site Walk groups with Other), plus job count, install/drop LF, pickup LF, revenue, rough labor. Job tickets only — not transfers or write-offs. Cancelled tickets are excluded.
+**Analytics** (`/analytics`): monthly LF by branch and job-type group (Install / Drop vs Pickup vs Other; Site Walk and Relocate group with Other), plus job count, install/drop LF, pickup LF, revenue, rough labor. Job tickets only — not transfers or write-offs. Cancelled tickets are excluded.
 
 ---
 

@@ -106,8 +106,8 @@ export default async function JobsPage({
       {from && to && from === to ? (
         <p className="text-sm text-slate-700">
           Day list for <span className="font-medium">{from}</span>
-          {" \u2014 "}every ticket that date, including Site Walk with $0 / no materials
-          and Cancelled jobs (badge). Use Hide cancelled to omit them.
+          {" \u2014 "}every ticket that date, including Site Walk with $0 / no materials,
+          Relocate with no materials, and Cancelled jobs (badge). Use Hide cancelled to omit them.
         </p>
       ) : null}
 

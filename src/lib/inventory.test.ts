@@ -49,6 +49,7 @@ describe("inventorySignForMaterial", () => {
     expect(inventorySignForMaterial("Pickup", true)).toBe(1);
     expect(inventorySignForMaterial("Other", true)).toBe(0);
     expect(inventorySignForMaterial("Site Walk", true)).toBe(0);
+    expect(inventorySignForMaterial("Relocate", true)).toBe(0);
   });
 
   it("does not restock consumables on Pickup; outbound still decrements", () => {
@@ -58,6 +59,7 @@ describe("inventorySignForMaterial", () => {
     expect(inventorySignForMaterial("Drop", false)).toBe(-1);
     expect(inventorySignForMaterial("Other", false)).toBe(0);
     expect(inventorySignForMaterial("Site Walk", false)).toBe(0);
+    expect(inventorySignForMaterial("Relocate", false)).toBe(0);
   });
 
   it("defaults missing reusable to true (Prisma default)", () => {
