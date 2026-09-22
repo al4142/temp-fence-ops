@@ -102,6 +102,8 @@ There is no separate “BOM page.” Generate BOM lives on the job create/edit f
 
 Required: **Order #**, **Date**, **Branch**, **Job type**. **Create job** defaults **Class** to **CONSTRUCTION** for Install, Pickup, Drop, Other, and Relocate. **Edit job** keeps the saved class. Options stay EVENT / CONSTRUCTION / OTHER for those types, and **Non Pay** / **Site Visit** for Site Walk. Changing type swaps the class dropdown to the matching set (and resets the value if the previous class is not in the new set) — Site Walk still becomes **Non Pay**. Also: customer, address, city, account exec, revenue, notes.
 
+**Contact 1** and **Contact 2** are optional free text (a name and phone in one string). On **Job details**, **Revenue**, **Contact 1**, and **Contact 2** sit on one row; **Notes** is full width underneath. Leave either contact blank — the ticket still saves. Clearing a contact does not change Notes. **Create job** and **Save changes** persist both. Job detail shows Contact 1 and Contact 2 (blank as “-”). **Export Project** includes them on the summary sheet.
+
 Job types in the form: **Install**, **Pickup**, **Drop**, **Other**, **Site Walk**, **Relocate**.
 
 **Site Walk** (additive; Install / Pickup / Drop / Other / Relocate are unchanged): unpaid site visit / preconstruction walk. Fence type and materials may be blank. Labor is optional, including **0-hr** attribution (the Labor section hint says 0 hours is allowed so a supervisor is attributed without labor cost). Inventory sign is 0 — the Jobs table **Inv.** column shows **No inventory effect**. A $0 ticket with no materials is still a normal Jobs table row for its date. Class is not a Jobs-table column; the type badge is enough. Install still errors on an empty unnamed materials row (`Each material line needs an inventory item or a name`).
@@ -110,7 +112,7 @@ Job types in the form: **Install**, **Pickup**, **Drop**, **Other**, **Site Walk
 
 Form sections (in order):
 
-1. **Job details**
+1. **Job details** — **Revenue** / **Contact 1** / **Contact 2** on one row; **Notes** full width below
 2. **Fence / BOM options** — section fields → **Screen SKU (job total LF)** → **Add section** (new section inserts above Screen SKU)
 3. **Cost lines** — lodging (amount / facility), freight (company / cost), misc (amount / category)
 4. **Materials** — catalog pick or free-text name + qty; **Generate BOM**
