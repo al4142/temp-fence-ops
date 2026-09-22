@@ -169,7 +169,10 @@ export function emptyJobFormValues(defaults?: {
   return {
     date: ymd,
     branchId: defaults?.branchId ?? "",
-    class: "EVENT",
+    // Create form only (Install / Pickup / Drop / Other). Edit loads the saved
+    // class. Site Walk is not this default; switching to it still swaps class
+    // onto Non Pay / Site Visit because CONSTRUCTION is not in that set.
+    class: "CONSTRUCTION",
     orderNumber: "",
     customer: "",
     address: "",
