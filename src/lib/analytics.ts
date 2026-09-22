@@ -1,3 +1,4 @@
+import type { HourlyRateValue } from "./hourly-rate";
 import { inventorySignForJobType } from "./inventory";
 import { laborCostForLine } from "./pnl";
 import { isCancelledStatus } from "./job-constants";
@@ -172,7 +173,7 @@ export function summarizeJobs(
   laborLines: Array<{
     regularHours: number;
     overtimeHours: number;
-    employee: { hourlyRate: number };
+    employee: { hourlyRate: HourlyRateValue };
   }>
 ): AnalyticsSummary {
   let installLf = 0;

@@ -174,7 +174,10 @@ export function emptyJobFormValues(defaults?: {
   return {
     date: ymd,
     branchId: defaults?.branchId ?? "",
-    class: "EVENT",
+    // Create form only (Install / Pickup / Drop / Other). Edit loads the saved
+    // class. Site Walk is not this default; switching to it still swaps class
+    // onto Non Pay / Site Visit because CONSTRUCTION is not in that set.
+    class: "CONSTRUCTION",
     orderNumber: "",
     customer: "",
     address: "",
@@ -241,8 +244,9 @@ export function validateAndNormalize(input: JobFormValues): ValidateResult {
     const inventoryItemId = m.inventoryItemId?.trim() || null;
     const itemName = m.itemName?.trim() || null;
     if (!inventoryItemId && !itemName) {
-      // Site Walk: skip the form's empty placeholder row (qty defaults to 1).
+      // Site Walk / Relocate: skip the form's empty placeholder row (qty defaults to 1).
       // Other types still require a catalog item or name when qty is non-zero.
+      // Relocate does not keep 0-hour labor (allowsZeroHourLabor stays Site Walk only).
       if (allowsEmptyFenceAndMaterials(jobType)) continue;
       return { ok: false, error: "Each material line needs an inventory item or a name." };
     }

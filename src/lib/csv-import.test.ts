@@ -77,11 +77,27 @@ describe("parseImportText job-type map", () => {
     ]);
   });
 
+  it("maps RELOCATE / RELOC to Relocate", () => {
+    const parsed = parseImportText(
+      csv([
+        "2026-04-11,MIA,ORD-11,Acme,RELOCATE,,,450,,,,",
+        "2026-04-12,MIA,ORD-12,Acme,RELOC,,,200,,,,",
+        "2026-04-13,MIA,ORD-13,Acme,Relocate,,,0,,,,",
+      ])
+    );
+    const mapped = parsed.rows.map((r) => [r.originalType, r.mappedType, r.status, r.jobType]);
+    expect(mapped).toEqual([
+      ["RELOCATE", "Relocate", "accept", "Relocate"],
+      ["RELOC", "Relocate", "accept", "Relocate"],
+      ["Relocate", "Relocate", "accept", "Relocate"],
+    ]);
+  });
+
   it("rejects unknown codes and never stores Other for them", () => {
     const parsed = parseImportText(
       csv([
         "2026-04-01,MIA,ORD-1,Acme,SWLK,6x10,100,0,,,,",
-        "2026-04-02,MIA,ORD-2,Acme,RELOCATE,6x10,100,0,,,,",
+        "2026-04-02,MIA,ORD-2,Acme,MOVE,6x10,100,0,,,,",
         "2026-04-03,MIA,ORD-3,Acme,REP,6x10,100,0,,,,",
       ])
     );
@@ -179,6 +195,32 @@ describe("evaluateImportRows + validator parity", () => {
     expect(evaluated.map((e) => e.row.status)).toEqual(["accept", "accept", "accept"]);
     expect(evaluated.map((e) => e.payload?.qtyLf)).toEqual([null, 0, 100]);
     expect(planImportCommit(evaluated).ok).toBe(true);
+  });
+
+  it("accepts Relocate with empty fence/materials and billable hours", () => {
+    const parsed = parseImportText(
+      csv(["2026-04-14,MIA,ORD-REL,Acme,RELOC,,,450,Carlos Rivera,3,1,"])
+    );
+    const [evaluated] = evaluateImportRows(parsed.rows, lookup());
+    expect(evaluated.row.status).toBe("accept");
+    expect(evaluated.payload?.jobType).toBe("Relocate");
+    expect(evaluated.payload?.fenceType).toBeNull();
+    expect(evaluated.payload?.materials).toEqual([]);
+    expect(evaluated.payload?.revenue).toBe(450);
+    expect(evaluated.payload?.labor).toEqual([
+      { employeeId: "emp-1", regularHours: 3, overtimeHours: 1 },
+    ]);
+    expect(planImportCommit([evaluated]).ok).toBe(true);
+  });
+
+  it("drops 0-hour import labor on Relocate (unlike Site Walk)", () => {
+    const parsed = parseImportText(
+      csv(["2026-04-14,MIA,ORD-REL0,Acme,RELOCATE,,,0,Carlos Rivera,0,0,"])
+    );
+    const [evaluated] = evaluateImportRows(parsed.rows, lookup());
+    expect(evaluated.row.status).toBe("accept");
+    expect(evaluated.payload?.jobType).toBe("Relocate");
+    expect(evaluated.payload?.labor).toEqual([]);
   });
 
   it("accepts Site Walk with empty fence/materials and 0-hour labor", () => {

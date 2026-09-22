@@ -119,6 +119,42 @@ describe("jobVisibleOnJobsList — Site Walk day confirmation", () => {
   });
 });
 
+describe("jobVisibleOnJobsList — Relocate day confirmation", () => {
+  const relocateEmpty: JobsListVisibilityJob = row({
+    jobType: "Relocate",
+    orderNumber: "ORD-REL",
+    customer: "Acme",
+    revenue: 450,
+    materialCount: 0,
+  });
+
+  it("shows Relocate with no materials on the unfiltered Jobs list and same-day list", () => {
+    expect(JOB_TYPES).toContain("Relocate");
+    expect(jobVisibleOnJobsList(relocateEmpty, {})).toBe(true);
+    expect(jobVisibleOnJobsList(relocateEmpty, { from: DAY, to: DAY })).toBe(true);
+    expect(jobVisibleOnJobsList(relocateEmpty, { jobType: "Relocate" })).toBe(true);
+    expect(jobVisibleOnJobsList(relocateEmpty, { jobType: "relocate" })).toBe(true);
+    expect(jobIsOnCalendarDay(relocateEmpty.date, DAY)).toBe(true);
+    expect(jobsOnCalendarDay([relocateEmpty], DAY)).toEqual([relocateEmpty]);
+  });
+
+  it("does not hide Relocate because materialCount is 0", () => {
+    expect(
+      jobVisibleOnJobsList(
+        { ...relocateEmpty, revenue: 0, materialCount: 0 },
+        { from: DAY, to: DAY }
+      )
+    ).toBe(true);
+  });
+
+  it("stays off a different day's list and off Type=Install / Site Walk", () => {
+    expect(jobVisibleOnJobsList(relocateEmpty, { from: OTHER_DAY, to: OTHER_DAY })).toBe(false);
+    expect(jobVisibleOnJobsList(relocateEmpty, { jobType: "Install" })).toBe(false);
+    expect(jobVisibleOnJobsList(relocateEmpty, { jobType: "Site Walk" })).toBe(false);
+    expect(jobVisibleOnJobsList(siteWalkEmpty, { jobType: "Relocate" })).toBe(false);
+  });
+});
+
 describe("jobVisibleOnJobsList — existing types (regression)", () => {
   it("still shows Install / Pickup / Drop / Other on the unfiltered list and same-day list", () => {
     for (const jobType of ["Install", "Pickup", "Drop", "Other"] as const) {

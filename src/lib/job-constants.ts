@@ -1,4 +1,4 @@
-export const JOB_TYPES = ["Install", "Pickup", "Drop", "Other", "Site Walk"] as const;
+export const JOB_TYPES = ["Install", "Pickup", "Drop", "Other", "Site Walk", "Relocate"] as const;
 
 export type JobType = (typeof JOB_TYPES)[number];
 
@@ -14,7 +14,7 @@ export const JOB_STATUS_CANCELLED = "Cancelled" satisfies JobStatus;
 export const CANCEL_JOB_CONFIRM =
   "Stays on Jobs and the day list. No inventory or P&L.";
 
-/** Classes for Install / Pickup / Drop / Other. Do not rename or remove. */
+/** Classes for Install / Pickup / Drop / Other / Relocate. Do not rename or remove. */
 export const JOB_CLASSES = ["EVENT", "CONSTRUCTION", "OTHER"] as const;
 
 /** Classes for Site Walk only. Additive — not shown on existing job types. */
@@ -26,9 +26,15 @@ export function isSiteWalk(jobType: string): boolean {
   return normalizeJobType(jobType) === "Site Walk";
 }
 
+/** Relocate moves an existing fence section. No new materials; labor stays billable. */
+export function isRelocate(jobType: string): boolean {
+  return normalizeJobType(jobType) === "Relocate";
+}
+
 /**
  * Class dropdown options for a job type.
- * Existing types keep EVENT / CONSTRUCTION / OTHER; Site Walk uses Non Pay / Site Visit.
+ * Install / Pickup / Drop / Other / Relocate keep EVENT / CONSTRUCTION / OTHER.
+ * Site Walk uses Non Pay / Site Visit. Create default class is shared (not Relocate-specific).
  */
 export function classesForJobType(jobType: string): readonly string[] {
   return isSiteWalk(jobType) ? SITE_WALK_CLASSES : JOB_CLASSES;
@@ -40,11 +46,13 @@ export function allowsZeroHourLabor(jobType: string): boolean {
 }
 
 /**
- * Site Walk may omit fence type, LF, and materials. Other types keep today's required-line rules
+ * Site Walk and Relocate may omit fence type, LF, materials, and Generate BOM.
+ * Relocate does not inherit Site Walk's 0-hour / Non Pay rules — labor stays billable.
+ * Other types keep today's required-line rules
  * (unnamed material rows with a non-zero qty still error).
  */
 export function allowsEmptyFenceAndMaterials(jobType: string): boolean {
-  return isSiteWalk(jobType);
+  return isSiteWalk(jobType) || isRelocate(jobType);
 }
 
 /**
@@ -68,6 +76,8 @@ export const IMPORT_JOB_TYPE_ALIASES: Record<string, JobType> = {
   OTHER: "Other",
   "SITE-WALK": "Site Walk",
   SITEWALK: "Site Walk",
+  RELOCATE: "Relocate",
+  RELOC: "Relocate",
 };
 
 export type ImportJobTypeMapResult =
@@ -79,7 +89,7 @@ export function importJobTypeAliasKey(raw: string): string {
   return raw.trim().toUpperCase().replace(/[\s_]+/g, "-");
 }
 
-const JOB_TYPE_LIST = "Install, Pickup, Drop, Other, or Site Walk";
+const JOB_TYPE_LIST = "Install, Pickup, Drop, Other, Site Walk, or Relocate";
 
 /**
  * Map a CSV/Excel job-type cell for import.
@@ -106,7 +116,7 @@ export function mapImportJobType(raw: string): ImportJobTypeMapResult {
     ok: false,
     original,
     mapped: null,
-    reason: `Unknown job type "${original}". Use ${JOB_TYPE_LIST} (or a known alias such as INST, PU, DELIVERY, SITEWALK). Unknown codes are not coerced to Other.`,
+    reason: `Unknown job type "${original}". Use ${JOB_TYPE_LIST} (or a known alias such as INST, PU, DELIVERY, SITEWALK, RELOC). Unknown codes are not coerced to Other.`,
   };
 }
 

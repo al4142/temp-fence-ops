@@ -3,7 +3,8 @@
  *
  * There is no separate calendar widget. From/To on `/jobs` (same date in both)
  * is the day list ops use to confirm what ran. Site Walk with $0 / no materials
- * must match the same rules as Install / Pickup — never drop empty tickets.
+ * and Relocate with no materials must match the same rules as Install / Pickup —
+ * never drop empty tickets.
  * Cancelled jobs stay on the unfiltered list and same-day list unless Hide cancelled.
  */
 import type { Prisma } from "@prisma/client";

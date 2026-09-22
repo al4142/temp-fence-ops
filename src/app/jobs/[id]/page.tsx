@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
+import { formatHourlyRate } from "@/lib/hourly-rate";
 import { JobStatusBadge } from "@/components/JobStatusBadge";
 import {
   describeInventoryEffect,
@@ -291,7 +292,7 @@ export default async function JobDetailPage({ params }: Props) {
                   <td className="py-2 pr-2 tabular-nums">{formatNumber(l.regularHours, 1)}</td>
                   <td className="py-2 pr-2 tabular-nums">{formatNumber(l.overtimeHours, 1)}</td>
                   <td className="py-2 pr-2 tabular-nums">
-                    {formatCurrency(l.employee.hourlyRate)}
+                    {formatHourlyRate(l.employee.hourlyRate)}
                   </td>
                   <td className="py-2 tabular-nums">{formatCurrency(cost)}</td>
                 </tr>
