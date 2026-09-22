@@ -81,7 +81,7 @@ There is no separate “BOM page.” Generate BOM lives on the job create/edit f
 1. Sign in as `admin@demo.local`.
 2. Click **Jobs** → **New job**.
 3. Fill **Job details** (order #, date, branch, job type). Use **Install** or **Drop** to pull stock, **Pickup** to return it.
-4. In **Fence / BOM options**, set the first section (fence type, LF, rails/weights, post mount for chainlink, gates). Add a section to mix driven + plate or panel + chainlink.
+4. In **Fence / BOM options**, set the first section (fence type, LF, rails/weights, post mount for chainlink, gates), then **Screen SKU (job total LF)** if needed. **Add section** sits below Screen SKU (new section appears above Screen SKU) when you mix driven + plate or panel + chainlink.
 5. In **Materials**, click **Generate BOM**. Review the preview table (Item / Qty / Match).
 6. Click **Apply to materials** (confirms if you already have material rows).
 7. Add **Labor** (and cost lines / variance if needed) → **Create job**.
@@ -111,7 +111,7 @@ Job types in the form: **Install**, **Pickup**, **Drop**, **Other**, **Site Walk
 Form sections (in order):
 
 1. **Job details**
-2. **Fence / BOM options**
+2. **Fence / BOM options** — section fields → **Screen SKU (job total LF)** → **Add section** (new section inserts above Screen SKU)
 3. **Cost lines** — lodging (amount / facility), freight (company / cost), misc (amount / category)
 4. **Materials** — catalog pick or free-text name + qty; **Generate BOM**
 5. **Material variance** — signed inventory delta (damaged on site, lost, extra used, returned unused)
