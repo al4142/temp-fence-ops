@@ -121,6 +121,24 @@ Do **not** run `prisma migrate dev` against production (that is for local schema
 
 `prisma/seed.ts` **deletes existing rows** (users, jobs, inventory, …) then inserts sample data. Running it against a database with real tickets **wipes that data**.
 
+`npm run db:seed` is that destructive demo load. Copying Davie’s catalog onto a yard in the app is a different action — [Catalog copy from Davie](#catalog-copy-from-davie-ale-38).
+
+### Catalog copy from Davie (ALE-38)
+
+Shipped in [PR #33](https://github.com/al4142/temp-fence-ops/pull/33) (`6519ff23`). No schema migration. **Yards** (`/admin/branches`) inserts ordinary `InventoryItem` rows: Davie’s catalog definitions on the target yard, each at **starting qty 0**. Users, jobs, and SKUs already stored stay in place.
+
+| Action | Where | What happens |
+|--------|--------|----------------|
+| **Create** a yard | **Yards** | Copies Davie (`DAV`) SKUs onto the new yard at qty 0. Banner: `Created "{code}". Seeded {n} catalog SKU(s) from Davie at qty 0.` When any SKU was already there: `Seeded {n} catalog SKU(s) from Davie at qty 0 ({skipped} SKU(s) already present skipped).` |
+| **Seed from Davie** | Same page, every yard except code `DAV` | Confirm: `Seed "{code}" catalog from Davie? Existing SKUs are skipped; new SKUs start at qty 0.` Safe to repeat. |
+| Davie row | Code `DAV` | **Edit** and **Remove** only. No **Seed from Davie** button. |
+
+Copied fields: SKU, name, description, unit, reusable, unit cost, and active. `startingQty` is 0. On-hand, adjustments, transfers, and Davie’s quantities stay on Davie. If the copy fails during **Create**, the new yard row is deleted so an empty branch is not left behind.
+
+Davie is the branch with code `DAV`. If that code is missing, a yard named `Davie` or whose name starts with `Davie ` is the source. If neither exists, **Create** for any other code returns `Davie yard (code DAV) was not found. Create or restore Davie before seeding catalogs.`
+
+Set opening stock on **Inv. admin** after the copy (starting qty or a manual adjustment). `Seeded 0` plus a skipped count means those SKUs were already on the yard; quantities were left as stored.
+
 Live demo credentials (public, demo-only):
 
 | Email | Password | Role |
@@ -154,7 +172,8 @@ Shorthand: **6x10 / 400 LF / BFOOT → 40 / 41 / 39 / 82**.
 
 4. Optional: **Apply to materials** → **Create job** → open **Inventory** (catalog lines moved) → **P&L** look up the order #.
 5. **Job contacts** — on **New job**, **Revenue**, **Contact 1**, and **Contact 2** share one row and **Notes** is full width below. A blank contact still saves. Fill both, save, reopen **Edit job**, and confirm they persisted. A Prisma error naming `contact1` / `contact2` means `20260922101500_job_contacts` did not apply — run `npx prisma migrate deploy` ([§5](#5-migrate-on-neon)).
-6. **Log out** from the header.
+6. **Davie catalog seed** — **Yards**. Code `DAV` has no **Seed from Davie**. Another yard does; the control title is “Copy Davie catalog SKUs at qty 0; skip existing.” Open the confirm dialog and cancel — the copy says existing SKUs are skipped and new SKUs start at qty 0. Confirming on the live demo inserts only SKUs Davie has that the target lacks, at qty 0, and reports the rest as skipped ([Catalog copy from Davie](#catalog-copy-from-davie-ale-38)). A repeat leaves quantities as stored. `npm run db:seed` stays the wiped demo load in [§6](#6-seed-policy).
+7. **Log out** from the header.
 
 If login fails, check `AUTH_SECRET` and that demo users exist (seeded demo DB only). If Generate BOM quantities differ, the live calculator or catalog drifted from [BOM_APPROVED.md](./BOM_APPROVED.md) — see `src/lib/bom/` and `npm test`.
 
@@ -173,6 +192,9 @@ If login fails, check `AUTH_SECRET` and that demo users exist (seeded demo DB on
 | Demo data vanished | Someone ran `db:seed` / `db:reset` against Neon | Restore Neon; treat seed as destructive. |
 | Admin screens visible to `office@` | Expected | Role is stored; Admin nav is **not** hidden. See [TECH_SPEC.md](./TECH_SPEC.md) §7. |
 | Generate BOM warns on seed jobs | Seed fence type `6ft Panel` is legacy | Use a canonical type (`6x10`, `CL6`, …). |
+| Create yard: `Davie yard (code DAV) was not found` | No branch with code `DAV`, and no yard named `Davie` / `Davie …` | Create or restore Davie, then create the other yard. |
+| New yard’s catalog on-hand is all 0 | Catalog copy writes definitions at qty 0 | Set starting qty or a manual adjustment on **Inv. admin**. |
+| **Seed from Davie** reports `Seeded 0` and a skipped count | Those SKUs are already on the yard | Expected. Repeat skips them and leaves quantities as stored. |
 | Hobby 404 / spin-up delay | Cold start | Retry; not an SLA. |
 | SQLite / `file:./dev.db` errors | Old local env | Provider is `postgresql` only. Point `DATABASE_URL` at Postgres and migrate a **fresh** database. |
 
