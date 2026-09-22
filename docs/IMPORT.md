@@ -42,7 +42,7 @@ Material columns whose header looks like a SKU (`PANEL-6`, `BASE-STD`) are treat
 
 ## Job-type map (import only)
 
-The job **form** still accepts only Title Case `Install` / `Pickup` / `Drop` / `Other` / `Site Walk` / `Relocate`. Import applies this alias table (`IMPORT_JOB_TYPE_ALIASES` in `src/lib/job-constants.ts`; keys after collapsing spaces/underscores to `-`), then runs the same `validateAndNormalize` as the form. Site Walk rows may omit fence/materials and may keep 0-hour labor when a labor name matches an employee. Relocate rows may omit fence/materials; hours are kept when non-zero (0-hour labor is dropped).
+The job **form** still accepts only Title Case `Install` / `Pickup` / `Drop` / `Other` / `Site Walk` / `Relocate`. Import applies this alias table (`IMPORT_JOB_TYPE_ALIASES` in `src/lib/job-constants.ts`; keys after collapsing spaces/underscores to `-`), then runs the same `validateAndNormalize` as the form. Site Walk rows may omit fence/materials and may keep 0-hour labor when a labor name matches an employee. Relocate rows may omit fence/materials (same empty path); **0-hour labor is dropped** (billable type — unlike Site Walk).
 
 | CSV / Excel value | Stored type | Inventory sign |
 |-------------------|-------------|----------------|
