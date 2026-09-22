@@ -86,6 +86,8 @@ export default async function EditJobPage({ params }: Props) {
     sections: sectionsForJob(job).map(storedToFormSection),
     notes: job.notes ?? "",
     accountExec: job.accountExec ?? "",
+    contact1: job.contact1 ?? "",
+    contact2: job.contact2 ?? "",
     revenue: String(job.revenue),
     lodgingLines: job.lodgingLines.map((l) => ({
       amount: l.amount,

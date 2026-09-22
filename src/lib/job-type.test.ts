@@ -474,6 +474,38 @@ describe("validateAndNormalize existing job types (regression)", () => {
   });
 });
 
+describe("job contacts", () => {
+  function base() {
+    return {
+      ...emptyJobFormValues({ branchId: "b1", date: "2026-03-05" }),
+      orderNumber: "ORD-1",
+    };
+  }
+
+  it("stores trimmed free text and allows both contacts to be empty", () => {
+    const empty = validateAndNormalize(base());
+    expect(empty.ok).toBe(true);
+    if (empty.ok) {
+      expect(empty.data.contact1).toBeNull();
+      expect(empty.data.contact2).toBeNull();
+      expect(empty.data.notes).toBeNull();
+    }
+
+    const filled = validateAndNormalize({
+      ...base(),
+      notes: "gate code 4412",
+      contact1: "  David 407-848-8220  ",
+      contact2: "Maria 305-555-0100",
+    });
+    expect(filled.ok).toBe(true);
+    if (filled.ok) {
+      expect(filled.data.contact1).toBe("David 407-848-8220");
+      expect(filled.data.contact2).toBe("Maria 305-555-0100");
+      expect(filled.data.notes).toBe("gate code 4412");
+    }
+  });
+});
+
 describe("job status Active | Cancelled", () => {
   function base() {
     return {
