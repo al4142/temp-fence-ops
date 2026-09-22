@@ -1,4 +1,6 @@
+import { Prisma } from "@prisma/client";
 import { formatCurrency } from "./format";
+import { hourlyRateDecimalString, type HourlyRateValue } from "./hourly-rate";
 import { inventorySignForJobType } from "./inventory";
 import { isCancelledStatus } from "./job-constants";
 
@@ -21,7 +23,7 @@ export type JobForPnL = {
   labor: Array<{
     regularHours: number;
     overtimeHours: number;
-    employee: { hourlyRate: number; name: string };
+    employee: { hourlyRate: HourlyRateValue; name: string };
   }>;
   materials: Array<{
     quantity: number;
@@ -53,13 +55,22 @@ export type OrderPnL = {
   jobs: JobForPnL[];
 };
 
-/** OT billed at 1.5x for P&L demo purposes. */
+/**
+ * OT billed at 1.5x for P&L demo purposes.
+ * The rate is multiplied at full precision (up to 4 decimal places). It is
+ * not rounded to cents before the hours are applied.
+ */
 export function laborCostForLine(
   regularHours: number,
   overtimeHours: number,
-  hourlyRate: number
+  hourlyRate: HourlyRateValue
 ): number {
-  return regularHours * hourlyRate + overtimeHours * hourlyRate * 1.5;
+  const rateText = hourlyRateDecimalString(hourlyRate);
+  const rate = new Prisma.Decimal(rateText ?? "0");
+  const cost = rate
+    .mul(new Prisma.Decimal(regularHours))
+    .plus(rate.mul(new Prisma.Decimal(overtimeHours)).mul("1.5"));
+  return cost.toNumber();
 }
 
 export function materialCostForLine(quantity: number, unitCost: number): number {

@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import {
   buildOrderPnL,
@@ -31,6 +32,53 @@ function job(overrides: Partial<JobForPnL> & Pick<JobForPnL, "id" | "jobType">):
     ...overrides,
   };
 }
+
+describe("laborCostForLine", () => {
+  it("keeps a 4-decimal hourly rate instead of rounding it to cents", () => {
+    // Abel Gonzalez @ 21.0635: 8 reg + 2 OT @ 1.5x
+    // 8 * 21.0635 + 2 * 21.0635 * 1.5 = 168.508 + 63.1905 = 231.6985
+    const exact = new Prisma.Decimal("21.0635")
+      .mul(8)
+      .plus(new Prisma.Decimal("21.0635").mul(2).mul("1.5"));
+    expect(exact.toString()).toBe("231.6985");
+
+    expect(laborCostForLine(8, 2, "21.0635")).toBe(exact.toNumber());
+    expect(laborCostForLine(8, 2, 21.0635)).toBe(exact.toNumber());
+    expect(laborCostForLine(8, 2, new Prisma.Decimal("21.0635"))).toBe(exact.toNumber());
+
+    const roundedToCents = laborCostForLine(8, 2, "21.06");
+    expect(roundedToCents).not.toBe(exact.toNumber());
+    expect(laborCostForLine(8, 0, "21.0635")).toBe(new Prisma.Decimal("21.0635").mul(8).toNumber());
+  });
+
+  it("still prices whole-dollar and 2-decimal rates the same way", () => {
+    expect(laborCostForLine(8, 2, 25)).toBe(275);
+    expect(laborCostForLine(6, 0, 22)).toBe(132);
+    expect(laborCostForLine(0, 0, 40)).toBe(0);
+    expect(laborCostForLine(10, 0, "20.50")).toBe(205);
+    expect(laborCostForLine(8, 0, "22.0000")).toBe(176);
+  });
+
+  it("rolls the unrounded rate into order labor cost", () => {
+    const pnl = buildOrderPnL([
+      job({
+        id: "inst",
+        jobType: "Install",
+        revenue: 1000,
+        materials: [],
+        labor: [
+          {
+            regularHours: 8,
+            overtimeHours: 2,
+            employee: { hourlyRate: "21.0635", name: "Abel Gonzalez" },
+          },
+        ],
+      }),
+    ]);
+    expect(pnl!.laborCost).toBe(laborCostForLine(8, 2, "21.0635"));
+    expect(pnl!.laborCost).not.toBe(laborCostForLine(8, 2, "21.06"));
+  });
+});
 
 describe("countsTowardMaterialCost", () => {
   it("counts Install and Drop (outbound) only", () => {

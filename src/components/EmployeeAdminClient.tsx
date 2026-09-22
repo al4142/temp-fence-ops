@@ -7,13 +7,18 @@ import {
   deactivateEmployee,
   reactivateEmployee,
 } from "@/app/admin/employees/actions";
+import {
+  HOURLY_RATE_INPUT_STEP,
+  formatHourlyRate,
+  hourlyRateInputValue,
+} from "@/lib/hourly-rate";
 
 type Branch = { id: string; code: string; name: string; active?: boolean };
 type Employee = {
   id: string;
   name: string;
   nameKey: string;
-  hourlyRate: number;
+  hourlyRate: string;
   position: string;
   branchId: string;
   active: boolean;
@@ -48,7 +53,7 @@ export function EmployeeAdminClient({ branches, employees }: Props) {
     setForm({
       name: e.name,
       nameKey: e.nameKey,
-      hourlyRate: String(e.hourlyRate),
+      hourlyRate: hourlyRateInputValue(e.hourlyRate),
       position: e.position,
       branchId: e.branchId,
       active: e.active ? "true" : "false",
@@ -110,7 +115,17 @@ export function EmployeeAdminClient({ branches, employees }: Props) {
           </label>
           <label className="block text-sm">
             <span className="text-xs font-medium text-slate-600">Hourly rate *</span>
-            <input required type="number" min={0} step="0.01" value={form.hourlyRate} onChange={(ev) => set("hourlyRate", ev.target.value)} className={"mt-1 " + inputCls} />
+            <input
+              required
+              type="number"
+              min={0}
+              step={HOURLY_RATE_INPUT_STEP}
+              inputMode="decimal"
+              value={form.hourlyRate}
+              onChange={(ev) => set("hourlyRate", ev.target.value)}
+              className={"mt-1 " + inputCls}
+            />
+            <span className="mt-1 block text-xs text-slate-500">Up to 4 decimal places, e.g. 21.0635</span>
           </label>
           <label className="block text-sm">
             <span className="text-xs font-medium text-slate-600">Position *</span>
@@ -172,7 +187,7 @@ export function EmployeeAdminClient({ branches, employees }: Props) {
                 <td className="px-3 py-2 font-mono text-xs text-slate-600">{e.nameKey}</td>
                 <td className="px-3 py-2">{e.position}</td>
                 <td className="px-3 py-2">{e.branch.code}</td>
-                <td className="px-3 py-2 text-right tabular-nums">${e.hourlyRate.toFixed(2)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatHourlyRate(e.hourlyRate)}</td>
                 <td className="px-3 py-2">
                   {e.active ? (
                     <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-xs text-emerald-800">Active</span>
