@@ -4,7 +4,7 @@
  * Canonical labels (Title Case) only:
  *   OUTBOUND (negative on-hand): Install, Drop — all linked catalog lines
  *   INBOUND  (positive on-hand): Pickup — reusable items only
- *   No movement: Other, Site Walk (and any unrecognized string)
+ *   No movement: Other, Site Walk, Relocate (and any unrecognized string)
  *   Cancelled status: sign 0 regardless of jobType (materials/variances kept)
  *   Consumables (`reusable === false`) never restock on inbound jobs
  *
@@ -20,7 +20,7 @@ export type InventoryDirection = -1 | 0 | 1;
 
 /**
  * Inventory sign for a job type. Optional `status` defaults to Active so
- * existing Active Install / Pickup / Drop / Other / Site Walk callers are unchanged.
+ * existing Active Install / Pickup / Drop / Other / Site Walk / Relocate callers are unchanged.
  * Cancelled → 0 regardless of type.
  */
 export function inventorySignForJobType(

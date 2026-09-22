@@ -318,14 +318,6 @@ export function JobFormBomOptions(p: Props) {
         })}
       </div>
 
-      <button
-        type="button"
-        onClick={addSection}
-        className="mt-3 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-50"
-      >
-        Add section
-      </button>
-
       <div className="mt-4 max-w-sm">
         <label className={p.labelClass} htmlFor="screenSku">
           Screen SKU (job total LF)
@@ -347,6 +339,14 @@ export function JobFormBomOptions(p: Props) {
           Rolls = CEILING(sum of section LF / 50). Not per-section.
         </p>
       </div>
+
+      <button
+        type="button"
+        onClick={addSection}
+        className="mt-3 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-50"
+      >
+        Add section
+      </button>
     </section>
   );
 }

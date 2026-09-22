@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
+import { parseHourlyRate } from "@/lib/hourly-rate";
 
 export type AdminActionResult = { ok: true } | { ok: false; error: string };
 
@@ -20,14 +21,12 @@ export async function createEmployee(formData: FormData): Promise<AdminActionRes
   let nameKey = String(formData.get("nameKey") ?? "").trim();
   const position = String(formData.get("position") ?? "").trim();
   const branchId = String(formData.get("branchId") ?? "").trim();
-  const hourlyRate = Number(String(formData.get("hourlyRate") ?? "").replace(/,/g, ""));
+  const hourlyRate = parseHourlyRate(formData.get("hourlyRate"));
 
   if (!name) return { ok: false, error: "Name is required." };
   if (!branchId) return { ok: false, error: "Branch is required." };
   if (!position) return { ok: false, error: "Position is required." };
-  if (!Number.isFinite(hourlyRate) || hourlyRate < 0) {
-    return { ok: false, error: "Hourly rate must be a non-negative number." };
-  }
+  if (!hourlyRate.ok) return { ok: false, error: hourlyRate.error };
   if (!nameKey) nameKey = slugifyNameKey(name);
   if (!nameKey) return { ok: false, error: "nameKey could not be derived from name." };
 
@@ -41,7 +40,7 @@ export async function createEmployee(formData: FormData): Promise<AdminActionRes
         nameKey,
         position,
         branchId,
-        hourlyRate,
+        hourlyRate: hourlyRate.value,
         active: true,
       },
     });
@@ -64,22 +63,20 @@ export async function updateEmployee(formData: FormData): Promise<AdminActionRes
   let nameKey = String(formData.get("nameKey") ?? "").trim();
   const position = String(formData.get("position") ?? "").trim();
   const branchId = String(formData.get("branchId") ?? "").trim();
-  const hourlyRate = Number(String(formData.get("hourlyRate") ?? "").replace(/,/g, ""));
+  const hourlyRate = parseHourlyRate(formData.get("hourlyRate"));
   const active = String(formData.get("active") ?? "true") === "true";
 
   if (!id) return { ok: false, error: "Missing employee id." };
   if (!name) return { ok: false, error: "Name is required." };
   if (!branchId) return { ok: false, error: "Branch is required." };
   if (!position) return { ok: false, error: "Position is required." };
-  if (!Number.isFinite(hourlyRate) || hourlyRate < 0) {
-    return { ok: false, error: "Hourly rate must be a non-negative number." };
-  }
+  if (!hourlyRate.ok) return { ok: false, error: hourlyRate.error };
   if (!nameKey) nameKey = slugifyNameKey(name);
 
   try {
     await prisma.employee.update({
       where: { id },
-      data: { name, nameKey, position, branchId, hourlyRate, active },
+      data: { name, nameKey, position, branchId, hourlyRate: hourlyRate.value, active },
     });
     revalidatePath("/admin/employees");
     revalidatePath("/jobs");

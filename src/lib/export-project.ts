@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { hourlyRateNumber, type HourlyRateValue } from "@/lib/hourly-rate";
 import { laborCostForLine } from "@/lib/pnl";
 import { formatDate } from "@/lib/format";
 
@@ -28,6 +29,8 @@ export type ExportJob = {
   fenceSections?: unknown;
   notes: string | null;
   accountExec: string | null;
+  contact1?: string | null;
+  contact2?: string | null;
   revenue: number;
   branch: { code: string; name: string };
   materials: Array<{
@@ -39,7 +42,7 @@ export type ExportJob = {
   labor: Array<{
     regularHours: number;
     overtimeHours: number;
-    employee: { name: string; position: string; hourlyRate: number };
+    employee: { name: string; position: string; hourlyRate: HourlyRateValue };
   }>;
   lodgingLines: Array<{ amount: number; facility: string | null; notes: string | null }>;
   freightLines: Array<{ cost: number; company: string | null; notes: string | null }>;
@@ -104,6 +107,8 @@ export async function buildProjectWorkbook(job: ExportJob): Promise<Buffer> {
     ["Manual terminals", job.terminalsManual ?? 0],
     ["Account exec", job.accountExec ?? ""],
     ["Revenue", job.revenue],
+    ["Contact 1", job.contact1 ?? ""],
+    ["Contact 2", job.contact2 ?? ""],
     ["Notes", job.notes ?? ""],
   ];
   for (const [field, value] of rows) {
@@ -143,7 +148,7 @@ export async function buildProjectWorkbook(job: ExportJob): Promise<Buffer> {
       position: l.employee.position,
       reg: l.regularHours,
       ot: l.overtimeHours,
-      rate: l.employee.hourlyRate,
+      rate: hourlyRateNumber(l.employee.hourlyRate),
       cost: laborCostForLine(l.regularHours, l.overtimeHours, l.employee.hourlyRate),
     });
   }

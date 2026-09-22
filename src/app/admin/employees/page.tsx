@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { hourlyRateInputValue } from "@/lib/hourly-rate";
 import { EmployeeAdminClient } from "@/components/EmployeeAdminClient";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,24 @@ export default async function AdminEmployeesPage() {
           labor stays linked.
         </p>
       </div>
-      <EmployeeAdminClient branches={branches} employees={employees} />
+      <EmployeeAdminClient
+        branches={branches}
+        employees={employees.map((e) => ({
+          id: e.id,
+          name: e.name,
+          nameKey: e.nameKey,
+          hourlyRate: hourlyRateInputValue(e.hourlyRate),
+          position: e.position,
+          branchId: e.branchId,
+          active: e.active,
+          branch: {
+            id: e.branch.id,
+            code: e.branch.code,
+            name: e.branch.name,
+            active: e.branch.active,
+          },
+        }))}
+      />
     </div>
   );
 }

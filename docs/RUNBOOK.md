@@ -80,7 +80,9 @@ prisma generate && prisma migrate deploy && next build
 
 `postinstall` also runs `prisma generate`.
 
-**Preview and production builds run `prisma migrate deploy`** so Neon gets new columns (for example `Job.fenceSections`) before the new Prisma client serves traffic. `DATABASE_URL` on Vercel must be the **direct** (non-pooler) Neon URL — migrate fails on transaction-mode poolers ([§5](#5-migrate-on-neon)).
+**Preview and production builds run `prisma migrate deploy`** so Neon gets new columns before the new Prisma client serves traffic. `DATABASE_URL` on Vercel must be the **direct** (non-pooler) Neon URL — migrate fails on transaction-mode poolers ([§5](#5-migrate-on-neon)).
+
+**Job contacts (ALE-37):** `prisma/migrations/20260922101500_job_contacts` adds nullable `Job.contact1` and `Job.contact2` (`TEXT`). After that change is on `main`, **Production needs `prisma migrate deploy`**. The Vercel production build runs it when `DATABASE_URL` is the direct Neon URL. If the build skipped migrate or failed before it, **Pritpal** runs `npx prisma migrate deploy` against Production Neon with the direct URL ([§5](#5-migrate-on-neon)). Existing job rows are unchanged (new columns stay NULL). A save error on Contact 1 / Contact 2 means this migration has not been applied.
 
 If a preview still boots against a DB that is missing `fenceSections` / `postMount`, Job reads fall back to the legacy one-section columns so the jobs list, New Job, and Edit Job pages do not 500.
 
@@ -90,7 +92,7 @@ If you need to apply migrations off-Vercel (local, one-off, or a failed build):
 2. Run `npx prisma migrate deploy` against Neon using the **direct** URL ([§5](#5-migrate-on-neon)).
 3. Smoke-check the live app ([§7](#7-smoke-checks)).
 
-Rollback of the **app**: Vercel dashboard → Deployments → promote / rollback the previous successful deployment. Rollback of the **schema**: restore the Neon branch / backup; this repo ships a single Postgres baseline (`prisma/migrations/20260916220000_init_postgresql`) with no down-migration workflow.
+Rollback of the **app**: Vercel dashboard → Deployments → promote / rollback the previous successful deployment. Rollback of the **schema**: restore the Neon branch / backup. Checked-in SQL under `prisma/migrations/` applies in timestamp order, starting from baseline `20260916220000_init_postgresql` and including later migrations such as `20260922101500_job_contacts`. There is no down-migration workflow.
 
 ---
 
@@ -104,7 +106,7 @@ From a trusted machine (or a one-off command runner) with production `DATABASE_U
 npx prisma migrate deploy
 ```
 
-That applies checked-in SQL under `prisma/migrations/` only. It does **not** load seed data.
+That applies checked-in SQL under `prisma/migrations/` only, including `20260922101500_job_contacts` (`Job.contact1` / `Job.contact2`). It does **not** load seed data. Production (Pritpal: Neon on the Hardpoint Vercel project) must run this after a deploy that adds columns, if the build did not already apply it.
 
 Do **not** run `prisma migrate dev` against production (that is for local schema development). Do **not** point `DATABASE_URL` at a leftover SQLite `dev.db`.
 
@@ -151,7 +153,8 @@ Expected preview (approved panel math):
 Shorthand: **6x10 / 400 LF / BFOOT → 40 / 41 / 39 / 82**.
 
 4. Optional: **Apply to materials** → **Create job** → open **Inventory** (catalog lines moved) → **P&L** look up the order #.
-5. **Log out** from the header.
+5. **Job contacts** — on **New job**, **Revenue**, **Contact 1**, and **Contact 2** share one row and **Notes** is full width below. A blank contact still saves. Fill both, save, reopen **Edit job**, and confirm they persisted. A Prisma error naming `contact1` / `contact2` means `20260922101500_job_contacts` did not apply — run `npx prisma migrate deploy` ([§5](#5-migrate-on-neon)).
+6. **Log out** from the header.
 
 If login fails, check `AUTH_SECRET` and that demo users exist (seeded demo DB only). If Generate BOM quantities differ, the live calculator or catalog drifted from [BOM_APPROVED.md](./BOM_APPROVED.md) — see `src/lib/bom/` and `npm test`.
 

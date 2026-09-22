@@ -21,7 +21,7 @@ At least one header alias for each:
 | date | `date`, `Job Date` |
 | branch | `branch`, `yard` (use branch **code**: `MIA`, `DAV`) |
 | orderNumber | `orderNumber`, `Order #`, `WO` |
-| jobType | `jobType`, `Type`, `Txn` (values: `Install`, `Pickup`, `Drop`, `Other`, `Site Walk`; known aliases such as `INST` / `PU` / `DELIVERY` / `SITEWALK` / `SITE-WALK` map; spaces and underscores collapse to `-`, so `SITE WALK` and `site_walk` also map. **Unknown codes reject the row** — never coerced to Other. `SWLK` rejects.) |
+| jobType | `jobType`, `Type`, `Txn` (values: `Install`, `Pickup`, `Drop`, `Other`, `Site Walk`, `Relocate`; known aliases such as `INST` / `PU` / `DELIVERY` / `SITEWALK` / `SITE-WALK` / `RELOCATE` / `RELOC` map; spaces and underscores collapse to `-`, so `SITE WALK` and `site_walk` also map. **Unknown codes reject the row** — never coerced to Other. `SWLK` rejects.) |
 
 ## Optional columns
 
@@ -42,7 +42,7 @@ Material columns whose header looks like a SKU (`PANEL-6`, `BASE-STD`) are treat
 
 ## Job-type map (import only)
 
-The job **form** still accepts only Title Case `Install` / `Pickup` / `Drop` / `Other` / `Site Walk`. Import applies this alias table (`IMPORT_JOB_TYPE_ALIASES` in `src/lib/job-constants.ts`; keys after collapsing spaces/underscores to `-`), then runs the same `validateAndNormalize` as the form. Site Walk rows may omit fence/materials and may keep 0-hour labor when a labor name matches an employee.
+The job **form** still accepts only Title Case `Install` / `Pickup` / `Drop` / `Other` / `Site Walk` / `Relocate`. Import applies this alias table (`IMPORT_JOB_TYPE_ALIASES` in `src/lib/job-constants.ts`; keys after collapsing spaces/underscores to `-`), then runs the same `validateAndNormalize` as the form. Site Walk rows may omit fence/materials and may keep 0-hour labor when a labor name matches an employee. Relocate rows may omit fence/materials (same empty path); **0-hour labor is dropped** (billable type — unlike Site Walk).
 
 | CSV / Excel value | Stored type | Inventory sign |
 |-------------------|-------------|----------------|
@@ -51,7 +51,8 @@ The job **form** still accepts only Title Case `Install` / `Pickup` / `Drop` / `
 | Drop, DELIVERY, DEL | Drop | outbound |
 | Other | Other | none |
 | Site Walk, SITE WALK, SITE-WALK, SITEWALK | Site Walk | none |
-| SWLK, RELOCATE, REP, MOVE, blank, anything else | **reject** | — |
+| Relocate, RELOCATE, RELOC | Relocate | none |
+| SWLK, REP, MOVE, blank, anything else | **reject** | — |
 
 ## API shape for Dutch (preview)
 
@@ -61,7 +62,7 @@ The job **form** still accepts only Title Case `Install` / `Pickup` / `Drop` / `
 rows[]: {
   rowNumber: number
   originalType: string          // raw CSV cell
-  mappedType: "Install" | "Pickup" | "Drop" | "Other" | "Site Walk" | null
+  mappedType: "Install" | "Pickup" | "Drop" | "Other" | "Site Walk" | "Relocate" | null
   status: "accept" | "reject"
   rejectReason: string | null
   action?: "create" | "update" | "skip" | "error"
