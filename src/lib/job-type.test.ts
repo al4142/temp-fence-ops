@@ -394,6 +394,20 @@ describe("job classes", () => {
     expect(classesForJobType("Relocate")).not.toEqual(SITE_WALK_CLASSES);
   });
 
+  it("defaults a new job to CONSTRUCTION for non–Site Walk types", () => {
+    const initial = emptyJobFormValues({ branchId: "b1", date: "2026-03-05" });
+    expect(initial.jobType).toBe("Install");
+    expect(initial.class).toBe("CONSTRUCTION");
+    for (const jobType of ["Install", "Pickup", "Drop", "Other"] as const) {
+      expect(classesForJobType(jobType)).toContain(initial.class);
+    }
+    // Site Walk keeps its own set. The form swaps when the current class is
+    // missing from the next set, so CONSTRUCTION becomes that set's first option.
+    expect(classesForJobType("Site Walk")).toEqual(SITE_WALK_CLASSES);
+    expect(classesForJobType("Site Walk")).not.toContain(initial.class);
+    expect(classesForJobType("Site Walk")[0]).toBe("Non Pay");
+  });
+
   it("uses Non Pay and Site Visit only for Site Walk", () => {
     expect([...SITE_WALK_CLASSES]).toEqual(["Non Pay", "Site Visit"]);
     expect(classesForJobType("Site Walk")).toEqual(SITE_WALK_CLASSES);
