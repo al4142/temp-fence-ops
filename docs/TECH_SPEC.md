@@ -191,9 +191,9 @@ Options on the job form live on **`Job.fenceSections[]`** (plus job-level `scree
 | **Top rail** / **Bottom rail** | Chainlink section | Same 1-3/8″ tube; independent toggles. Top rail defaults on for `+1` in the UI (overridable). |
 | **Post mount** | Chainlink section | `Driven` (default, bury-length posts) or `Plate (concrete)` (fence-height posts + `SCREW-BOLT+ 3/8x3` = 2× line + 4× terminals). Not a job-wide toggle. |
 | **Weights** | Panel section | `BFOOT` (big feet) or `SBAG` (sand bags) = 2 × T-stands. Blank = no weights. |
-| **Gates / manual terminals** | Each section | Auto terminals = that section’s gate qty × 2. 6′ slides add ALE-30 extra track-support posts — recipe and emit rule in [BOM_APPROVED.md](./BOM_APPROVED.md) §7. The 2-1/2″ stack (gate ×2 + extras) **always emits**, including chainlink LF = 0 and panel/barricade hosts. Chainlink LF > 0 must **not** double-count (`24x6` qty 1 → 7, not 14). |
+| **Gates / manual terminals** | Each section | Auto terminals = that section’s gate qty × 2. 6′ slides add ALE-30 extra track-support posts — recipe and emit rule in [BOM_APPROVED.md](./BOM_APPROVED.md) §7. The 2-1/2″ stack (gate ×2 + extras) emits when the section has fence LF > 0 (chainlink recipe, or CL6 driven posts on a panel/barricade host). Gate-only and chainlink LF = 0 do not emit that kit. Chainlink LF > 0 must **not** double-count (`24x6` qty 1 → 7, not 14). |
 | **Screen SKU** | Any | SKU pick (`BLACK6`, …), not Yes/No. `CUSTOM` is a known catalog gap. |
-| **Gates** | Any | Gate + Gate 2 type/qty. Auto terminals = (gate qty × 2) plus 6′ slide extras per ALE-30 §7. Same emit rule as above (LF=0 / panel-host still emit; no double-count when CL+LF>0). Known gaps `4x6`, `12x8` emit free-text. |
+| **Gates** | Any | Gate + Gate 2 type/qty. Auto terminals = (gate qty × 2) plus 6′ slide extras per ALE-30 §7 when a fence body is running. Gate-only emits slide hardware only. Known gaps `4x6`, `12x8` emit free-text. `12x6 SLIDE` / `24x6 SLIDE` match catalog SKUs `12x6-SLIDE` / `24x6-SLIDE`. |
 | **Manual terminals** | Chainlink | Corners / start-stop / extras. |
 | **Tension wire** | — | **Out of scope for v1** (not shown, not BOM’d). |
 

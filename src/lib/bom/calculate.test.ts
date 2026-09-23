@@ -654,32 +654,34 @@ describe("gates", () => {
   });
 
   it.each([
-    { type: "12x6 SLIDE", extra: 2, brackets: 6 },
-    { type: "15x6 SLIDE", extra: 3, brackets: 8 },
-    { type: "20x6 SLIDE", extra: 4, brackets: 10 },
-    { type: "24x6 SLIDE", extra: 5, brackets: 12 },
+    { type: "12x6 SLIDE", brackets: 6, pipeLf: 24 },
+    { type: "15x6 SLIDE", brackets: 8, pipeLf: 30 },
+    { type: "20x6 SLIDE", brackets: 10, pipeLf: 40 },
+    { type: "24x6 SLIDE", brackets: 12, pipeLf: 48 },
   ] as const)(
-    "6′ slide $type qty 1 with CL6 LF=0 emits post qty = 2+$extra (Lance scope)",
-    ({ type, extra, brackets }) => {
+    "6′ slide $type qty 1 with CL6 LF=0 does not emit the CL terminal kit",
+    ({ type, brackets, pipeLf }) => {
       const r = calculateBom({
         fenceType: "CL6",
         qtyLf: 0,
         topRail: false,
         gate: { type, qty: 1 },
       });
-      const posts = 2 + extra;
       expect(qty(r, type)).toBe(1);
       expect(qty(r, BOM_NAMES.slideCarrier)).toBe(1);
+      expect(qty(r, BOM_NAMES.slideSafetyRoller)).toBe(2);
       expect(qty(r, BOM_NAMES.trackBracket)).toBe(brackets);
+      expect(qty(r, BOM_NAMES.tube138)).toBe(Math.ceil(pipeLf / TUBE_138_STICK_FT));
       expect(qty(r, BOM_NAMES.cl6Wire)).toBe(0);
       expect(qty(r, BOM_NAMES.cl6LinePost)).toBe(0);
-      expect(r.terminalsTotal).toBe(posts);
-      expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(2 + extra);
-      expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(posts);
-      expect(qty(r, BOM_NAMES.braceBand)).toBe(posts);
-      expect(qty(r, BOM_NAMES.tensionBand)).toBe(posts * 3);
-      expect(qty(r, BOM_NAMES.clBolts)).toBe(posts + posts * 3);
+      expect(r.terminalsTotal).toBe(0);
+      expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(0);
+      expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(0);
+      expect(qty(r, BOM_NAMES.braceBand)).toBe(0);
+      expect(qty(r, BOM_NAMES.tensionBand)).toBe(0);
+      expect(qty(r, BOM_NAMES.clBolts)).toBe(0);
       expect(qty(r, BOM_NAMES.cl8Terminal)).toBe(0);
+      expect(r.warnings.some((w) => /LF > 0/i.test(w))).toBe(true);
     }
   );
 
@@ -723,32 +725,53 @@ describe("gates", () => {
     expect(qty(r, BOM_NAMES.tensionBand)).toBe(21);
   });
 
-  it("6′ slide with no fence type defaults to CL6 8' x 2-1/2 stack", () => {
+  it("gate-only 24x6 SLIDE (no fence type, empty LF) is slide hardware for one 24′ opening", () => {
     const r = calculateBom({
       fenceType: "",
-      qtyLf: 0,
+      qtyLf: null,
       gate: { type: "24x6 SLIDE", qty: 1 },
     });
-    expect(r.terminalsTotal).toBe(7);
-    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(7);
+    expect(r.terminalsTotal).toBe(0);
+    expect(r.qtyLf).toBe(0);
+    expect(qty(r, "24x6 SLIDE")).toBe(1);
+    expect(qty(r, BOM_NAMES.slideCarrier)).toBe(1);
+    expect(qty(r, BOM_NAMES.slideSafetyRoller)).toBe(2);
+    expect(qty(r, BOM_NAMES.trackBracket)).toBe(12);
+    expect(qty(r, BOM_NAMES.tube138)).toBe(Math.ceil(48 / TUBE_138_STICK_FT));
+    expect(r.lines.find((l) => l.skuOrName === BOM_NAMES.tube138)?.notes).toMatch(/48′ LF/);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(0);
     expect(qty(r, BOM_NAMES.cl8Terminal)).toBe(0);
-    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(7);
-    expect(qty(r, BOM_NAMES.braceBand)).toBe(7);
-    expect(qty(r, BOM_NAMES.tensionBand)).toBe(21);
+    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl8TensionBar)).toBe(0);
+    expect(qty(r, BOM_NAMES.braceBand)).toBe(0);
+    expect(qty(r, BOM_NAMES.tensionBand)).toBe(0);
+    expect(qty(r, BOM_NAMES.clBolts)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl6Wire)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl6LinePost)).toBe(0);
+    const kit = [
+      BOM_NAMES.cl6Terminal,
+      BOM_NAMES.cl6TensionBar,
+      BOM_NAMES.braceBand,
+      BOM_NAMES.tensionBand,
+      BOM_NAMES.clBolts,
+    ];
+    expect(r.lines.some((l) => kit.includes(l.skuOrName as (typeof kit)[number]))).toBe(false);
   });
 
-  it("CL8 host uses CL8 terminal SKU for 6′ slide extras (LF=0 and LF>0, no double-count)", () => {
+  it("CL8 host uses CL8 terminal SKU for 6′ slide extras when LF>0, and skips the kit at LF=0", () => {
     const lf0 = calculateBom({
       fenceType: "CL8",
       qtyLf: 0,
       topRail: false,
       gate: { type: "24x6 SLIDE", qty: 1 },
     });
-    expect(lf0.terminalsTotal).toBe(7);
-    expect(qty(lf0, BOM_NAMES.cl8Terminal)).toBe(7);
+    expect(lf0.terminalsTotal).toBe(0);
+    expect(qty(lf0, BOM_NAMES.cl8Terminal)).toBe(0);
     expect(qty(lf0, BOM_NAMES.cl6Terminal)).toBe(0);
-    expect(qty(lf0, BOM_NAMES.cl8TensionBar)).toBe(7);
-    expect(qty(lf0, BOM_NAMES.tensionBand)).toBe(7 * 4);
+    expect(qty(lf0, BOM_NAMES.cl8TensionBar)).toBe(0);
+    expect(qty(lf0, BOM_NAMES.tensionBand)).toBe(0);
+    expect(qty(lf0, "24x6 SLIDE")).toBe(1);
+    expect(qty(lf0, BOM_NAMES.trackBracket)).toBe(12);
 
     const lf = calculateBom({
       fenceType: "CL8",
@@ -787,20 +810,21 @@ describe("gates", () => {
     expect(qty(r, BOM_NAMES.tensionBand)).toBe(21);
   });
 
-  it("panel 6x12 LF=0 with 12x6 SLIDE still emits 4× CL6 terminals", () => {
+  it("panel 6x12 LF=0 with 12x6 SLIDE does not emit a CL terminal kit", () => {
     const r = calculateBom({
       fenceType: "6x12",
       qtyLf: 0,
       gate: { type: "12x6 SLIDE", qty: 1 },
     });
     expect(qty(r, "6x12")).toBe(0);
-    expect(r.terminalsTotal).toBe(2 + 2);
-    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(2 + 2);
-    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(4);
+    expect(r.terminalsTotal).toBe(0);
+    expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(0);
+    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(0);
     expect(qty(r, BOM_NAMES.trackBracket)).toBe(6);
+    expect(qty(r, "12x6 SLIDE")).toBe(1);
   });
 
-  it("CL6 plate LF=0 with 24x6 SLIDE emits plate terminals + 4 bolts each", () => {
+  it("CL6 plate LF=0 with 24x6 SLIDE does not emit plate terminals", () => {
     const r = calculateBom({
       fenceType: "CL6",
       qtyLf: 0,
@@ -808,12 +832,14 @@ describe("gates", () => {
       postMount: "plate",
       gate: { type: "24x6 SLIDE", qty: 1 },
     });
-    expect(r.terminalsTotal).toBe(7);
-    expect(qty(r, BOM_NAMES.cl6TerminalPlate)).toBe(7);
+    expect(r.terminalsTotal).toBe(0);
+    expect(qty(r, BOM_NAMES.cl6TerminalPlate)).toBe(0);
     expect(qty(r, BOM_NAMES.cl6Terminal)).toBe(0);
-    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(7);
-    expect(qty(r, BOM_NAMES.screwBolt38x3)).toBe(7 * 4);
+    expect(qty(r, BOM_NAMES.cl6TensionBar)).toBe(0);
+    expect(qty(r, BOM_NAMES.screwBolt38x3)).toBe(0);
     expect(qty(r, BOM_NAMES.cl6LinePostPlate)).toBe(0);
+    expect(qty(r, "24x6 SLIDE")).toBe(1);
+    expect(qty(r, BOM_NAMES.trackBracket)).toBe(12);
   });
 
   it("14x8 SLIDE on panel stays Excel-thin (no extra track posts / no CL6 terminal stack)", () => {
@@ -983,6 +1009,32 @@ describe("catalog matching", () => {
     }
     expect(byName.get(BOM_NAMES.screwBolt38x3)?.reusable).toBe(false);
     expect(byName.get(BOM_NAMES.screwBolt38x3)?.sku).toBe("SCREW-BOLT-3-8x3");
+  });
+
+  it("gate-only 24x6 SLIDE matches the yard leaf when the catalog row exists", () => {
+    const r = calculateBom({
+      fenceType: "",
+      qtyLf: null,
+      gate: { type: "24x6 SLIDE", qty: 1 },
+    });
+    const seed = BOM_SEED_ITEMS.find((i) => i.name === "24x6 SLIDE");
+    expect(seed?.sku).toBe("24x6-SLIDE");
+    const catalog = BOM_SEED_ITEMS.map((item, idx) => ({
+      id: String(idx),
+      sku: item.sku,
+      name: item.name,
+    }));
+    const mats = bomLinesToMaterials(r.lines, catalog);
+    const leaf = mats.find((m) => m.skuOrName === "24x6 SLIDE");
+    expect(leaf?.catalogMatched).toBe(true);
+    expect(leaf?.inventoryItemId).toBe(catalog.find((i) => i.name === "24x6 SLIDE")?.id);
+    expect(leaf?.itemName).toBeNull();
+    expect(mats.filter((m) => !m.catalogMatched)).toEqual([]);
+
+    const withoutLeaf = catalog.filter((i) => i.name !== "24x6 SLIDE" && i.sku !== "24x6-SLIDE");
+    const unmatched = bomLinesToMaterials(r.lines, withoutLeaf).find((m) => m.skuOrName === "24x6 SLIDE");
+    expect(unmatched?.catalogMatched).toBe(false);
+    expect(unmatched?.notes).toMatch(/no catalog match/i);
   });
 
   it("matches SCREW-BOLT+ aliases (DeWalt / PFM1411240)", () => {

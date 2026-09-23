@@ -112,8 +112,9 @@ function addPanelRecipe(
 
 /**
  * 2-1/2″ terminal posts + tension-bar / brace-band / tension-band stack.
- * Used by the chainlink fence body and also by 6′ slides when that body does not run
- * (LF=0, panel, barricade). Plate screw-bolts here are the 4-per-terminal share only.
+ * Used by a running chainlink body, and by 6′ slides on a panel/barricade host with LF > 0.
+ * Not used for gate-only sections or chainlink LF = 0 (no fence fabric to terminate).
+ * Plate screw-bolts here are the 4-per-terminal share only.
  */
 function addTerminalStack(
   map: Map<string, BomLine>,
@@ -352,7 +353,15 @@ function applySectionFence(
     (g1.type && g1.qty > 0 ? slide6ExtraTrackPosts(g1.type) * g1.qty : 0) +
     (g2.type && g2.qty > 0 ? slide6ExtraTrackPosts(g2.type) * g2.qty : 0);
   // Gate rule ×2 still applies to slides; 6′ slides also add track-support terminals (ALE-30).
-  const terminalsTotal = gateQtyTotal * 2 + terminalsManual + extraTrackPosts;
+  const terminalsFormula = gateQtyTotal * 2 + terminalsManual + extraTrackPosts;
+  // Terminal posts are fence-body materials. A gate with no running fence (blank type,
+  // or chainlink/panel/barricade LF = 0) must not emit that kit. Count stays 0 so
+  // Generate BOM does not say "terminals 7" for lines that are not there.
+  const fenceBodyRuns =
+    fenceType != null &&
+    qtyLf > 0 &&
+    (isPanelType(fenceType) || fenceType === "BARRICADE" || isChainlinkType(fenceType));
+  const terminalsTotal = fenceBodyRuns ? terminalsFormula : 0;
 
   if (fenceType && isPanelType(fenceType)) {
     if (qtyLf > 0) addPanelRecipe(map, fenceType, qtyLf, weightMode);
@@ -371,20 +380,21 @@ function applySectionFence(
     }
   } else if (fenceType && isChainlinkType(fenceType)) {
     if (qtyLf > 0) {
-      addChainlinkRecipe(map, fenceType, qtyLf, topRail, bottomRail, terminalsTotal, resolvedMount);
+      addChainlinkRecipe(map, fenceType, qtyLf, topRail, bottomRail, terminalsFormula, resolvedMount);
     } else {
       warnings.push(`${labelPrefix}Chainlink recipe needs LF > 0.`);
-      // 6′ slide track supports still need the terminal SKU stack with no fence body.
-      if (extraTrackPosts > 0) {
-        addTerminalStack(map, fenceType, terminalsTotal, resolvedMount, topRail, bottomRail);
-      }
     }
   }
 
-  // Panel / barricade / unknown: chainlink recipe never runs. 6′ slides still emit
-  // the usual CL6 driven terminal stack (gate ×2 + track extras).
-  if (extraTrackPosts > 0 && !(fenceType && isChainlinkType(fenceType))) {
-    addTerminalStack(map, "CL6", terminalsTotal, "driven", false, false);
+  // Panel / barricade with LF: chainlink recipe never runs, but the slide still needs
+  // track-support posts on that host (ALE-30). Gate-only and LF=0 do not.
+  if (
+    extraTrackPosts > 0 &&
+    fenceType &&
+    qtyLf > 0 &&
+    (isPanelType(fenceType) || fenceType === "BARRICADE")
+  ) {
+    addTerminalStack(map, "CL6", terminalsFormula, "driven", false, false);
   }
 
   if (weightMode && fenceType && !isPanelType(fenceType)) {
