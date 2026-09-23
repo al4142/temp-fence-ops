@@ -1,6 +1,6 @@
 # BOM rules — approved decisions
 
-**Status:** Locked through Alex updates 2026-09-15 → 2026-09-21 (ET). 6′ slide field recipe (ALE-30) locked 2026-09-21. Terminal SKU emit was narrowed 2026-09-23: gate ×2 + extras emit only with fence LF > 0 (panel/barricade host included). Gate-only and chainlink LF = 0 do not emit the CL terminal kit. CL+LF>0 still does not double-count (the LF=0-always-emit rule from [PR #22](https://github.com/al4142/temp-fence-ops/pull/22) was the gate-only 7-post bug). Barb rolls, bottom rail, tension-wire defer confirmed AM Sep 16.  
+**Status:** Locked through Alex updates 2026-09-15 → 2026-09-21 (ET). 6′ slide field recipe (ALE-30) locked 2026-09-21. ALE-39 (2026-09-23, [PR #39](https://github.com/al4142/temp-fence-ops/pull/39)): the **terminal post kit** (fence posts, tension bars, brace and tension bands) emits **only when fence LF > 0**. A gate-only 6′ slide (LF empty, fence type blank) does not emit that kit. Slide hardware still emits (carrier, rollers, track brackets, top rail, leaf). Chainlink LF 100 with one `24x6 SLIDE` is **7** terminals, not 14. Barb rolls, bottom rail, tension-wire defer confirmed AM Sep 16.  
 **App:** Temp Fence Ops  
 **Excel draft:** `BOM_FROM_EXCEL_DRAFT.md` = historical reverse-engineer; this file wins on conflicts.  
 **Implementation:** `src/lib/bom/` (calculator + job create/edit Generate BOM).
@@ -110,9 +110,9 @@ Manual = corners + start/stop + extras.
 | 20′ | +4 |
 | 24′ | +5 |
 
-Swing and 8′ slides add **0** extras. Those extras use the same terminal SKU / tension-band stack (driven vs plate still follows section `postMount`).
+Swing and 8′ slides add **0** extras. When the terminal post kit emits (fence LF > 0), those extras use the same terminal SKU / tension-band stack (driven vs plate still follows section `postMount`).
 
-**Emit (corrected after the gate-only 24×6 report):** `terminals_total` for a 6′ slide materializes as the terminal SKU stack (posts + tension bar + brace/tension bands) **only when that section has a running fence body** (chainlink, panel, or barricade with **LF > 0**). Panel / barricade host → usual CL6 driven SKU (`8' x 2-1/2`). **Gate-only** (fence type blank, LF empty/0) and **chainlink LF = 0** do **not** emit that kit — a slide repair is the leaf plus slide hardware, not seven chainlink terminals. **Do not double-count** when chainlink LF > 0: one emission (the chainlink recipe already uses `terminals_total`). Qty 1 on CL6 with LF > 0: `12x6` → **4**, `15x6` → **5**, `20x6` → **6**, `24x6` → **7** of `8' x 2-1/2` (`24x6` is **7, never 14**).
+**Emit (ALE-39):** The **terminal post kit** (terminal posts + tension bar + brace band + tension band) materializes from `terminals_total` **only when fence LF > 0** (chainlink, panel, or barricade). A panel or barricade section with LF > 0 uses the usual CL6 driven SKU (`8' x 2-1/2`). **Gate-only** (fence type blank, LF empty) and any section with **LF = 0** do **not** emit that kit. Slide hardware still emits on those jobs: leaf, carrier, rollers, track brackets, and gate-frame top rail. **Do not double-count** when chainlink LF > 0: one emission (the chainlink recipe already uses `terminals_total`). Regression: CL6 **LF 100** with one `24x6 SLIDE` → **7** of `8' x 2-1/2`, never 14. Qty 1 on CL6 with LF > 0: `12x6` → **4**, `15x6` → **5**, `20x6` → **6**, `24x6` → **7**.
 
 From `terminals_total` (temp fence — **fewer bands than permanent/Hoover**):
 
@@ -180,7 +180,7 @@ A job has **one or more fence sections**. Generate BOM runs each section’s rec
 
 **Mixed driven + plate** = two (or more) chainlink sections with the LF split (Option A). Panels with T-stands can sit on the same job as chainlink.
 
-**Gates are per-section** (panel and/or chainlink), not job-global only. Auto terminals (2 per gate) and manual terminals apply to **that section’s** terminal count when a fence body is running. **6′ slide terminals** (gate ×2 + extras) emit on a panel or barricade host with LF > 0 (CL6 driven stack) and inside the chainlink recipe when LF > 0. They do **not** emit for a gate-only section or when chainlink LF = 0. Chainlink + LF>0 must **not** double-count that stack — see §7.
+**Gates are per-section** (panel and/or chainlink), not job-global only. Auto terminals (2 per gate) and manual terminals feed **that section’s** terminal post kit **only when fence LF > 0**. A gate-only section (fence type blank, LF empty) does not emit the post kit. Slide hardware for a 6′ slide still emits. Chainlink LF 100 with one `24x6 SLIDE` is **7** terminals, not 14 — see §7.
 
 Screen SKU stays **job-level**: rolls = `CEILING(sum of section LF / 50)`.
 
@@ -254,11 +254,11 @@ brackets = TRACK BRACKET 2-1/2 × table qty
 
 **Horizontal gate pipe (locked):** 1-3/8″ **gate-frame** tube — top of the gate + bottom of the gate, each = opening. Table LF: `{12:24, 15:30, 20:40, 24:48}`. This is **not** fence-side overhead/cantilever track. Inventory emits existing `TOP RAIL` sticks as `CEILING(table_LF / 21)` (same 21′ stick as fence rail; storage conversion only). Open question for ops: dedicated SKU vs shared top-rail SKU.
 
-**Extra track posts:** explicit map `{12:2, 15:3, 20:4, 24:5}` — not a guessed `W/5` formula. Feed the same terminal stack as `terminals_total` (posts + tension bar + brace/tension bands).
+**Extra track posts:** explicit map `{12:2, 15:3, 20:4, 24:5}` — not a guessed `W/5` formula. They add into `terminals_total` and, **only when fence LF > 0**, into the terminal post kit (posts + tension bar + brace/tension bands).
 
-**Emit the terminal stack only with a fence body (LF > 0).** Qty 1 on CL6 with LF > 0 → **4 / 5 / 6 / 7** × `8' x 2-1/2` for `12x6` / `15x6` / `20x6` / `24x6 SLIDE` (gate ×2 + extras). Same counts on a **panel / barricade** host with LF > 0 (CL6 driven SKU). **Gate-only** (no fence type, LF empty or 0) and **chainlink LF = 0** do **not** emit posts, tension bars, brace bands, tension bands, or carriage bolts. Slide hardware still emits: leaf, carrier, rollers, brackets, and gate-frame `TOP RAIL` sticks. Chainlink **LF > 0** is still **7 not 14** for `24x6` (no second stack on top of the fence recipe). On a chainlink section, driven vs plate still follows `postMount`. Brackets `{12:6, 15:8, 20:10, 24:12}`. Rollers always 2; carrier always 1. Multiply table rows by qty.
+**Terminal post kit vs slide hardware.** The post kit emits **only when fence LF > 0**. Qty 1 on CL6 with LF > 0 → **4 / 5 / 6 / 7** × `8' x 2-1/2` for `12x6` / `15x6` / `20x6` / `24x6 SLIDE` (gate ×2 + extras). A panel or barricade section with LF > 0 uses that CL6 driven SKU. **Gate-only** (fence type blank, LF empty) and **LF = 0** do **not** emit posts, tension bars, brace bands, tension bands, or carriage bolts. **Slide hardware always emits**, including on a gate-only job: leaf, carrier, rollers, track brackets, and gate-frame `TOP RAIL` sticks. Regression: chainlink **LF 100** with one `24x6 SLIDE` is **7** terminals, not 14 (the fence recipe emits the post kit once). On a chainlink section, driven vs plate still follows `postMount`. Brackets `{12:6, 15:8, 20:10, 24:12}`. Rollers always 2; carrier always 1. Multiply table rows by qty.
 
-**Leaf catalog:** `12x6 SLIDE` and `24x6 SLIDE` are inventory SKUs (`12x6-SLIDE` / `24x6-SLIDE`, name = dropdown label). Yards seeded before those rows existed are backfilled at on-hand 0. Generate BOM matches the leaf to that row (catalog, not free-text). `4x6` / `12x8` / `CUSTOM` remain intentional gaps.
+**Leaf catalog:** `12x6 SLIDE` and `24x6 SLIDE` match inventory SKUs `12x6-SLIDE` and `24x6-SLIDE`. Yards that lacked those rows are backfilled at on-hand 0. `4x6` / `12x8` / `CUSTOM` remain intentional gaps.
 
 ### 8′ slide hardware (Excel — thin math until takeoff)
 
@@ -298,7 +298,7 @@ TRACK BRACKET 2-1/2 =
 [x] Barb: arm per line post; 3 strands; terminal secure
 [x] Screens CEIL/50; zip 110/roll
 [x] Slide 6′ = ALE-30 field recipe; 8′ slides = Excel thin (takeoff pending)
-[x] 6′ slide terminals (×2 + extras) emit on a fence body with LF>0 (chainlink or panel/barricade host); gate-only and CL LF=0 do not emit the kit; CL+LF>0 does not double-count
+[x] 6′ slide terminal post kit emits only when fence LF > 0; gate-only / LF empty / blank fence type does not emit it; slide hardware (carrier, rollers, brackets, top rail, leaf) still emits; CL LF 100 + 24x6 is 7 terminals, not 14
 [x] Pickup inventory up
 [x] Barb terminal bands: 3 per terminal (one per strand)
 [x] Rail ends on terminals for top and/or bottom (Excel-style + tension band)
